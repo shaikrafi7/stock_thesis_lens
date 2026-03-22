@@ -174,3 +174,9 @@ cython_debug/
 
 .DS_Store
 
+
+# SQLite databases
+*.db
+
+# Claude Code internal files
+.claude/
