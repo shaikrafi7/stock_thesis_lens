@@ -1,0 +1,202 @@
+"""Tests for agent logic (thesis generator, evaluator, interpreter, explanation)."""
+from unittest.mock import patch, MagicMock
+
+
+# ── Thesis Generator ─────────────────────────────────────────────────────────
+
+def test_thesis_generator_fallback_on_api_error():
+    from app.agents.thesis_generator import generate_thesis
+    with patch("app.agents.thesis_generator._call_openai", side_effect=Exception("API down")):
+        results = generate_thesis("TEST", "Test Corp")
+    assert len(results) == 5
+    assert all("[Add" in r.statement for r in results)
+
+
+def test_thesis_generator_fallback_on_empty_response():
+    from app.agents.thesis_generator import generate_thesis
+    with patch("app.agents.thesis_generator._call_openai", return_value={}):
+        results = generate_thesis("TEST", "Test Corp")
+    assert len(results) == 5  # fallback
+
+
+def test_thesis_generator_truncates_to_5_per_category():
+    from app.agents.thesis_generator import generate_thesis
+    many_bullets = [f"Bullet {i}" for i in range(10)]
+    data = {cat: many_bullets for cat in ["core_beliefs", "strengths", "risks", "leadership", "catalysts"]}
+    with patch("app.agents.thesis_generator._call_openai", return_value=data):
+        results = generate_thesis("TEST", "Test Corp")
+    per_category = {}
+    for r in results:
+        per_category[r.category] = per_category.get(r.category, 0) + 1
+    assert all(count <= 5 for count in per_category.values())
+
+
+def test_thesis_generator_returns_correct_categories():
+    from app.agents.thesis_generator import generate_thesis
+    data = {
+        "core_beliefs": ["Belief one."],
+        "strengths": ["Strength one."],
+        "risks": ["Risk one."],
+        "leadership": ["Leadership one."],
+        "catalysts": ["Catalyst one."],
+    }
+    with patch("app.agents.thesis_generator._call_openai", return_value=data):
+        results = generate_thesis("AAPL", "Apple")
+    cats = {r.category for r in results}
+    assert cats == set(data.keys())
+
+
+# ── Thesis Evaluator ──────────────────────────────────────────────────────────
+
+def test_evaluator_green_when_no_negative_signals():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mappings = [
+        ThesisSignalMapping(
+            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            sentiment="positive", confidence=0.8, signal_summary="Price up 10%"
+        )
+    ]
+    result = evaluate_thesis(mappings)
+    assert result.score == 100.0
+    assert result.status == "green"
+    assert result.broken_points == []
+
+
+def test_evaluator_deducts_for_negative_high_confidence():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mappings = [
+        ThesisSignalMapping(
+            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            sentiment="negative", confidence=0.9, signal_summary="Revenue fell 20%"
+        )
+    ]
+    result = evaluate_thesis(mappings)
+    assert result.score < 100.0
+    assert len(result.broken_points) == 1
+
+
+def test_evaluator_ignores_low_confidence_negatives():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mappings = [
+        ThesisSignalMapping(
+            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            sentiment="negative", confidence=0.3,  # below threshold
+            signal_summary="Mild rumour"
+        )
+    ]
+    result = evaluate_thesis(mappings)
+    assert result.score == 100.0
+    assert result.broken_points == []
+
+
+def test_evaluator_status_thresholds():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+
+    # Trigger multiple core_beliefs deductions to push into yellow/red
+    def make_mapping(thesis_id: int) -> ThesisSignalMapping:
+        return ThesisSignalMapping(
+            thesis_id=thesis_id, category="core_beliefs", statement="Belief.",
+            sentiment="negative", confidence=1.0, signal_summary="Bad news"
+        )
+
+    # 1 broken core_belief: -15 → score=85 (green)
+    r1 = evaluate_thesis([make_mapping(1)])
+    assert r1.status == "green"
+
+    # 3 broken core_beliefs: -45 → score=55 (yellow)
+    r2 = evaluate_thesis([make_mapping(i) for i in range(3)])
+    assert r2.status == "yellow"
+
+    # 6 broken core_beliefs: -90 → score=10 (red)
+    r3 = evaluate_thesis([make_mapping(i) for i in range(6)])
+    assert r3.status == "red"
+
+
+def test_evaluator_score_never_below_zero():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mappings = [
+        ThesisSignalMapping(
+            thesis_id=i, category="core_beliefs", statement="Belief.",
+            sentiment="negative", confidence=1.0, signal_summary="Terrible"
+        )
+        for i in range(20)
+    ]
+    result = evaluate_thesis(mappings)
+    assert result.score >= 0.0
+
+
+# ── Explanation Agent ─────────────────────────────────────────────────────────
+
+def test_explanation_no_broken_points_returns_intact_message():
+    from app.agents.explanation_agent import generate_explanation
+    from app.agents.thesis_evaluator import EvaluationResult
+    result = EvaluationResult(score=100.0, status="green", broken_points=[])
+    explanation = generate_explanation("AAPL", result)
+    assert "intact" in explanation.lower() or "no significant" in explanation.lower()
+
+
+def test_explanation_fallback_without_api_key():
+    from app.agents.explanation_agent import generate_explanation, _template_explanation
+    from app.agents.thesis_evaluator import EvaluationResult
+    broken = [{"category": "core_beliefs", "statement": "Strong moat.", "signal": "Revenue fell.", "deduction": 15.0, "sentiment": "negative"}]
+    result = EvaluationResult(score=85.0, status="green", broken_points=broken)
+    explanation = _template_explanation("AAPL", result)
+    assert "AAPL" in explanation
+    assert len(explanation) > 10
+
+
+def test_explanation_openai_failure_falls_back_to_template():
+    from app.agents.explanation_agent import generate_explanation
+    from app.agents.thesis_evaluator import EvaluationResult
+    broken = [{"category": "core_beliefs", "statement": "Strong moat.", "signal": "Bad news.", "deduction": 15.0, "sentiment": "negative"}]
+    result = EvaluationResult(score=85.0, status="green", broken_points=broken)
+    # OpenAI is imported lazily inside the function, so patch at the source module
+    with patch("openai.OpenAI", side_effect=Exception("No API")):
+        explanation = generate_explanation("AAPL", result)
+    assert "AAPL" in explanation
+
+
+# ── Signal Interpreter ────────────────────────────────────────────────────────
+
+def test_signal_interpreter_returns_empty_for_no_theses():
+    from app.agents.signal_interpreter import interpret_signals
+    from app.agents.signal_collector import CollectedSignals
+    signals = CollectedSignals(ticker="AAPL", price=None, news=[])
+    result = interpret_signals(signals, [])
+    assert result == []
+
+
+def test_signal_interpreter_price_rules_detect_downtrend():
+    from app.agents.signal_interpreter import _price_rules
+    from app.agents.signal_collector import PriceSignal
+
+    price = PriceSignal(
+        ticker="AAPL",
+        current_price=100.0,
+        prev_close=115.0,
+        day_change_pct=-5.0,
+        week_change_pct=-10.0,
+        month_change_pct=-20.0,  # triggers deduction for core_beliefs/strengths
+        fifty_two_week_high=200.0,
+        fifty_two_week_low=80.0,
+        avg_volume_10d=1_000_000,
+        current_volume=1_000_000,
+        volume_ratio=1.0,
+        ma_20=95.0,
+        ma_50=110.0,
+        trend="down",
+        available=True,
+    )
+
+    theses = [
+        {"id": 1, "category": "core_beliefs", "statement": "Strong business model.", "weight": 1.0},
+    ]
+
+    mappings = _price_rules(price, theses)
+    negative_maps = [m for m in mappings if m.sentiment == "negative"]
+    assert len(negative_maps) >= 1
