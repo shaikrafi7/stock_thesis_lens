@@ -1,0 +1,28 @@
+FULL VISION
+
+[ UI (Next.js) ]
+        |
+[ FastAPI Backend ]
+        |
+ ┌───────────────┬───────────────┐
+ |               |               |
+Thesis Engine  Signal Engine  User Engine
+ |               |
+LLM           APIs (Polygon, News)
+ |               |
+Evaluator (Logic Core)
+        |
+Explanation (LLM)
+
+
+MVP
+
+[ Next.js UI ]
+      |
+[ FastAPI ]
+      |
+[ Thesis DB ] ---- [ Polygon API ]
+      |
+[ Evaluator (Core Logic) ]
+      |
+[ Explanation (LLM) ]
