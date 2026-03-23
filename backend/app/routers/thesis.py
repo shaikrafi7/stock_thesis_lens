@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
-from app.schemas.thesis import ThesisRead, ThesisUpdate
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate
 from app.agents.thesis_generator import generate_thesis
 
 router = APIRouter(prefix="/stocks", tags=["thesis"])
@@ -40,6 +40,26 @@ def generate_stock_thesis(ticker: str, db: Session = Depends(get_db)):
         db.refresh(t)
 
     return theses
+
+
+@router.post("/{ticker}/theses", response_model=ThesisRead, status_code=201)
+def add_manual_thesis(ticker: str, payload: ThesisCreate, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
+
+    thesis = Thesis(
+        stock_id=stock.id,
+        category=payload.category,
+        statement=payload.statement,
+        weight=1.0,
+        selected=True,  # auto-select manual points
+    )
+    db.add(thesis)
+    db.commit()
+    db.refresh(thesis)
+    return thesis
 
 
 @router.get("/{ticker}/theses", response_model=list[ThesisRead])

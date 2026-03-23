@@ -4,6 +4,7 @@ export interface Stock {
   id: number;
   ticker: string;
   name: string;
+  logo_url: string | null;
 }
 
 export interface Thesis {
@@ -63,6 +64,17 @@ export const getTheses = (ticker: string): Promise<Thesis[]> =>
 
 export const generateThesis = (ticker: string): Promise<Thesis[]> =>
   apiFetch(`/stocks/${ticker}/generate-thesis`, { method: "POST" });
+
+export const addManualThesis = (
+  ticker: string,
+  category: string,
+  statement: string
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, statement }),
+  });
 
 export const updateThesisSelection = (
   ticker: string,

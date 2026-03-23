@@ -1,4 +1,5 @@
 """Tests for /stocks endpoints."""
+from unittest.mock import patch, MagicMock
 
 
 def test_health(client):
@@ -73,3 +74,43 @@ def test_delete_stock(client):
 def test_delete_stock_not_found(client):
     r = client.delete("/stocks/FAKE")
     assert r.status_code == 404
+
+
+# ── Ticker validation ────────────────────────────────────────────────────────
+
+def test_create_stock_rejects_ticker_with_spaces(client):
+    """Company name typed instead of ticker (has spaces) should be rejected."""
+    r = client.post("/stocks", json={"ticker": "NEBIUS GROUP", "name": ""})
+    assert r.status_code == 422
+    assert "not a valid ticker" in r.json()["detail"].lower() or "ticker" in r.json()["detail"].lower()
+
+
+def test_create_stock_rejects_nonexistent_ticker_via_polygon(client):
+    """Polygon 404 for fake ticker → 422 response."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 404
+
+    with patch("app.routers.stocks.settings") as mock_settings, \
+         patch("app.routers.stocks.httpx.get", return_value=mock_resp):
+        mock_settings.POLYGON_API_KEY = "fake_test_key"
+        mock_settings.DATABASE_URL = "sqlite://"  # keep other settings intact
+        r = client.post("/stocks", json={"ticker": "ZZZZZZ", "name": ""})
+
+    assert r.status_code == 422
+    assert "not found" in r.json()["detail"].lower()
+
+
+def test_create_stock_uses_polygon_company_name(client):
+    """When Polygon returns a real name, it should be stored (not the ticker)."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"results": {"name": "Apple Inc."}}
+
+    with patch("app.routers.stocks.settings") as mock_settings, \
+         patch("app.routers.stocks.httpx.get", return_value=mock_resp):
+        mock_settings.POLYGON_API_KEY = "fake_test_key"
+        mock_settings.DATABASE_URL = "sqlite://"
+        r = client.post("/stocks", json={"ticker": "AAPL", "name": ""})
+
+    assert r.status_code == 201
+    assert r.json()["name"] == "Apple Inc."

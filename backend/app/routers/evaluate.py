@@ -28,10 +28,13 @@ def run_evaluation(ticker: str, db: Session = Depends(get_db)):
         .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
         .all()
     )
-    if not selected_theses:
+    if len(selected_theses) < 3:
         raise HTTPException(
             status_code=422,
-            detail=f"No thesis points selected for {ticker}. Select at least one thesis bullet before evaluating.",
+            detail=(
+                f"Select at least 3 thesis points for {ticker} before evaluating "
+                f"({len(selected_theses)} currently selected)."
+            ),
         )
 
     thesis_dicts = [

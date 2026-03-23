@@ -67,6 +67,12 @@ def _price_rules(price: PriceSignal, theses: list[dict]) -> list[ThesisSignalMap
             confidence = 0.55
             signal_summary = "Price near 52-week high, catalysts being recognized"
 
+        # Significant price drop may indicate a selected risk is materializing
+        elif price.month_change_pct < -10 and category == "risks":
+            sentiment = "negative"
+            confidence = 0.5
+            signal_summary = f"Price down {price.month_change_pct:.1f}% over 30 days — monitored risk may be materializing"
+
         # Downtrend (MA crossover) hits anything with momentum-related language
         elif price.trend == "down" and any(w in stmt_lower for w in ("growth", "expand", "increas", "momentum", "accelerat")):
             sentiment = "negative"

@@ -21,6 +21,7 @@ class StockRead(BaseModel):
     id: int
     ticker: str
     name: str
+    logo_url: str | None = None
 
     model_config = {"from_attributes": True}
 

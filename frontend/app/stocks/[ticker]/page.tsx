@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { getTheses, getLatestEvaluation, type Thesis, type Evaluation } from "@/lib/api";
 import ThesisManager from "./ThesisManager";
+import DeleteStockButton from "@/app/components/DeleteStockButton";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 async function getStock(ticker: string) {
   const res = await fetch(`${BASE_URL}/stocks/${ticker}`, { cache: "no-store" });
   if (!res.ok) return null;
-  return res.json() as Promise<{ id: number; ticker: string; name: string }>;
+  return res.json() as Promise<{ id: number; ticker: string; name: string; logo_url: string | null }>;
 }
 
 interface Props {
@@ -60,12 +61,24 @@ export default async function StockPage({ params }: Props) {
 
         {/* Header */}
         <div className="mb-10">
-          <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-2xl font-mono font-bold text-white">{stock.ticker}</h1>
-            <span className="text-zinc-400">{stock.name}</span>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
+              {stock.logo_url ? (
+                <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-sm font-bold text-zinc-400">{stock.ticker[0]}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-mono font-bold text-white leading-none">{stock.ticker}</h1>
+              <p className="text-zinc-400 text-sm truncate">{stock.name}</p>
+            </div>
+            <div className="ml-auto">
+              <DeleteStockButton ticker={stock.ticker} redirectTo="/" />
+            </div>
           </div>
           <p className="text-zinc-600 text-sm">
-            Select the thesis points you believe in, then evaluate.
+            Select at least 3 thesis points you believe in, then evaluate.
           </p>
         </div>
 

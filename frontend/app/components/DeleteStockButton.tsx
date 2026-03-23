@@ -4,7 +4,12 @@ import { useState } from "react";
 import { deleteStock } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
-export default function DeleteStockButton({ ticker }: { ticker: string }) {
+interface Props {
+  ticker: string;
+  redirectTo?: string;
+}
+
+export default function DeleteStockButton({ ticker, redirectTo }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -13,7 +18,11 @@ export default function DeleteStockButton({ ticker }: { ticker: string }) {
     setLoading(true);
     try {
       await deleteStock(ticker);
-      router.refresh();
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.refresh();
+      }
     } finally {
       setLoading(false);
     }

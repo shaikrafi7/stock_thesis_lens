@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   generateThesis,
   updateThesisSelection,
+  addManualThesis,
   runEvaluation,
   type Thesis,
   type Evaluation,
@@ -41,6 +42,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [generating, setGenerating] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState("");
+  const [manualStatement, setManualStatement] = useState("");
+  const [manualCategory, setManualCategory] = useState("core_beliefs");
+  const [addingManual, setAddingManual] = useState(false);
 
   const selectedCount = theses.filter((t) => t.selected).length;
   const groups = groupByCategory(theses);
@@ -63,9 +67,29 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
+  async function handleAddManual(e: React.FormEvent) {
+    e.preventDefault();
+    const stmt = manualStatement.trim();
+    if (stmt.length < 10) {
+      setError("Statement must be at least 10 characters.");
+      return;
+    }
+    setAddingManual(true);
+    setError("");
+    try {
+      const added = await addManualThesis(ticker, manualCategory, stmt);
+      setTheses((prev) => [...prev, added]);
+      setManualStatement("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add point");
+    } finally {
+      setAddingManual(false);
+    }
+  }
+
   async function handleEvaluate() {
-    if (selectedCount === 0) {
-      setError("Select at least one thesis point before evaluating.");
+    if (selectedCount < 3) {
+      setError(`Select at least 3 thesis points before evaluating (${selectedCount} selected).`);
       return;
     }
     setEvaluating(true);
@@ -93,13 +117,52 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         </button>
         <button
           onClick={handleEvaluate}
-          disabled={evaluating || selectedCount === 0}
+          disabled={evaluating || selectedCount < 3}
           className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded transition-colors"
+          title={selectedCount < 3 ? `Select at least 3 points (${selectedCount} selected)` : undefined}
         >
           {evaluating ? "Evaluating…" : `Evaluate (${selectedCount} selected)`}
         </button>
         {error && <p className="text-red-400 text-xs">{error}</p>}
       </div>
+
+      {/* Evaluation result — shown at top so it's immediately visible after evaluating */}
+      {evaluation && (
+        <div className="border border-zinc-700 rounded-lg p-5 bg-zinc-900">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-2xl font-mono font-bold text-white">
+              {evaluation.score}/100
+            </span>
+            <StatusBadge status={evaluation.status} />
+            <span className="text-zinc-600 text-xs ml-auto">
+              {new Date(evaluation.timestamp).toLocaleString()}
+            </span>
+          </div>
+
+          {evaluation.explanation && (
+            <p className="text-sm text-zinc-300 leading-relaxed mb-4 border-l-2 border-zinc-600 pl-3">
+              {evaluation.explanation}
+            </p>
+          )}
+
+          {evaluation.broken_points.length > 0 && (
+            <div>
+              <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
+                Flagged Points
+              </h4>
+              <div className="flex flex-col gap-2">
+                {evaluation.broken_points.map((bp, i) => (
+                  <div key={i} className="bg-red-950 border border-red-900 rounded p-3">
+                    <p className="text-zinc-300 text-xs mb-1 italic">&quot;{bp.statement}&quot;</p>
+                    <p className="text-red-300 text-xs">{bp.signal}</p>
+                    <p className="text-zinc-600 text-xs mt-1">−{bp.deduction} pts</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Thesis bullets */}
       {theses.length === 0 ? (
@@ -147,43 +210,43 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         </div>
       )}
 
-      {/* Evaluation result */}
-      {evaluation && (
-        <div className="border border-zinc-700 rounded-lg p-5 bg-zinc-900">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl font-mono font-bold text-white">
-              {evaluation.score}/100
-            </span>
-            <StatusBadge status={evaluation.status} />
-            <span className="text-zinc-600 text-xs ml-auto">
-              {new Date(evaluation.timestamp).toLocaleString()}
-            </span>
+      {/* Manual thesis point — below AI points, above evaluation */}
+      <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
+        <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
+          Add Your Own Point
+        </h3>
+        <form onSubmit={handleAddManual} className="flex flex-col gap-2">
+          <select
+            value={manualCategory}
+            onChange={(e) => setManualCategory(e.target.value)}
+            disabled={addingManual}
+            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-300 text-sm focus:outline-none focus:border-blue-500"
+          >
+            {CATEGORY_ORDER.map((cat) => (
+              <option key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={manualStatement}
+              onChange={(e) => setManualStatement(e.target.value)}
+              placeholder="e.g. Management has a strong track record of capital allocation."
+              disabled={addingManual}
+              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={addingManual || manualStatement.trim().length < 10}
+              className="px-4 py-2 text-sm bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-200 rounded transition-colors shrink-0"
+            >
+              {addingManual ? "Adding…" : "Add"}
+            </button>
           </div>
-
-          {evaluation.explanation && (
-            <p className="text-sm text-zinc-300 leading-relaxed mb-4 border-l-2 border-zinc-600 pl-3">
-              {evaluation.explanation}
-            </p>
-          )}
-
-          {evaluation.broken_points.length > 0 && (
-            <div>
-              <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
-                Flagged Points
-              </h4>
-              <div className="flex flex-col gap-2">
-                {evaluation.broken_points.map((bp, i) => (
-                  <div key={i} className="bg-red-950 border border-red-900 rounded p-3">
-                    <p className="text-zinc-300 text-xs mb-1 italic">&quot;{bp.statement}&quot;</p>
-                    <p className="text-red-300 text-xs">{bp.signal}</p>
-                    <p className="text-zinc-600 text-xs mt-1">−{bp.deduction} pts</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        </form>
+      </div>
     </div>
   );
 }
