@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema
 from app.agents.thesis_generator import generate_thesis
+from app.agents.thesis_chat_agent import chat as thesis_chat
 
 router = APIRouter(prefix="/stocks", tags=["thesis"])
 
@@ -71,8 +72,30 @@ def get_theses(ticker: str, db: Session = Depends(get_db)):
     return db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
 
 
+@router.post("/{ticker}/chat", response_model=ChatResponse)
+def chat_with_assistant(ticker: str, payload: ChatRequest, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
+
+    existing_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
+    thesis_dicts = [{"category": t.category, "statement": t.statement} for t in existing_theses]
+    messages = [{"role": m.role, "content": m.content} for m in payload.messages]
+
+    result = thesis_chat(ticker, stock.name, thesis_dicts, messages)
+
+    return ChatResponse(
+        message=result.message,
+        suggestion=ThesisSuggestionSchema(
+            category=result.suggestion.category,
+            statement=result.suggestion.statement,
+        ) if result.suggestion else None,
+    )
+
+
 @router.patch("/{ticker}/theses/{thesis_id}", response_model=ThesisRead)
-def update_thesis_selection(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Session = Depends(get_db)):
+def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Session = Depends(get_db)):
     ticker = ticker.upper()
     stock = db.query(Stock).filter(Stock.ticker == ticker).first()
     if not stock:
@@ -82,7 +105,27 @@ def update_thesis_selection(ticker: str, thesis_id: int, payload: ThesisUpdate, 
     if not thesis:
         raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {ticker}")
 
-    thesis.selected = payload.selected
+    if payload.selected is not None:
+        thesis.selected = payload.selected
+    if payload.statement is not None:
+        thesis.statement = payload.statement
+
     db.commit()
     db.refresh(thesis)
     return thesis
+
+
+@router.delete("/{ticker}/theses/{thesis_id}", status_code=204)
+def delete_thesis(ticker: str, thesis_id: int, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
+
+    thesis = db.query(Thesis).filter(Thesis.id == thesis_id, Thesis.stock_id == stock.id).first()
+    if not thesis:
+        raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {ticker}")
+
+    db.delete(thesis)
+    db.commit()
+    return None

@@ -26,24 +26,29 @@ Rules:
 
 
 def _template_explanation(ticker: str, result: EvaluationResult) -> str:
-    if not result.broken_points:
-        return f"{ticker} thesis appears intact — no significant negative signals detected against your selected beliefs."
+    parts = []
+    if result.confirmed_points:
+        count = len(result.confirmed_points)
+        parts.append(f"{count} point(s) confirmed by recent signals")
+    if result.broken_points:
+        count = len(result.broken_points)
+        categories = list({bp["category"] for bp in result.broken_points})
+        parts.append(f"{count} point(s) under pressure in {' and '.join(categories)}")
 
-    count = len(result.broken_points)
-    categories = list({bp["category"] for bp in result.broken_points})
-    category_str = " and ".join(categories)
-    action = "weakening" if result.status in ("yellow", "red") else "under mild pressure"
+    if not parts:
+        return f"{ticker} thesis intact — no significant signals detected against your selected beliefs."
 
-    lines = [f"{ticker} thesis {action}: {count} point(s) flagged in {category_str}."]
-    for bp in result.broken_points[:3]:
+    action = "weakening" if result.status in ("yellow", "red") else "holding"
+    lines = [f"{ticker} thesis {action}: {', '.join(parts)}."]
+    for bp in result.broken_points[:2]:
         lines.append(f"• {bp['statement'][:60]}... — {bp['signal']}")
     return "\n".join(lines)
 
 
 def generate_explanation(ticker: str, result: EvaluationResult) -> str:
     """Generate a plain-language explanation for the evaluation. Never raises."""
-    if not result.broken_points:
-        return f"{ticker} thesis appears intact — no significant negative signals detected against your selected beliefs."
+    if not result.broken_points and not result.confirmed_points:
+        return f"{ticker} thesis intact — no significant signals detected against your selected beliefs."
 
     if not settings.OPENAI_API_KEY:
         return _template_explanation(ticker, result)
@@ -53,15 +58,22 @@ def generate_explanation(ticker: str, result: EvaluationResult) -> str:
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         broken_summary = "\n".join(
-            f"- [{bp['category']}] \"{bp['statement'][:80]}\" → {bp['signal']} (deducted {bp['deduction']} pts)"
+            f"- [{bp['category']}] \"{bp['statement'][:80]}\" → {bp['signal']} (−{bp['deduction']} pts)"
             for bp in result.broken_points
-        )
+        ) or "None"
+
+        confirmed_summary = "\n".join(
+            f"- [{cp['category']}] \"{cp['statement'][:80]}\" → {cp['signal']} (+{cp['credit']} pts)"
+            for cp in result.confirmed_points
+        ) or "None"
 
         prompt = (
             f"Stock: {ticker}\n"
             f"Thesis score: {result.score}/100 ({result.status.upper()})\n\n"
+            f"Confirmed thesis points:\n{confirmed_summary}\n\n"
             f"Flagged thesis points:\n{broken_summary}\n\n"
-            "Write a brief, honest explanation of the thesis status."
+            "Write a brief, honest explanation of the thesis status. "
+            "Mention both what is holding up and what is under pressure."
         )
 
         response = client.chat.completions.create(

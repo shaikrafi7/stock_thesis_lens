@@ -55,6 +55,7 @@ def run_evaluation(ticker: str, db: Session = Depends(get_db)):
         status=result.status,
         explanation=explanation,
         broken_points=json.dumps(result.broken_points),
+        confirmed_points=json.dumps(result.confirmed_points),
     )
     db.add(evaluation)
     db.commit()

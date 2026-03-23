@@ -12,7 +12,8 @@ class Evaluation(Base):
     score = Column(Float, nullable=False)
     status = Column(String(10), nullable=False)  # green | yellow | red
     explanation = Column(Text, nullable=True)
-    broken_points = Column(Text, nullable=True)  # JSON: list of {thesis_id, category, statement, signal, sentiment, deduction}
+    broken_points = Column(Text, nullable=True)    # JSON: list of {thesis_id, category, statement, signal, sentiment, deduction}
+    confirmed_points = Column(Text, nullable=True)  # JSON: list of {thesis_id, category, statement, signal, sentiment, credit}
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     stock = relationship("Stock", back_populates="evaluations")

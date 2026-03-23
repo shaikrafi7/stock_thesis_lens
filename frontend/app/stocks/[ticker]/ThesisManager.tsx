@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: false });
 import {
   generateThesis,
   updateThesisSelection,
-  addManualThesis,
+  updateThesisStatement,
+  deleteThesis,
   runEvaluation,
   type Thesis,
   type Evaluation,
 } from "@/lib/api";
+import { useAssistant } from "@/app/context/AssistantContext";
 import StatusBadge from "@/app/components/StatusBadge";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -42,9 +46,20 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [generating, setGenerating] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState("");
-  const [manualStatement, setManualStatement] = useState("");
-  const [manualCategory, setManualCategory] = useState("core_beliefs");
-  const [addingManual, setAddingManual] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const { setTicker, registerThesisAdded } = useAssistant();
+
+  // Sync active ticker into context so AssistantPanel knows which stock is open
+  useEffect(() => {
+    setTicker(ticker);
+    registerThesisAdded((t) => setTheses((prev) => [...prev, t]));
+    return () => {
+      setTicker(null);
+      registerThesisAdded(null);
+    };
+  }, [ticker, setTicker, registerThesisAdded]);
 
   const selectedCount = theses.filter((t) => t.selected).length;
   const groups = groupByCategory(theses);
@@ -67,23 +82,27 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
-  async function handleAddManual(e: React.FormEvent) {
-    e.preventDefault();
-    const stmt = manualStatement.trim();
-    if (stmt.length < 10) {
-      setError("Statement must be at least 10 characters.");
-      return;
-    }
-    setAddingManual(true);
-    setError("");
+  function startEdit(t: Thesis) {
+    setEditingId(t.id);
+    setEditDraft(t.statement);
+  }
+
+  async function handleSaveEdit(id: number) {
     try {
-      const added = await addManualThesis(ticker, manualCategory, stmt);
-      setTheses((prev) => [...prev, added]);
-      setManualStatement("");
+      const updated = await updateThesisStatement(ticker, id, editDraft);
+      setTheses((prev) => prev.map((t) => (t.id === id ? updated : t)));
+      setEditingId(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to add point");
-    } finally {
-      setAddingManual(false);
+      setError(err instanceof Error ? err.message : "Edit failed");
+    }
+  }
+
+  async function handleDeleteThesis(id: number) {
+    try {
+      await deleteThesis(ticker, id);
+      setTheses((prev) => prev.filter((t) => t.id !== id));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Delete failed");
     }
   }
 
@@ -104,8 +123,43 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     }
   }
 
+  const scoreColor = (s: number) => s >= 75 ? "#22c55e" : s >= 50 ? "#eab308" : "#ef4444";
+  const scoreLabel = (s: number) => s >= 75 ? "Thesis Strong" : s >= 50 ? "Under Pressure" : "At Risk";
+
   return (
     <div className="flex flex-col gap-8">
+      {/* Per-stock thesis health gauge */}
+      {evaluation && (
+        <div className="flex flex-col items-center py-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Thesis Health</p>
+          <GaugeComponent
+            type="semicircle"
+            value={evaluation.score}
+            minValue={0}
+            maxValue={100}
+            arc={{
+              colorArray: ["#ef4444", "#eab308", "#22c55e"],
+              subArcs: [{ limit: 50 }, { limit: 75 }, { limit: 100 }],
+              padding: 0.02,
+              width: 0.25,
+            }}
+            pointer={{ color: scoreColor(evaluation.score), animationDelay: 0 }}
+            labels={{ valueLabel: { hide: true }, tickLabels: { hideMinMax: true, ticks: [] } }}
+            style={{ width: "100%", maxWidth: "200px" }}
+          />
+          <div className="text-center -mt-2">
+            <span className="text-3xl font-mono font-bold text-white">{evaluation.score}</span>
+            <span className="text-zinc-500 text-xs ml-1">/100</span>
+            <p className="text-xs mt-0.5 font-semibold tracking-wide" style={{ color: scoreColor(evaluation.score) }}>
+              {scoreLabel(evaluation.score)}
+            </p>
+            <p className="text-zinc-600 text-xs mt-0.5">
+              {new Date(evaluation.timestamp).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 items-center flex-wrap">
         <button
@@ -126,7 +180,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         {error && <p className="text-red-400 text-xs">{error}</p>}
       </div>
 
-      {/* Evaluation result — shown at top so it's immediately visible after evaluating */}
+      {/* Evaluation result */}
       {evaluation && (
         <div className="border border-zinc-700 rounded-lg p-5 bg-zinc-900">
           <div className="flex items-center gap-3 mb-4">
@@ -145,20 +199,40 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             </p>
           )}
 
-          {evaluation.broken_points.length > 0 && (
-            <div>
-              <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
-                Flagged Points
-              </h4>
-              <div className="flex flex-col gap-2">
-                {evaluation.broken_points.map((bp, i) => (
-                  <div key={i} className="bg-red-950 border border-red-900 rounded p-3">
-                    <p className="text-zinc-300 text-xs mb-1 italic">&quot;{bp.statement}&quot;</p>
-                    <p className="text-red-300 text-xs">{bp.signal}</p>
-                    <p className="text-zinc-600 text-xs mt-1">−{bp.deduction} pts</p>
+          {(evaluation.confirmed_points.length > 0 || evaluation.broken_points.length > 0) && (
+            <div className="flex flex-col gap-4">
+              {evaluation.confirmed_points.length > 0 && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">
+                    Confirmed Points
+                  </h4>
+                  <div className="flex flex-col gap-2">
+                    {evaluation.confirmed_points.map((cp, i) => (
+                      <div key={i} className="bg-green-950 border border-green-900 rounded p-3">
+                        <p className="text-zinc-300 text-xs mb-1 italic">&quot;{cp.statement}&quot;</p>
+                        <p className="text-green-300 text-xs">{cp.signal}</p>
+                        <p className="text-zinc-600 text-xs mt-1">+{cp.credit} pts</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+              {evaluation.broken_points.length > 0 && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">
+                    Flagged Points
+                  </h4>
+                  <div className="flex flex-col gap-2">
+                    {evaluation.broken_points.map((bp, i) => (
+                      <div key={i} className="bg-red-950 border border-red-900 rounded p-3">
+                        <p className="text-zinc-300 text-xs mb-1 italic">&quot;{bp.statement}&quot;</p>
+                        <p className="text-red-300 text-xs">{bp.signal}</p>
+                        <p className="text-zinc-600 text-xs mt-1">−{bp.deduction} pts</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -172,7 +246,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       ) : (
         <div className="flex flex-col gap-6">
           <p className="text-zinc-500 text-xs">
-            Check the thesis points you believe in. These will be evaluated against current signals.
+            <span className="text-zinc-300">Checked</span> points are submitted for evaluation and affect your score.
+            Unchecked points stay in your pool — re-check them any time.
+            Hover a point to edit or delete it. Use <span className="text-zinc-400">Research AI</span> to ask questions or add new points.
           </p>
           {CATEGORY_ORDER.map((cat) => {
             const items = groups[cat];
@@ -183,70 +259,84 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                   {CATEGORY_LABELS[cat] ?? cat}
                 </h3>
                 <div className="flex flex-col gap-1">
-                  {items.map((t) => (
-                    <label
-                      key={t.id}
-                      className={`flex items-start gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
-                        t.selected
-                          ? "bg-zinc-800 border border-zinc-600"
-                          : "bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={t.selected}
-                        onChange={() => handleToggle(t)}
-                        className="mt-0.5 accent-blue-500 shrink-0"
-                      />
-                      <span className={`text-sm leading-relaxed ${t.selected ? "text-zinc-100" : "text-zinc-400"}`}>
-                        {t.statement}
-                      </span>
-                    </label>
-                  ))}
+                  {items.map((t) =>
+                    editingId === t.id ? (
+                      /* ── Edit mode ── */
+                      <div
+                        key={t.id}
+                        className="flex flex-col gap-2 px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
+                      >
+                        <textarea
+                          value={editDraft}
+                          onChange={(e) => setEditDraft(e.target.value)}
+                          rows={3}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-white resize-none focus:outline-none focus:border-blue-500"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveEdit(t.id)}
+                            className="px-3 py-1 text-xs bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Normal row ── */
+                      <div
+                        key={t.id}
+                        className={`group flex items-start gap-3 px-3 py-2 rounded transition-colors ${
+                          t.selected
+                            ? "bg-zinc-800 border border-zinc-600"
+                            : "bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={t.selected}
+                          onChange={() => handleToggle(t)}
+                          className="mt-0.5 accent-blue-500 shrink-0 cursor-pointer"
+                        />
+                        <span
+                          onClick={() => handleToggle(t)}
+                          className={`flex-1 text-sm leading-relaxed cursor-pointer ${
+                            t.selected ? "text-zinc-100" : "text-zinc-400"
+                          }`}
+                        >
+                          {t.statement}
+                        </span>
+                        {/* Edit / delete — visible on row hover */}
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startEdit(t); }}
+                            title="Edit"
+                            className="p-1 text-zinc-500 hover:text-zinc-200 rounded text-xs leading-none transition-colors"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteThesis(t.id); }}
+                            title="Delete"
+                            className="p-1 text-zinc-500 hover:text-red-400 rounded text-xs leading-none transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Manual thesis point — below AI points, above evaluation */}
-      <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
-        <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
-          Add Your Own Point
-        </h3>
-        <form onSubmit={handleAddManual} className="flex flex-col gap-2">
-          <select
-            value={manualCategory}
-            onChange={(e) => setManualCategory(e.target.value)}
-            disabled={addingManual}
-            className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-300 text-sm focus:outline-none focus:border-blue-500"
-          >
-            {CATEGORY_ORDER.map((cat) => (
-              <option key={cat} value={cat}>
-                {CATEGORY_LABELS[cat]}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={manualStatement}
-              onChange={(e) => setManualStatement(e.target.value)}
-              placeholder="e.g. Management has a strong track record of capital allocation."
-              disabled={addingManual}
-              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={addingManual || manualStatement.trim().length < 10}
-              className="px-4 py-2 text-sm bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-200 rounded transition-colors shrink-0"
-            >
-              {addingManual ? "Adding…" : "Add"}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

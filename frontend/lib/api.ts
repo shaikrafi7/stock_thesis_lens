@@ -18,6 +18,29 @@ export interface Thesis {
   last_confirmed: string | null;
 }
 
+export interface CompanyInfo {
+  name: string | null;
+  sector: string | null;
+  industry: string | null;
+  market_cap: number | null;
+  beta: number | null;
+  analyst_target: number | null;
+  institutional_ownership: number | null;
+}
+
+export interface PricePoint {
+  date: string;
+  close: number;
+}
+
+export interface MarketData {
+  company: CompanyInfo;
+  prices: PricePoint[];
+}
+
+export const fetchMarketData = (ticker: string): Promise<MarketData> =>
+  apiFetch(`/stocks/${ticker}/market-data`);
+
 export interface BrokenPoint {
   thesis_id: number;
   category: string;
@@ -27,6 +50,15 @@ export interface BrokenPoint {
   deduction: number;
 }
 
+export interface ConfirmedPoint {
+  thesis_id: number;
+  category: string;
+  statement: string;
+  signal: string;
+  sentiment: string;
+  credit: number;
+}
+
 export interface Evaluation {
   id: number;
   stock_id: number;
@@ -34,6 +66,7 @@ export interface Evaluation {
   status: "green" | "yellow" | "red";
   explanation: string | null;
   broken_points: BrokenPoint[];
+  confirmed_points: ConfirmedPoint[];
   timestamp: string;
 }
 
@@ -87,8 +120,47 @@ export const updateThesisSelection = (
     body: JSON.stringify({ selected }),
   });
 
+export const updateThesisStatement = (
+  ticker: string,
+  thesisId: number,
+  statement: string
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ statement }),
+  });
+
+export const deleteThesis = (ticker: string, thesisId: number): Promise<void> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, { method: "DELETE" });
+
 export const runEvaluation = (ticker: string): Promise<Evaluation> =>
   apiFetch(`/stocks/${ticker}/evaluate`, { method: "POST" });
 
 export const getLatestEvaluation = (ticker: string): Promise<Evaluation> =>
   apiFetch(`/stocks/${ticker}/evaluation`);
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ThesisSuggestion {
+  category: string;
+  statement: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  suggestion: ThesisSuggestion | null;
+}
+
+export const chatWithAssistant = (
+  ticker: string,
+  messages: ChatMessage[]
+): Promise<ChatResponse> =>
+  apiFetch(`/stocks/${ticker}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });

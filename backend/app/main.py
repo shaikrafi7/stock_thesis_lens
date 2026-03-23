@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_all_tables
-from app.routers import stocks, thesis, evaluate
+from app.routers import stocks, thesis, evaluate, market_data
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(stocks.router)
 app.include_router(thesis.router)
 app.include_router(evaluate.router)
+app.include_router(market_data.router)
 
 
 @app.get("/health")

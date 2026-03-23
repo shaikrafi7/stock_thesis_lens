@@ -48,7 +48,7 @@ def test_thesis_generator_returns_correct_categories():
 
 # ── Thesis Evaluator ──────────────────────────────────────────────────────────
 
-def test_evaluator_green_when_no_negative_signals():
+def test_evaluator_credits_positive_signals():
     from app.agents.thesis_evaluator import evaluate_thesis
     from app.agents.signal_interpreter import ThesisSignalMapping
     mappings = [
@@ -58,9 +58,10 @@ def test_evaluator_green_when_no_negative_signals():
         )
     ]
     result = evaluate_thesis(mappings)
-    assert result.score == 100.0
-    assert result.status == "green"
+    # base=50, credit=8.0*0.8=6.4 → 56.4
+    assert result.score > 50.0
     assert result.broken_points == []
+    assert len(result.confirmed_points) == 1
 
 
 def test_evaluator_deducts_for_negative_high_confidence():
@@ -88,31 +89,45 @@ def test_evaluator_ignores_low_confidence_negatives():
         )
     ]
     result = evaluate_thesis(mappings)
-    assert result.score == 100.0
+    # Low confidence → no deduction; base=50
+    assert result.score == 50.0
     assert result.broken_points == []
 
 
 def test_evaluator_status_thresholds():
-    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.thesis_evaluator import evaluate_thesis, CATEGORY_CREDITS, CATEGORY_DEDUCTIONS
     from app.agents.signal_interpreter import ThesisSignalMapping
 
-    # Trigger multiple core_beliefs deductions to push into yellow/red
-    def make_mapping(thesis_id: int) -> ThesisSignalMapping:
+    def make_neg(thesis_id: int) -> ThesisSignalMapping:
         return ThesisSignalMapping(
             thesis_id=thesis_id, category="core_beliefs", statement="Belief.",
             sentiment="negative", confidence=1.0, signal_summary="Bad news"
         )
 
-    # 1 broken core_belief: -15 → score=85 (green)
-    r1 = evaluate_thesis([make_mapping(1)])
-    assert r1.status == "green"
+    def make_pos(thesis_id: int) -> ThesisSignalMapping:
+        return ThesisSignalMapping(
+            thesis_id=thesis_id, category="core_beliefs", statement="Belief.",
+            sentiment="positive", confidence=1.0, signal_summary="Good news"
+        )
 
-    # 3 broken core_beliefs: -45 → score=55 (yellow)
-    r2 = evaluate_thesis([make_mapping(i) for i in range(3)])
-    assert r2.status == "yellow"
+    # No signals → base score 50 (yellow)
+    r0 = evaluate_thesis([])
+    assert r0.score == 50.0
+    assert r0.status == "yellow"
 
-    # 6 broken core_beliefs: -90 → score=10 (red)
-    r3 = evaluate_thesis([make_mapping(i) for i in range(6)])
+    # 1 negative (deduction=8.0): 50-8=42 → red
+    r1 = evaluate_thesis([make_neg(1)])
+    assert r1.status == "red"
+    assert len(r1.broken_points) == 1
+
+    # Many positives → score approaches 100 and stays ≤ 100
+    r2 = evaluate_thesis([make_pos(i) for i in range(20)])
+    assert r2.score <= 100.0
+    assert r2.status == "green"
+
+    # Many negatives → score approaches 0 and stays ≥ 0
+    r3 = evaluate_thesis([make_neg(i) for i in range(20)])
+    assert r3.score >= 0.0
     assert r3.status == "red"
 
 

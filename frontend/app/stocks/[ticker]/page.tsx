@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTheses, getLatestEvaluation, type Thesis, type Evaluation } from "@/lib/api";
 import ThesisManager from "./ThesisManager";
 import DeleteStockButton from "@/app/components/DeleteStockButton";
+import StockInfoPanel from "@/app/components/StockInfoPanel";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -50,7 +51,7 @@ export default async function StockPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="max-w-3xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Breadcrumb */}
         <Link
           href="/"
@@ -60,7 +61,7 @@ export default async function StockPage({ params }: Props) {
         </Link>
 
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-8">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
               {stock.logo_url ? (
@@ -77,17 +78,24 @@ export default async function StockPage({ params }: Props) {
               <DeleteStockButton ticker={stock.ticker} redirectTo="/" />
             </div>
           </div>
-          <p className="text-zinc-600 text-sm">
-            Select at least 3 thesis points you believe in, then evaluate.
-          </p>
         </div>
 
-        {/* Thesis Manager (client component handles all interactivity) */}
-        <ThesisManager
-          ticker={upperTicker}
-          initialTheses={theses}
-          initialEvaluation={evaluation}
-        />
+        {/* 2-column layout: chart/info on left, thesis on right */}
+        <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-10 items-start">
+          {/* Left: stock info + chart (sticky on scroll) */}
+          <div className="md:sticky md:top-8">
+            <StockInfoPanel ticker={upperTicker} />
+          </div>
+
+          {/* Right: thesis manager */}
+          <div>
+            <ThesisManager
+              ticker={upperTicker}
+              initialTheses={theses}
+              initialEvaluation={evaluation}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

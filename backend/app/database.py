@@ -33,6 +33,10 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE evaluations ADD COLUMN broken_points TEXT"))
             conn.commit()
 
+        if "confirmed_points" not in columns:
+            conn.execute(text("ALTER TABLE evaluations ADD COLUMN confirmed_points TEXT"))
+            conn.commit()
+
         result = conn.execute(text("PRAGMA table_info(stocks)"))
         stock_columns = [row[1] for row in result.fetchall()]
         if "logo_url" not in stock_columns:
