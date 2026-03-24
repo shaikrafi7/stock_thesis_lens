@@ -45,10 +45,22 @@ class NewsSignal:
 
 
 @dataclass
+class FundamentalSignal:
+    pe_ratio: float | None = None
+    revenue_growth: float | None = None
+    gross_profit_margin: float | None = None
+    eps_actual: float | None = None
+    eps_estimate: float | None = None
+    surprise_pct: float | None = None
+    eps_beat: bool | None = None
+
+
+@dataclass
 class CollectedSignals:
     ticker: str
     price: PriceSignal | None
     news: list[NewsSignal] = field(default_factory=list)
+    fundamentals: FundamentalSignal | None = None
 
 
 # ── Polygon helpers ──────────────────────────────────────────────────────────
@@ -177,10 +189,38 @@ def _collect_news(ticker: str, company_name: str) -> list[NewsSignal]:
         return []
 
 
+# ── Fundamentals helpers ─────────────────────────────────────────────────────
+
+def _collect_fundamentals(ticker: str) -> FundamentalSignal | None:
+    try:
+        from app.utils.fmp import get_fundamentals
+        from app.utils.financial_datasets import get_earnings
+
+        fmp = get_fundamentals(ticker)
+        earnings = get_earnings(ticker)
+
+        if not fmp and not earnings:
+            return None
+
+        return FundamentalSignal(
+            pe_ratio=fmp.get("pe_ratio"),
+            revenue_growth=fmp.get("revenue_growth"),
+            gross_profit_margin=fmp.get("gross_profit_margin"),
+            eps_actual=earnings.get("eps_actual"),
+            eps_estimate=earnings.get("eps_estimate"),
+            surprise_pct=earnings.get("surprise_pct"),
+            eps_beat=earnings.get("eps_beat"),
+        )
+    except Exception as exc:
+        logger.error("signal_collector: fundamentals fetch failed for %s: %s", ticker, exc)
+        return None
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
     """Collect all available signals for a stock. Never raises."""
     price = _collect_price(ticker)
     news = _collect_news(ticker, company_name)
-    return CollectedSignals(ticker=ticker, price=price, news=news)
+    fundamentals = _collect_fundamentals(ticker)
+    return CollectedSignals(ticker=ticker, price=price, news=news, fundamentals=fundamentals)

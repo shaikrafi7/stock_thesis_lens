@@ -5,6 +5,7 @@ pydantic
 pydantic-settings
 python-dotenv
 openai
+tavily-python
 langsmith
 httpx
 pytest

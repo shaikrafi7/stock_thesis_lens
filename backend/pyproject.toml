@@ -1,0 +1,24 @@
+[project]
+name = "stock-thesis-lens-backend"
+version = "0.1.0"
+description = "AI investment thesis evaluation backend"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "openai",
+    "tavily-python",
+    "langsmith",
+    "httpx",
+    "yfinance",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]

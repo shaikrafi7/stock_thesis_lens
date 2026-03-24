@@ -72,3 +72,27 @@ class ThesisSuggestionSchema(BaseModel):
 class ChatResponse(BaseModel):
     message: str
     suggestion: Optional[ThesisSuggestionSchema] = None
+
+
+class PortfolioAction(BaseModel):
+    type: Literal["add_stock", "delete_stock", "add_thesis"]
+    ticker: str
+    category: Optional[str] = None
+    statement: Optional[str] = None
+
+
+class PortfolioChatResponse(BaseModel):
+    message: str
+    action: Optional[PortfolioAction] = None
+
+
+class BriefingItemSchema(BaseModel):
+    ticker: str
+    headline: str
+    impact: str  # "bullish" | "bearish" | "neutral"
+    suggestion: Optional[ThesisSuggestionSchema] = None
+
+
+class MorningBriefingResponse(BaseModel):
+    summary: str
+    items: list[BriefingItemSchema]

@@ -164,3 +164,39 @@ export const chatWithAssistant = (
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages }),
   });
+
+export interface PortfolioAction {
+  type: "add_stock" | "delete_stock" | "add_thesis";
+  ticker: string;
+  category?: string;
+  statement?: string;
+}
+
+export interface PortfolioChatResponse {
+  message: string;
+  action?: PortfolioAction | null;
+}
+
+export const chatWithPortfolioAssistant = (
+  messages: ChatMessage[]
+): Promise<PortfolioChatResponse> =>
+  apiFetch("/portfolio/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+
+export interface BriefingItem {
+  ticker: string;
+  headline: string;
+  impact: "bullish" | "bearish" | "neutral";
+  suggestion?: ThesisSuggestion | null;
+}
+
+export interface MorningBriefingResponse {
+  summary: string;
+  items: BriefingItem[];
+}
+
+export const getMorningBriefing = (): Promise<MorningBriefingResponse> =>
+  apiFetch("/portfolio/morning-briefing");

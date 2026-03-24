@@ -15,12 +15,14 @@ Your role:
 - Answer research questions about the company (business model, moat, risks, leadership, catalysts)
 - Help the investor think through and articulate thesis points
 - Suggest specific thesis statements when useful
+- When asked about today's performance or recent events, use the live market data and recent news provided in the context
 
 Rules:
 - Be factual and balanced — cover bull and bear cases honestly
 - No buy/sell recommendations or direct financial advice
 - Focus on structural, durable factors for a 3–10 year time horizon
 - Keep responses concise (3–5 sentences unless more detail is requested)
+- When market data is available, reference specific numbers (price, change%, volume) to ground your analysis
 
 You MUST always respond with valid JSON in this exact format:
 
@@ -54,8 +56,28 @@ class ChatResult:
     suggestion: Optional[ThesisSuggestion] = None
 
 
-def _build_context(company_name: str, ticker: str, existing_theses: list[dict]) -> str:
+def _build_context(
+    company_name: str,
+    ticker: str,
+    existing_theses: list[dict],
+    market_data: str = "",
+    recent_news: list[dict] | None = None,
+) -> str:
     lines = [f"Stock: {ticker} — {company_name}"]
+
+    if market_data:
+        lines.append(f"\nLive Market Data:\n{market_data}")
+
+    if recent_news:
+        lines.append("\nRecent News:")
+        for n in recent_news[:5]:
+            title = n.get("title", "")
+            desc = n.get("description", "")
+            snippet = desc[:150] + "…" if len(desc) > 150 else desc
+            lines.append(f"  - {title}")
+            if snippet:
+                lines.append(f"    {snippet}")
+
     if existing_theses:
         by_category: dict[str, list[str]] = {}
         for t in existing_theses:
@@ -76,6 +98,8 @@ def chat(
     company_name: str,
     existing_theses: list[dict],
     messages: list[dict],
+    market_data: str = "",
+    recent_news: list[dict] | None = None,
 ) -> ChatResult:
     if not settings.OPENAI_API_KEY:
         return ChatResult(message="OpenAI API key not configured.")
@@ -83,7 +107,7 @@ def chat(
     from openai import OpenAI
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    context = _build_context(company_name, ticker, existing_theses)
+    context = _build_context(company_name, ticker, existing_theses, market_data, recent_news)
     system_content = f"{SYSTEM_PROMPT}\n\nContext:\n{context}"
 
     openai_messages = [{"role": "system", "content": system_content}]

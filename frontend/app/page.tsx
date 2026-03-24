@@ -4,6 +4,7 @@ import AddStockForm from "./components/AddStockForm";
 import StatusBadge from "./components/StatusBadge";
 import DeleteStockButton from "./components/DeleteStockButton";
 import PortfolioGauge from "./components/PortfolioGauge";
+import MorningBriefing from "./components/MorningBriefing";
 
 async function getEvaluationSafe(ticker: string): Promise<Evaluation | null> {
   try {
@@ -50,6 +51,9 @@ export default async function DashboardPage() {
 
         {/* Portfolio Gauge */}
         {avgScore !== null && <PortfolioGauge avgScore={avgScore} />}
+
+        {/* Morning Briefing */}
+        {stocks.length > 0 && <MorningBriefing />}
 
         {/* Add Stock */}
         <div className="mb-10">

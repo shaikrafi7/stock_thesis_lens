@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: false });
 import {
@@ -63,6 +63,14 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
   const selectedCount = theses.filter((t) => t.selected).length;
   const groups = groupByCategory(theses);
+
+  const impactMap = useMemo((): Map<number, { type: "confirmed" | "broken"; pts: number }> => {
+    if (!evaluation) return new Map();
+    const m = new Map<number, { type: "confirmed" | "broken"; pts: number }>();
+    for (const cp of evaluation.confirmed_points) m.set(cp.thesis_id, { type: "confirmed", pts: cp.credit });
+    for (const bp of evaluation.broken_points) m.set(bp.thesis_id, { type: "broken", pts: bp.deduction });
+    return m;
+  }, [evaluation]);
 
   async function handleGenerate() {
     setGenerating(true);
@@ -259,8 +267,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                   {CATEGORY_LABELS[cat] ?? cat}
                 </h3>
                 <div className="flex flex-col gap-1">
-                  {items.map((t) =>
-                    editingId === t.id ? (
+                  {items.map((t) => {
+                    const impact = impactMap.get(t.id);
+                    return editingId === t.id ? (
                       /* ── Edit mode ── */
                       <div
                         key={t.id}
@@ -292,7 +301,11 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                       <div
                         key={t.id}
                         className={`group flex items-start gap-3 px-3 py-2 rounded transition-colors ${
-                          t.selected
+                          impact?.type === "confirmed"
+                            ? "border-l-2 border-green-700 bg-green-950/30"
+                            : impact?.type === "broken"
+                            ? "border-l-2 border-red-700 bg-red-950/30"
+                            : t.selected
                             ? "bg-zinc-800 border border-zinc-600"
                             : "bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
                         }`}
@@ -311,6 +324,13 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         >
                           {t.statement}
                         </span>
+                        {impact && (
+                          <span className={`text-[10px] font-mono font-bold shrink-0 mt-0.5 ${
+                            impact.type === "confirmed" ? "text-green-400" : "text-red-400"
+                          }`}>
+                            {impact.type === "confirmed" ? `+${impact.pts}` : `\u2212${impact.pts}`}
+                          </span>
+                        )}
                         {/* Edit / delete — visible on row hover */}
                         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
                           <button
@@ -329,8 +349,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                           </button>
                         </div>
                       </div>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               </div>
             );

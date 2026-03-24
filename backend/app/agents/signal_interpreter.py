@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 
 from app.core.config import settings
-from app.agents.signal_collector import CollectedSignals, PriceSignal
+from app.agents.signal_collector import CollectedSignals, FundamentalSignal, PriceSignal
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,26 @@ Rules:
 - No buy/sell language"""
 
 
-def _llm_news_mapping(theses: list[dict], headlines: list[str]) -> list[ThesisSignalMapping]:
+def _format_fundamentals(f: FundamentalSignal) -> str:
+    lines = []
+    if f.pe_ratio is not None:
+        lines.append(f"- P/E Ratio: {f.pe_ratio:.1f}")
+    if f.revenue_growth is not None:
+        lines.append(f"- Revenue Growth (YoY): {f.revenue_growth * 100:.1f}%" if f.revenue_growth < 10 else f"- Revenue Growth (YoY): {f.revenue_growth:.1f}%")
+    if f.gross_profit_margin is not None:
+        lines.append(f"- Gross Margin: {f.gross_profit_margin * 100:.1f}%" if f.gross_profit_margin <= 1 else f"- Gross Margin: {f.gross_profit_margin:.1f}%")
+    if f.eps_actual is not None and f.eps_estimate is not None:
+        beat_str = "beat" if f.eps_beat else "missed"
+        pct_str = f" ({f.surprise_pct:+.1f}%)" if f.surprise_pct is not None else ""
+        lines.append(f"- Latest EPS: {f.eps_actual:.2f} vs estimate {f.eps_estimate:.2f} — {beat_str}{pct_str}")
+    return "\n".join(lines)
+
+
+def _llm_news_mapping(
+    theses: list[dict],
+    headlines: list[str],
+    fundamentals: FundamentalSignal | None = None,
+) -> list[ThesisSignalMapping]:
     if not headlines or not theses or not settings.OPENAI_API_KEY:
         return []
     try:
@@ -125,6 +144,13 @@ def _llm_news_mapping(theses: list[dict], headlines: list[str]) -> list[ThesisSi
         thesis_list = "\n".join(f"[{t['id']}] ({t['category']}) {t['statement']}" for t in theses)
         news_list = "\n".join(f"- {h}" for h in headlines[:8])
 
+        user_content = f"THESIS STATEMENTS:\n{thesis_list}\n\nNEWS HEADLINES:\n{news_list}"
+        if fundamentals:
+            fund_str = _format_fundamentals(fundamentals)
+            if fund_str:
+                user_content += f"\n\nFUNDAMENTAL SIGNALS:\n{fund_str}"
+        user_content += "\n\nReturn JSON array under key 'mappings'."
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             response_format={"type": "json_object"},
@@ -132,7 +158,7 @@ def _llm_news_mapping(theses: list[dict], headlines: list[str]) -> list[ThesisSi
             max_tokens=800,
             messages=[
                 {"role": "system", "content": INTERPRETER_SYSTEM},
-                {"role": "user", "content": f"THESIS STATEMENTS:\n{thesis_list}\n\nNEWS HEADLINES:\n{news_list}\n\nReturn JSON array under key 'mappings'."},
+                {"role": "user", "content": user_content},
             ],
         )
         raw = response.choices[0].message.content or "{}"
@@ -196,6 +222,6 @@ def interpret_signals(signals: CollectedSignals, selected_theses: list[dict]) ->
             logger.error("signal_interpreter: price rules failed: %s", exc)
 
     headlines = [f"{n.title}. {n.snippet}" for n in signals.news if n.title]
-    news_maps = _llm_news_mapping(selected_theses, headlines)
+    news_maps = _llm_news_mapping(selected_theses, headlines, signals.fundamentals)
 
     return _merge_mappings(price_maps, news_maps)

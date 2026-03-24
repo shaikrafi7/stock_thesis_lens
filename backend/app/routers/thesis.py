@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -6,6 +8,10 @@ from app.models.thesis import Thesis
 from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat
+from app.utils.market_snapshot import get_snapshot, format_snapshot
+from app.utils.news import _search_one_ticker
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/stocks", tags=["thesis"])
 
@@ -83,7 +89,19 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, db: Session = Depends
     thesis_dicts = [{"category": t.category, "statement": t.statement} for t in existing_theses]
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
 
-    result = thesis_chat(ticker, stock.name, thesis_dicts, messages)
+    # Fetch live market data and recent news for richer chat context
+    snap = get_snapshot(ticker)
+    market_data = format_snapshot(snap)
+    try:
+        recent_news = _search_one_ticker(ticker, stock.name, limit=3)
+    except Exception:
+        recent_news = []
+
+    result = thesis_chat(
+        ticker, stock.name, thesis_dicts, messages,
+        market_data=market_data,
+        recent_news=recent_news,
+    )
 
     return ChatResponse(
         message=result.message,
