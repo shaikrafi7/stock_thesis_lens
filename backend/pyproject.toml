@@ -15,6 +15,7 @@ dependencies = [
     "langsmith",
     "httpx",
     "yfinance",
+    "apscheduler>=3.11.2",
 ]
 
 [dependency-groups]

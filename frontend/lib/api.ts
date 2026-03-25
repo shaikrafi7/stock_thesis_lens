@@ -14,6 +14,8 @@ export interface Thesis {
   statement: string;
   selected: boolean;
   weight: number;
+  importance: "standard" | "important" | "critical";
+  frozen: boolean;
   created_at: string;
   last_confirmed: string | null;
 }
@@ -67,6 +69,7 @@ export interface Evaluation {
   explanation: string | null;
   broken_points: BrokenPoint[];
   confirmed_points: ConfirmedPoint[];
+  frozen_breaks: BrokenPoint[];
   timestamp: string;
 }
 
@@ -129,6 +132,17 @@ export const updateThesisStatement = (
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ statement }),
+  });
+
+export const updateThesisFrozen = (
+  ticker: string,
+  thesisId: number,
+  frozen: boolean
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ frozen }),
   });
 
 export const deleteThesis = (ticker: string, thesisId: number): Promise<void> =>
@@ -196,7 +210,56 @@ export interface BriefingItem {
 export interface MorningBriefingResponse {
   summary: string;
   items: BriefingItem[];
+  date?: string;
 }
+
+export interface EvaluationSummary {
+  id: number;
+  score: number;
+  status: string;
+  timestamp: string;
+}
+
+export interface StockTrend {
+  ticker: string;
+  score: number;
+  previous_score: number | null;
+  trend: "up" | "down" | "flat" | "new";
+}
+
+export const getEvaluationHistory = (
+  ticker: string,
+  limit = 20
+): Promise<EvaluationSummary[]> =>
+  apiFetch(`/stocks/${ticker}/evaluation-history?limit=${limit}`);
+
+export const getPortfolioTrends = (): Promise<StockTrend[]> =>
+  apiFetch("/portfolio/trends");
+
+export interface EvaluateAllResult {
+  evaluated: string[];
+  skipped: string[];
+  errors: Record<string, string>;
+}
+
+export const evaluateAll = (): Promise<EvaluateAllResult> =>
+  apiFetch("/portfolio/evaluate-all", { method: "POST" });
 
 export const getMorningBriefing = (): Promise<MorningBriefingResponse> =>
   apiFetch("/portfolio/morning-briefing");
+
+export const getBriefingHistory = (limit = 7): Promise<MorningBriefingResponse[]> =>
+  apiFetch(`/portfolio/briefing-history?limit=${limit}`);
+
+export const getPortfolioScoreHistories = (
+  limit = 10
+): Promise<Record<string, EvaluationSummary[]>> =>
+  apiFetch(`/portfolio/score-histories?limit=${limit}`);
+
+export interface GenerateAndEvaluateResponse {
+  theses: Thesis[];
+  evaluation: Evaluation | null;
+}
+
+export const generateAndEvaluate = (ticker: string): Promise<GenerateAndEvaluateResponse> =>
+  apiFetch(`/stocks/${ticker}/generate-and-evaluate`, { method: "POST" });

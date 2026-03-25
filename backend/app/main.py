@@ -1,14 +1,17 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import create_all_tables
+from app.database import create_all_tables, SessionLocal
 from app.routers import stocks, thesis, evaluate, market_data, portfolio
+from app.services.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_all_tables()
+    start_scheduler(SessionLocal)
     yield
+    stop_scheduler()
 
 
 app = FastAPI(title="Stock Thesis Lens", version="0.1.0", lifespan=lifespan)

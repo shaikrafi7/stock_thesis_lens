@@ -14,6 +14,7 @@ class Evaluation(Base):
     explanation = Column(Text, nullable=True)
     broken_points = Column(Text, nullable=True)    # JSON: list of {thesis_id, category, statement, signal, sentiment, deduction}
     confirmed_points = Column(Text, nullable=True)  # JSON: list of {thesis_id, category, statement, signal, sentiment, credit}
+    frozen_breaks = Column(Text, nullable=True)      # JSON: list of frozen points that broke (subset of broken_points)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     stock = relationship("Stock", back_populates="evaluations")

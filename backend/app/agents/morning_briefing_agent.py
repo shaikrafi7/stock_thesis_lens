@@ -7,7 +7,10 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-CATEGORIES = ["core_beliefs", "strengths", "risks", "leadership", "catalysts"]
+CATEGORIES = [
+    "competitive_moat", "growth_trajectory", "valuation",
+    "financial_health", "ownership_conviction", "risks",
+]
 
 SYSTEM_PROMPT = """You are a financial research assistant generating a morning portfolio briefing for a long-term retail investor.
 
@@ -42,8 +45,8 @@ You MUST respond with valid JSON in this exact format:
       "headline": "short version of the headline",
       "impact": "bearish",
       "suggestion": {
-        "category": "risks",
-        "statement": "A complete sentence under 25 words written from a long-term investor perspective"
+        "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
+        "statement": "A complete sentence under 25 words written from a buyer's investment perspective"
       }
     }
   ]

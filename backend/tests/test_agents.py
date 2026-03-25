@@ -8,7 +8,7 @@ def test_thesis_generator_fallback_on_api_error():
     from app.agents.thesis_generator import generate_thesis
     with patch("app.agents.thesis_generator._call_openai", side_effect=Exception("API down")):
         results = generate_thesis("TEST", "Test Corp")
-    assert len(results) == 5
+    assert len(results) == 6  # one fallback per category
     assert all("[Add" in r.statement for r in results)
 
 
@@ -16,13 +16,13 @@ def test_thesis_generator_fallback_on_empty_response():
     from app.agents.thesis_generator import generate_thesis
     with patch("app.agents.thesis_generator._call_openai", return_value={}):
         results = generate_thesis("TEST", "Test Corp")
-    assert len(results) == 5  # fallback
+    assert len(results) == 6  # fallback
 
 
 def test_thesis_generator_truncates_to_5_per_category():
-    from app.agents.thesis_generator import generate_thesis
+    from app.agents.thesis_generator import generate_thesis, CATEGORIES
     many_bullets = [f"Bullet {i}" for i in range(10)]
-    data = {cat: many_bullets for cat in ["core_beliefs", "strengths", "risks", "leadership", "catalysts"]}
+    data = {cat: many_bullets for cat in CATEGORIES}
     with patch("app.agents.thesis_generator._call_openai", return_value=data):
         results = generate_thesis("TEST", "Test Corp")
     per_category = {}
@@ -32,18 +32,12 @@ def test_thesis_generator_truncates_to_5_per_category():
 
 
 def test_thesis_generator_returns_correct_categories():
-    from app.agents.thesis_generator import generate_thesis
-    data = {
-        "core_beliefs": ["Belief one."],
-        "strengths": ["Strength one."],
-        "risks": ["Risk one."],
-        "leadership": ["Leadership one."],
-        "catalysts": ["Catalyst one."],
-    }
+    from app.agents.thesis_generator import generate_thesis, CATEGORIES
+    data = {cat: [{"statement": f"{cat} observation.", "importance": "standard"}] for cat in CATEGORIES}
     with patch("app.agents.thesis_generator._call_openai", return_value=data):
         results = generate_thesis("AAPL", "Apple")
     cats = {r.category for r in results}
-    assert cats == set(data.keys())
+    assert cats == set(CATEGORIES)
 
 
 # ── Thesis Evaluator ──────────────────────────────────────────────────────────
@@ -53,7 +47,7 @@ def test_evaluator_credits_positive_signals():
     from app.agents.signal_interpreter import ThesisSignalMapping
     mappings = [
         ThesisSignalMapping(
-            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            thesis_id=1, category="competitive_moat", statement="Strong moat.",
             sentiment="positive", confidence=0.8, signal_summary="Price up 10%"
         )
     ]
@@ -69,7 +63,7 @@ def test_evaluator_deducts_for_negative_high_confidence():
     from app.agents.signal_interpreter import ThesisSignalMapping
     mappings = [
         ThesisSignalMapping(
-            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            thesis_id=1, category="competitive_moat", statement="Strong moat.",
             sentiment="negative", confidence=0.9, signal_summary="Revenue fell 20%"
         )
     ]
@@ -83,7 +77,7 @@ def test_evaluator_ignores_low_confidence_negatives():
     from app.agents.signal_interpreter import ThesisSignalMapping
     mappings = [
         ThesisSignalMapping(
-            thesis_id=1, category="core_beliefs", statement="Strong moat.",
+            thesis_id=1, category="competitive_moat", statement="Strong moat.",
             sentiment="negative", confidence=0.3,  # below threshold
             signal_summary="Mild rumour"
         )
@@ -100,13 +94,13 @@ def test_evaluator_status_thresholds():
 
     def make_neg(thesis_id: int) -> ThesisSignalMapping:
         return ThesisSignalMapping(
-            thesis_id=thesis_id, category="core_beliefs", statement="Belief.",
+            thesis_id=thesis_id, category="competitive_moat", statement="Belief.",
             sentiment="negative", confidence=1.0, signal_summary="Bad news"
         )
 
     def make_pos(thesis_id: int) -> ThesisSignalMapping:
         return ThesisSignalMapping(
-            thesis_id=thesis_id, category="core_beliefs", statement="Belief.",
+            thesis_id=thesis_id, category="competitive_moat", statement="Belief.",
             sentiment="positive", confidence=1.0, signal_summary="Good news"
         )
 
@@ -136,13 +130,45 @@ def test_evaluator_score_never_below_zero():
     from app.agents.signal_interpreter import ThesisSignalMapping
     mappings = [
         ThesisSignalMapping(
-            thesis_id=i, category="core_beliefs", statement="Belief.",
+            thesis_id=i, category="competitive_moat", statement="Belief.",
             sentiment="negative", confidence=1.0, signal_summary="Terrible"
         )
         for i in range(20)
     ]
     result = evaluate_thesis(mappings)
     assert result.score >= 0.0
+
+
+def test_evaluator_importance_multiplier():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mapping = ThesisSignalMapping(
+        thesis_id=1, category="competitive_moat", statement="Strong moat.",
+        sentiment="negative", confidence=1.0, signal_summary="Moat weakening"
+    )
+
+    # Standard importance: deduction = 8.0 * 1.0 * 1.0 = 8.0
+    r_std = evaluate_thesis([mapping], {1: {"importance": "standard", "frozen": False}})
+    # Critical importance: deduction = 8.0 * 1.0 * 2.0 = 16.0
+    r_crit = evaluate_thesis([mapping], {1: {"importance": "critical", "frozen": False}})
+    assert r_crit.score < r_std.score  # critical deduction is heavier
+
+
+def test_evaluator_frozen_break_detection():
+    from app.agents.thesis_evaluator import evaluate_thesis
+    from app.agents.signal_interpreter import ThesisSignalMapping
+    mapping = ThesisSignalMapping(
+        thesis_id=42, category="competitive_moat", statement="Core conviction point.",
+        sentiment="negative", confidence=0.8, signal_summary="Conviction broken"
+    )
+
+    result = evaluate_thesis([mapping], {42: {"importance": "standard", "frozen": True}})
+    assert len(result.frozen_breaks) == 1
+    assert result.frozen_breaks[0]["thesis_id"] == 42
+
+    # Non-frozen should not appear in frozen_breaks
+    result2 = evaluate_thesis([mapping], {42: {"importance": "standard", "frozen": False}})
+    assert len(result2.frozen_breaks) == 0
 
 
 # ── Explanation Agent ─────────────────────────────────────────────────────────
@@ -158,7 +184,7 @@ def test_explanation_no_broken_points_returns_intact_message():
 def test_explanation_fallback_without_api_key():
     from app.agents.explanation_agent import generate_explanation, _template_explanation
     from app.agents.thesis_evaluator import EvaluationResult
-    broken = [{"category": "core_beliefs", "statement": "Strong moat.", "signal": "Revenue fell.", "deduction": 15.0, "sentiment": "negative"}]
+    broken = [{"category": "competitive_moat", "statement": "Strong moat.", "signal": "Revenue fell.", "deduction": 15.0, "sentiment": "negative"}]
     result = EvaluationResult(score=85.0, status="green", broken_points=broken)
     explanation = _template_explanation("AAPL", result)
     assert "AAPL" in explanation
@@ -168,7 +194,7 @@ def test_explanation_fallback_without_api_key():
 def test_explanation_openai_failure_falls_back_to_template():
     from app.agents.explanation_agent import generate_explanation
     from app.agents.thesis_evaluator import EvaluationResult
-    broken = [{"category": "core_beliefs", "statement": "Strong moat.", "signal": "Bad news.", "deduction": 15.0, "sentiment": "negative"}]
+    broken = [{"category": "competitive_moat", "statement": "Strong moat.", "signal": "Bad news.", "deduction": 15.0, "sentiment": "negative"}]
     result = EvaluationResult(score=85.0, status="green", broken_points=broken)
     # OpenAI is imported lazily inside the function, so patch at the source module
     with patch("openai.OpenAI", side_effect=Exception("No API")):
@@ -196,7 +222,7 @@ def test_signal_interpreter_price_rules_detect_downtrend():
         prev_close=115.0,
         day_change_pct=-5.0,
         week_change_pct=-10.0,
-        month_change_pct=-20.0,  # triggers deduction for core_beliefs/strengths
+        month_change_pct=-20.0,  # triggers deduction for competitive_moat/strengths
         fifty_two_week_high=200.0,
         fifty_two_week_low=80.0,
         avg_volume_10d=1_000_000,
@@ -209,7 +235,7 @@ def test_signal_interpreter_price_rules_detect_downtrend():
     )
 
     theses = [
-        {"id": 1, "category": "core_beliefs", "statement": "Strong business model.", "weight": 1.0},
+        {"id": 1, "category": "competitive_moat", "statement": "Strong business model.", "weight": 1.0},
     ]
 
     mappings = _price_rules(price, theses)

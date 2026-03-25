@@ -1,17 +1,13 @@
 """Evaluate router — runs the full thesis evaluation pipeline for a stock."""
-import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.evaluation import Evaluation
-from app.schemas.evaluation import EvaluationRead
-from app.agents.signal_collector import collect_signals
-from app.agents.signal_interpreter import interpret_signals
-from app.agents.thesis_evaluator import evaluate_thesis
-from app.agents.explanation_agent import generate_explanation
+from app.schemas.evaluation import EvaluationRead, EvaluationSummary
+from app.services.evaluation_service import run_evaluation_for_stock
 
 router = APIRouter(prefix="/stocks", tags=["evaluate"])
 
@@ -23,43 +19,23 @@ def run_evaluation(ticker: str, db: Session = Depends(get_db)):
     if not stock:
         raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
 
-    selected_theses = (
+    selected_count = (
         db.query(Thesis)
         .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
-        .all()
+        .count()
     )
-    if len(selected_theses) < 3:
+    if selected_count < 3:
         raise HTTPException(
             status_code=422,
             detail=(
                 f"Select at least 3 thesis points for {ticker} before evaluating "
-                f"({len(selected_theses)} currently selected)."
+                f"({selected_count} currently selected)."
             ),
         )
 
-    thesis_dicts = [
-        {"id": t.id, "category": t.category, "statement": t.statement, "weight": t.weight}
-        for t in selected_theses
-    ]
-
-    # Pipeline
-    signals = collect_signals(ticker, stock.name)
-    mappings = interpret_signals(signals, thesis_dicts)
-    result = evaluate_thesis(mappings)
-    explanation = generate_explanation(ticker, result)
-
-    # Save evaluation
-    evaluation = Evaluation(
-        stock_id=stock.id,
-        score=result.score,
-        status=result.status,
-        explanation=explanation,
-        broken_points=json.dumps(result.broken_points),
-        confirmed_points=json.dumps(result.confirmed_points),
-    )
-    db.add(evaluation)
-    db.commit()
-    db.refresh(evaluation)
+    evaluation = run_evaluation_for_stock(stock, db)
+    if evaluation is None:
+        raise HTTPException(status_code=500, detail=f"Evaluation failed for {ticker}")
 
     return evaluation
 
@@ -81,3 +57,25 @@ def get_latest_evaluation(ticker: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"No evaluation found for {ticker}. Run POST /{ticker}/evaluate first.")
 
     return evaluation
+
+
+@router.get("/{ticker}/evaluation-history", response_model=list[EvaluationSummary])
+def get_evaluation_history(
+    ticker: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Return all evaluations for a stock, oldest first (for charting)."""
+    ticker = ticker.upper()
+    stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
+
+    evaluations = (
+        db.query(Evaluation)
+        .filter(Evaluation.stock_id == stock.id)
+        .order_by(Evaluation.timestamp.asc())
+        .limit(limit)
+        .all()
+    )
+    return evaluations

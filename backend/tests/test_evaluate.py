@@ -12,8 +12,8 @@ def _setup_stock_with_selected_theses(client, ticker="AAPL"):
     client.post("/stocks", json={"ticker": ticker, "name": "Apple Inc."})
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         mock_gen.return_value = [
-            GeneratedThesis(category="core_beliefs", statement="Strong ecosystem creates moat."),
-            GeneratedThesis(category="strengths", statement="Best-in-class product design."),
+            GeneratedThesis(category="competitive_moat", statement="Strong ecosystem creates moat."),
+            GeneratedThesis(category="growth_trajectory", statement="Best-in-class product design."),
             GeneratedThesis(category="risks", statement="Competition risk remains elevated."),
         ]
         r = client.post(f"/stocks/{ticker}/generate-thesis")
@@ -31,7 +31,7 @@ def test_evaluate_stock_not_found(client):
 def test_evaluate_no_selected_theses_returns_422(client):
     client.post("/stocks", json={"ticker": "AAPL", "name": "Apple"})
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
-        mock_gen.return_value = [GeneratedThesis(category="core_beliefs", statement="Belief.")]
+        mock_gen.return_value = [GeneratedThesis(category="competitive_moat", statement="Belief.")]
         client.post("/stocks/AAPL/generate-thesis")
     # Don't select any thesis
     r = client.post("/stocks/AAPL/evaluate")
@@ -44,8 +44,8 @@ def test_evaluate_too_few_theses_selected_returns_422(client):
     client.post("/stocks", json={"ticker": "AAPL", "name": "Apple"})
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         mock_gen.return_value = [
-            GeneratedThesis(category="core_beliefs", statement="Strong ecosystem."),
-            GeneratedThesis(category="strengths", statement="Best-in-class design."),
+            GeneratedThesis(category="competitive_moat", statement="Strong ecosystem."),
+            GeneratedThesis(category="growth_trajectory", statement="Best-in-class design."),
         ]
         r = client.post("/stocks/AAPL/generate-thesis")
     # Select only 1 of the 2 generated
@@ -63,10 +63,10 @@ def test_evaluate_full_pipeline_green(client):
     no_mappings: list[ThesisSignalMapping] = []
     green_result = EvaluationResult(score=100.0, status="green", broken_points=[])
 
-    with patch("app.routers.evaluate.collect_signals", return_value=no_signals), \
-         patch("app.routers.evaluate.interpret_signals", return_value=no_mappings), \
-         patch("app.routers.evaluate.evaluate_thesis", return_value=green_result), \
-         patch("app.routers.evaluate.generate_explanation", return_value="Thesis intact."):
+    with patch("app.services.evaluation_service.collect_signals", return_value=no_signals), \
+         patch("app.services.evaluation_service.interpret_signals", return_value=no_mappings), \
+         patch("app.services.evaluation_service.evaluate_thesis", return_value=green_result), \
+         patch("app.services.evaluation_service.generate_explanation", return_value="Thesis intact."):
         r = client.post("/stocks/AAPL/evaluate")
 
     assert r.status_code == 200
@@ -83,21 +83,21 @@ def test_evaluate_full_pipeline_red(client):
     no_signals = CollectedSignals(ticker="AAPL", price=None, news=[])
     broken_mappings = [
         ThesisSignalMapping(
-            thesis_id=1, category="core_beliefs", statement="Strong ecosystem.",
+            thesis_id=1, category="competitive_moat", statement="Strong ecosystem.",
             sentiment="negative", confidence=1.0, signal_summary="Revenue collapsed."
         )
     ]
     red_result = EvaluationResult(
         score=40.0,
         status="red",
-        broken_points=[{"thesis_id": 1, "category": "core_beliefs", "statement": "Strong ecosystem.",
+        broken_points=[{"thesis_id": 1, "category": "competitive_moat", "statement": "Strong ecosystem.",
                         "signal": "Revenue collapsed.", "sentiment": "negative", "deduction": 15.0}]
     )
 
-    with patch("app.routers.evaluate.collect_signals", return_value=no_signals), \
-         patch("app.routers.evaluate.interpret_signals", return_value=broken_mappings), \
-         patch("app.routers.evaluate.evaluate_thesis", return_value=red_result), \
-         patch("app.routers.evaluate.generate_explanation", return_value="Thesis breaking."):
+    with patch("app.services.evaluation_service.collect_signals", return_value=no_signals), \
+         patch("app.services.evaluation_service.interpret_signals", return_value=broken_mappings), \
+         patch("app.services.evaluation_service.evaluate_thesis", return_value=red_result), \
+         patch("app.services.evaluation_service.generate_explanation", return_value="Thesis breaking."):
         r = client.post("/stocks/AAPL/evaluate")
 
     assert r.status_code == 200
@@ -120,10 +120,10 @@ def test_get_latest_evaluation_returns_most_recent(client):
 
     def run_eval(score: float, status: str):
         result = EvaluationResult(score=score, status=status, broken_points=[])
-        with patch("app.routers.evaluate.collect_signals", return_value=no_signals), \
-             patch("app.routers.evaluate.interpret_signals", return_value=[]), \
-             patch("app.routers.evaluate.evaluate_thesis", return_value=result), \
-             patch("app.routers.evaluate.generate_explanation", return_value="ok"):
+        with patch("app.services.evaluation_service.collect_signals", return_value=no_signals), \
+             patch("app.services.evaluation_service.interpret_signals", return_value=[]), \
+             patch("app.services.evaluation_service.evaluate_thesis", return_value=result), \
+             patch("app.services.evaluation_service.generate_explanation", return_value="ok"):
             client.post("/stocks/AAPL/evaluate")
 
     run_eval(score=90.0, status="green")
@@ -139,14 +139,14 @@ def test_evaluate_broken_points_stored_and_returned_as_list(client):
     _setup_stock_with_selected_theses(client)
 
     no_signals = CollectedSignals(ticker="AAPL", price=None, news=[])
-    broken = [{"thesis_id": 1, "category": "core_beliefs", "statement": "Moat.",
+    broken = [{"thesis_id": 1, "category": "competitive_moat", "statement": "Moat.",
                "signal": "Bad news.", "sentiment": "negative", "deduction": 15.0}]
     red_result = EvaluationResult(score=85.0, status="green", broken_points=broken)
 
-    with patch("app.routers.evaluate.collect_signals", return_value=no_signals), \
-         patch("app.routers.evaluate.interpret_signals", return_value=[]), \
-         patch("app.routers.evaluate.evaluate_thesis", return_value=red_result), \
-         patch("app.routers.evaluate.generate_explanation", return_value="ok"):
+    with patch("app.services.evaluation_service.collect_signals", return_value=no_signals), \
+         patch("app.services.evaluation_service.interpret_signals", return_value=[]), \
+         patch("app.services.evaluation_service.evaluate_thesis", return_value=red_result), \
+         patch("app.services.evaluation_service.generate_explanation", return_value="ok"):
         client.post("/stocks/AAPL/evaluate")
 
     r = client.get("/stocks/AAPL/evaluation")

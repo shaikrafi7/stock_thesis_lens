@@ -1,10 +1,9 @@
-import Link from "next/link";
-import { fetchStocks, getLatestEvaluation, type Stock, type Evaluation } from "@/lib/api";
+import { fetchStocks, getLatestEvaluation, getPortfolioTrends, getPortfolioScoreHistories, type Stock, type Evaluation, type StockTrend } from "@/lib/api";
 import AddStockForm from "./components/AddStockForm";
-import StatusBadge from "./components/StatusBadge";
-import DeleteStockButton from "./components/DeleteStockButton";
 import PortfolioGauge from "./components/PortfolioGauge";
 import MorningBriefing from "./components/MorningBriefing";
+import EvaluateAllButton from "./components/EvaluateAllButton";
+import PortfolioTable from "./components/PortfolioTable";
 
 async function getEvaluationSafe(ticker: string): Promise<Evaluation | null> {
   try {
@@ -23,9 +22,13 @@ export default async function DashboardPage() {
     // backend may not be running yet
   }
 
-  const evaluations = await Promise.all(
-    stocks.map((s) => getEvaluationSafe(s.ticker))
-  );
+  const [evaluations, trends, scoreHistories] = await Promise.all([
+    Promise.all(stocks.map((s) => getEvaluationSafe(s.ticker))),
+    getPortfolioTrends().catch(() => [] as StockTrend[]),
+    getPortfolioScoreHistories(10).catch(() => ({} as Record<string, never>)),
+  ]);
+  const trendMap: Record<string, StockTrend> = {};
+  for (const t of trends) trendMap[t.ticker] = t;
 
   const evaluatedScores = evaluations
     .filter((e): e is Evaluation => e !== null)
@@ -68,60 +71,24 @@ export default async function DashboardPage() {
 
         {/* Portfolio */}
         <div>
-          <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
-            Portfolio ({stocks.length})
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs uppercase tracking-widest text-zinc-500">
+              Portfolio ({stocks.length})
+            </h2>
+            {stocks.length > 0 && <EvaluateAllButton />}
+          </div>
 
           {stocks.length === 0 ? (
             <p className="text-zinc-600 text-sm">
               No stocks yet. Add a ticker above to get started.
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {stocks.map((stock, i) => {
-                const evaluation = evaluations[i];
-                return (
-                  <div
-                    key={stock.ticker}
-                    className="flex items-center justify-between px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-zinc-600 transition-colors group"
-                  >
-                    <Link
-                      href={`/stocks/${stock.ticker}`}
-                      className="flex items-center gap-4 flex-1 min-w-0"
-                    >
-                      <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-zinc-800 flex items-center justify-center">
-                        {stock.logo_url ? (
-                          <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
-                        ) : (
-                          <span className="text-xs font-bold text-zinc-400">{stock.ticker[0]}</span>
-                        )}
-                      </div>
-                      <span className="font-mono font-semibold text-white w-16 shrink-0">
-                        {stock.ticker}
-                      </span>
-                      <span className="text-zinc-400 text-sm truncate">
-                        {stock.name}
-                      </span>
-                    </Link>
-                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {evaluation ? (
-                        <>
-                          <span className="text-zinc-500 text-xs font-mono">
-                            {evaluation.score}/100
-                          </span>
-                          <StatusBadge status={evaluation.status} />
-                        </>
-                      ) : (
-                        <span className="text-zinc-600 text-xs">
-                          Not evaluated
-                        </span>
-                      )}
-                      <DeleteStockButton ticker={stock.ticker} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <PortfolioTable
+              stocks={stocks}
+              evaluations={evaluations}
+              trendMap={trendMap}
+              scoreHistories={scoreHistories}
+            />
           )}
         </div>
       </div>

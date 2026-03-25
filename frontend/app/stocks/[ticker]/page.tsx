@@ -3,6 +3,7 @@ import { getTheses, getLatestEvaluation, type Thesis, type Evaluation } from "@/
 import ThesisManager from "./ThesisManager";
 import DeleteStockButton from "@/app/components/DeleteStockButton";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
+import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -83,8 +84,9 @@ export default async function StockPage({ params }: Props) {
         {/* 2-column layout: chart/info on left, thesis on right */}
         <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-10 items-start">
           {/* Left: stock info + chart (sticky on scroll) */}
-          <div className="md:sticky md:top-8">
+          <div className="md:sticky md:top-8 flex flex-col gap-4 min-w-0">
             <StockInfoPanel ticker={upperTicker} />
+            <ScoreHistoryChart ticker={upperTicker} />
           </div>
 
           {/* Right: thesis manager */}

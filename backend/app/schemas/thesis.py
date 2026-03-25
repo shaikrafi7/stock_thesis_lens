@@ -1,8 +1,12 @@
 from datetime import datetime
 from typing import Literal, Optional
 from pydantic import BaseModel, field_validator, model_validator
+from app.schemas.evaluation import EvaluationRead
 
-ThesisCategory = Literal["core_beliefs", "strengths", "risks", "leadership", "catalysts"]
+ThesisCategory = Literal[
+    "competitive_moat", "growth_trajectory", "valuation",
+    "financial_health", "ownership_conviction", "risks",
+]
 
 
 class ThesisRead(BaseModel):
@@ -12,6 +16,8 @@ class ThesisRead(BaseModel):
     statement: str
     selected: bool
     weight: float
+    importance: str = "standard"  # standard | important | critical
+    frozen: bool = False
     created_at: datetime
     last_confirmed: Optional[datetime] = None
 
@@ -21,6 +27,8 @@ class ThesisRead(BaseModel):
 class ThesisUpdate(BaseModel):
     selected: Optional[bool] = None
     statement: Optional[str] = None
+    frozen: Optional[bool] = None
+    importance: Optional[Literal["standard", "important", "critical"]] = None
 
     @field_validator("statement")
     @classmethod
@@ -96,3 +104,9 @@ class BriefingItemSchema(BaseModel):
 class MorningBriefingResponse(BaseModel):
     summary: str
     items: list[BriefingItemSchema]
+    date: Optional[str] = None  # ISO date string, e.g. "2026-03-23"
+
+
+class GenerateAndEvaluateResponse(BaseModel):
+    theses: list[ThesisRead]
+    evaluation: Optional[EvaluationRead] = None

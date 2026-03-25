@@ -56,11 +56,67 @@ class FundamentalSignal:
 
 
 @dataclass
+class InsiderSignal:
+    form_type: str
+    date: str
+    filer: str
+
+
+@dataclass
+class FilingSignal:
+    form_type: str
+    date: str
+    title: str
+
+
+@dataclass
+class ValuationSignal:
+    trailing_pe: float | None = None
+    forward_pe: float | None = None
+    peg_ratio: float | None = None
+    ps_ratio: float | None = None
+    pb_ratio: float | None = None
+    ev_ebitda: float | None = None
+    analyst_target: float | None = None
+    current_price: float | None = None
+
+
+@dataclass
+class FinancialHealthSignal:
+    debt_to_equity: float | None = None
+    current_ratio: float | None = None
+    roe: float | None = None
+    gross_margin: float | None = None
+    operating_margin: float | None = None
+    profit_margin: float | None = None
+    fcf: float | None = None
+    total_cash: float | None = None
+    total_debt: float | None = None
+    revenue: float | None = None
+    revenue_growth: float | None = None
+
+
+@dataclass
+class OwnershipSignal:
+    institutional_pct: float | None = None
+    insider_pct: float | None = None
+    short_pct_float: float | None = None
+    analyst_count: int | None = None
+    recommendation: str | None = None  # e.g. "buy", "hold", "sell"
+    target_price: float | None = None
+
+
+@dataclass
 class CollectedSignals:
     ticker: str
     price: PriceSignal | None
     news: list[NewsSignal] = field(default_factory=list)
     fundamentals: FundamentalSignal | None = None
+    insider_transactions: list[InsiderSignal] = field(default_factory=list)
+    recent_filings: list[FilingSignal] = field(default_factory=list)
+    valuation: ValuationSignal | None = None
+    financial_health: FinancialHealthSignal | None = None
+    ownership: OwnershipSignal | None = None
 
 
 # ── Polygon helpers ──────────────────────────────────────────────────────────
@@ -216,6 +272,91 @@ def _collect_fundamentals(ticker: str) -> FundamentalSignal | None:
         return None
 
 
+# ── SEC EDGAR helpers ────────────────────────────────────────────────────────
+
+def _collect_insider(ticker: str) -> list[InsiderSignal]:
+    try:
+        from app.utils.sec_edgar import get_insider_transactions
+        raw = get_insider_transactions(ticker, days=90)
+        return [
+            InsiderSignal(
+                form_type=r.get("form_type", "4"),
+                date=r.get("date", ""),
+                filer=r.get("filer", ""),
+            )
+            for r in raw
+        ]
+    except Exception as exc:
+        logger.error("signal_collector: insider fetch failed for %s: %s", ticker, exc)
+        return []
+
+
+def _collect_filings(ticker: str) -> list[FilingSignal]:
+    try:
+        from app.utils.sec_edgar import get_recent_filings
+        raw = get_recent_filings(ticker, days=90)
+        return [
+            FilingSignal(
+                form_type=r.get("form_type", ""),
+                date=r.get("date", ""),
+                title=r.get("title", ""),
+            )
+            for r in raw
+        ]
+    except Exception as exc:
+        logger.error("signal_collector: filings fetch failed for %s: %s", ticker, exc)
+        return []
+
+
+# ── yfinance extended data ──────────────────────────────────────────────────
+
+def _collect_yfinance_extended(ticker: str) -> tuple[ValuationSignal | None, FinancialHealthSignal | None, OwnershipSignal | None]:
+    """Collect valuation, financial health, and ownership data from yfinance."""
+    try:
+        import yfinance as yf
+        info = yf.Ticker(ticker).info
+
+        valuation = ValuationSignal(
+            trailing_pe=info.get("trailingPE"),
+            forward_pe=info.get("forwardPE"),
+            peg_ratio=info.get("pegRatio"),
+            ps_ratio=info.get("priceToSalesTrailing12Months"),
+            pb_ratio=info.get("priceToBook"),
+            ev_ebitda=info.get("enterpriseToEbitda"),
+            analyst_target=info.get("targetMeanPrice"),
+            current_price=info.get("currentPrice") or info.get("regularMarketPrice"),
+        )
+
+        financial = FinancialHealthSignal(
+            debt_to_equity=info.get("debtToEquity"),
+            current_ratio=info.get("currentRatio"),
+            roe=info.get("returnOnEquity"),
+            gross_margin=info.get("grossMargins"),
+            operating_margin=info.get("operatingMargins"),
+            profit_margin=info.get("profitMargins"),
+            fcf=info.get("freeCashflow"),
+            total_cash=info.get("totalCash"),
+            total_debt=info.get("totalDebt"),
+            revenue=info.get("totalRevenue"),
+            revenue_growth=info.get("revenueGrowth"),
+        )
+
+        rec_key = info.get("recommendationKey", "")
+        ownership = OwnershipSignal(
+            institutional_pct=info.get("heldPercentInstitutions"),
+            insider_pct=info.get("heldPercentInsiders"),
+            short_pct_float=info.get("shortPercentOfFloat"),
+            analyst_count=info.get("numberOfAnalystOpinions"),
+            recommendation=rec_key if rec_key else None,
+            target_price=info.get("targetMeanPrice"),
+        )
+
+        return valuation, financial, ownership
+    except Exception as exc:
+        logger.error("signal_collector: yfinance extended data failed for %s: %s", ticker, exc)
+        return None, None, None
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
@@ -223,4 +364,17 @@ def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
     price = _collect_price(ticker)
     news = _collect_news(ticker, company_name)
     fundamentals = _collect_fundamentals(ticker)
-    return CollectedSignals(ticker=ticker, price=price, news=news, fundamentals=fundamentals)
+    insider = _collect_insider(ticker)
+    filings = _collect_filings(ticker)
+    valuation, financial, ownership = _collect_yfinance_extended(ticker)
+    return CollectedSignals(
+        ticker=ticker,
+        price=price,
+        news=news,
+        fundamentals=fundamentals,
+        insider_transactions=insider,
+        recent_filings=filings,
+        valuation=valuation,
+        financial_health=financial,
+        ownership=ownership,
+    )

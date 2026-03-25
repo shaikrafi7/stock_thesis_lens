@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  chatWithAssistant,
-  chatWithPortfolioAssistant,
   addManualThesis,
   addStock,
   deleteStock,
@@ -12,6 +10,7 @@ import {
   type ThesisSuggestion,
   type PortfolioAction,
 } from "@/lib/api";
+import { streamChat } from "@/lib/streaming";
 import { useAssistant } from "@/app/context/AssistantContext";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -104,33 +103,50 @@ export default function AssistantPanel() {
     setPendingAction(null);
     setError("");
 
-    try {
-      if (isPortfolioMode) {
-        const result = await chatWithPortfolioAssistant(newHistory);
-        setChatHistory((prev) => [
-          ...prev,
-          { role: "assistant", content: result.message },
-        ]);
-        if (result.action) setPendingAction(result.action);
-      } else {
-        const result = await chatWithAssistant(ticker!, newHistory);
-        setChatHistory((prev) => [
-          ...prev,
-          { role: "assistant", content: result.message },
-        ]);
-        if (result.suggestion) setPendingSuggestion(result.suggestion);
-      }
-    } catch (err) {
-      setChatHistory((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: err instanceof Error ? err.message : "Something went wrong.",
+    // Add placeholder assistant message that will stream in
+    const streamingHistory = [...newHistory, { role: "assistant" as const, content: "" }];
+    setChatHistory(streamingHistory);
+
+    let accumulated = "";
+    const path = isPortfolioMode
+      ? "/portfolio/chat/stream"
+      : `/stocks/${ticker}/chat/stream`;
+
+    await streamChat(
+      path,
+      { messages: newHistory },
+      {
+        onToken(text) {
+          accumulated += text;
+          setChatHistory((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: accumulated };
+            return updated;
+          });
         },
-      ]);
-    } finally {
-      setChatLoading(false);
-    }
+        onMeta(event, data) {
+          if (event === "suggestion") {
+            setPendingSuggestion(data as unknown as ThesisSuggestion);
+          } else if (event === "action") {
+            setPendingAction(data as unknown as PortfolioAction);
+          }
+        },
+        onDone() {
+          setChatLoading(false);
+        },
+        onError(message) {
+          if (!accumulated) {
+            // Replace empty placeholder with error
+            setChatHistory((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: "assistant", content: message };
+              return updated;
+            });
+          }
+          setChatLoading(false);
+        },
+      }
+    );
   }
 
   // Stock-mode: add thesis suggestion
@@ -197,6 +213,14 @@ export default function AssistantPanel() {
         >
           {isPortfolioMode ? "Portfolio AI" : "Research AI"}
         </button>
+      )}
+
+      {/* Backdrop — click to dismiss */}
+      {isOpen && (
+        <div
+          onClick={togglePanel}
+          className="fixed inset-0 z-20 bg-black/10"
+        />
       )}
 
       {/* Slide-in panel */}

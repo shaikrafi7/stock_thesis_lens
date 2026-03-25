@@ -1,5 +1,6 @@
 from .stock import Stock
 from .thesis import Thesis
 from .evaluation import Evaluation
+from .briefing import Briefing
 
-__all__ = ["Stock", "Thesis", "Evaluation"]
+__all__ = ["Stock", "Thesis", "Evaluation", "Briefing"]

@@ -3,11 +3,12 @@ from unittest.mock import patch
 
 
 MOCK_BULLETS = {
-    "core_beliefs": ["Strong ecosystem creates durable competitive moat."],
-    "strengths": ["High gross margins support R&D reinvestment."],
+    "competitive_moat": ["Strong ecosystem creates durable competitive moat."],
+    "growth_trajectory": ["High gross margins support R&D reinvestment."],
+    "valuation": ["Trading below peer average on PEG basis."],
+    "financial_health": ["Free cash flow exceeds all debt obligations."],
+    "ownership_conviction": ["Institutional ownership above 80 percent."],
     "risks": ["Concentration risk in single product line."],
-    "leadership": ["CEO has strong track record of capital allocation."],
-    "catalysts": ["AI product roadmap opens new revenue streams."],
 }
 
 
@@ -32,10 +33,10 @@ def test_generate_thesis_calls_agent_and_saves(client):
 
     assert r.status_code == 200
     data = r.json()
-    assert len(data) == 5
+    assert len(data) == 6
     categories = {item["category"] for item in data}
     assert categories == set(MOCK_BULLETS.keys())
-    assert all(item["selected"] is False for item in data)
+    assert all(item["selected"] is True for item in data)  # all auto-selected
 
 
 def test_generate_thesis_preserves_selections_on_regenerate(client):
@@ -43,7 +44,7 @@ def test_generate_thesis_preserves_selections_on_regenerate(client):
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         from app.agents.thesis_generator import GeneratedThesis
         stmt = "Strong ecosystem creates durable competitive moat."
-        mock_gen.return_value = [GeneratedThesis(category="core_beliefs", statement=stmt)]
+        mock_gen.return_value = [GeneratedThesis(category="competitive_moat", statement=stmt)]
         r = client.post("/stocks/AAPL/generate-thesis")
 
     thesis_id = r.json()[0]["id"]
@@ -54,7 +55,7 @@ def test_generate_thesis_preserves_selections_on_regenerate(client):
     # Regenerate with same statement — selection should be preserved
     with patch("app.routers.thesis.generate_thesis") as mock_gen2:
         from app.agents.thesis_generator import GeneratedThesis
-        mock_gen2.return_value = [GeneratedThesis(category="core_beliefs", statement=stmt)]
+        mock_gen2.return_value = [GeneratedThesis(category="competitive_moat", statement=stmt)]
         r2 = client.post("/stocks/AAPL/generate-thesis")
 
     assert r2.json()[0]["selected"] is True
@@ -64,7 +65,7 @@ def test_get_theses(client):
     _add_stock(client)
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         from app.agents.thesis_generator import GeneratedThesis
-        mock_gen.return_value = [GeneratedThesis(category="core_beliefs", statement="Test belief.")]
+        mock_gen.return_value = [GeneratedThesis(category="competitive_moat", statement="Test belief.")]
         client.post("/stocks/AAPL/generate-thesis")
 
     r = client.get("/stocks/AAPL/theses")
@@ -76,7 +77,7 @@ def test_update_thesis_selection(client):
     _add_stock(client)
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         from app.agents.thesis_generator import GeneratedThesis
-        mock_gen.return_value = [GeneratedThesis(category="core_beliefs", statement="Belief.")]
+        mock_gen.return_value = [GeneratedThesis(category="competitive_moat", statement="Belief.")]
         r = client.post("/stocks/AAPL/generate-thesis")
 
     thesis_id = r.json()[0]["id"]
@@ -95,7 +96,7 @@ def test_update_thesis_wrong_stock_returns_404(client):
 
     with patch("app.routers.thesis.generate_thesis") as mock_gen:
         from app.agents.thesis_generator import GeneratedThesis
-        mock_gen.return_value = [GeneratedThesis(category="core_beliefs", statement="Belief.")]
+        mock_gen.return_value = [GeneratedThesis(category="competitive_moat", statement="Belief.")]
         r = client.post("/stocks/AAPL/generate-thesis")
 
     thesis_id = r.json()[0]["id"]

@@ -30,6 +30,7 @@ class EvaluationRead(BaseModel):
     explanation: Optional[str] = None
     broken_points: list[BrokenPoint] = []
     confirmed_points: list[ConfirmedPoint] = []
+    frozen_breaks: list[BrokenPoint] = []
     timestamp: datetime
 
     model_config = {"from_attributes": True}
@@ -37,10 +38,10 @@ class EvaluationRead(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def parse_json_fields(cls, data: Any) -> Any:
-        # Handle ORM objects where broken_points/confirmed_points are JSON strings
+        # Handle ORM objects where broken_points/confirmed_points/frozen_breaks are JSON strings
         if hasattr(data, "__dict__"):
             obj_dict = {c.key: getattr(data, c.key) for c in data.__table__.columns}
-            for field in ("broken_points", "confirmed_points"):
+            for field in ("broken_points", "confirmed_points", "frozen_breaks"):
                 raw = obj_dict.get(field)
                 if isinstance(raw, str):
                     try:
@@ -51,3 +52,20 @@ class EvaluationRead(BaseModel):
                     obj_dict[field] = []
             return obj_dict
         return data
+
+
+class EvaluationSummary(BaseModel):
+    """Lightweight schema for history charts — no broken/confirmed details."""
+    id: int
+    score: float
+    status: str
+    timestamp: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StockTrend(BaseModel):
+    ticker: str
+    score: float
+    previous_score: Optional[float] = None
+    trend: str  # "up" | "down" | "flat" | "new"
