@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { addStock, generateThesis } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Plus, Loader2 } from "lucide-react";
 
 export default function AddStockForm() {
   const router = useRouter();
@@ -49,14 +50,24 @@ export default function AddStockForm() {
           onChange={(e) => setInput(e.target.value.toUpperCase())}
           placeholder="AAPL, NVDA, MSFT"
           disabled={busy}
-          className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 uppercase flex-1 min-w-0 max-w-xs"
+          className="px-3 py-2 bg-surface border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 uppercase flex-1 min-w-0 max-w-xs transition-colors"
         />
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white rounded transition-colors shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium shrink-0"
         >
-          {busy ? progress : "Add"}
+          {busy ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {progress}
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              Add
+            </>
+          )}
         </button>
       </div>
       {errors.length > 0 && (

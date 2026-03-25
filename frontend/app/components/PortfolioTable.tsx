@@ -6,12 +6,13 @@ import DeleteStockButton from "./DeleteStockButton";
 import StatusBadge from "./StatusBadge";
 import type { Stock, Evaluation, StockTrend, EvaluationSummary } from "@/lib/api";
 import MiniSparkline from "./MiniSparkline";
+import { TrendingUp, TrendingDown, Minus, CircleDot } from "lucide-react";
 
-const TREND_ICONS: Record<string, { icon: string; color: string }> = {
-  up: { icon: "\u25B2", color: "text-green-400" },
-  down: { icon: "\u25BC", color: "text-red-400" },
-  flat: { icon: "\u25B6", color: "text-zinc-500" },
-  new: { icon: "\u2022", color: "text-blue-400" },
+const TREND_ICONS: Record<string, { Icon: typeof TrendingUp; color: string }> = {
+  up: { Icon: TrendingUp, color: "text-green-400" },
+  down: { Icon: TrendingDown, color: "text-red-400" },
+  flat: { Icon: Minus, color: "text-zinc-500" },
+  new: { Icon: CircleDot, color: "text-teal-400" },
 };
 
 type SortField = "ticker" | "score";
@@ -55,7 +56,7 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
 
   const arrow = (field: SortField) => {
     if (sortField !== field) return "";
-    return sortDir === "asc" ? " ▲" : " ▼";
+    return sortDir === "asc" ? " \u25B2" : " \u25BC";
   };
 
   return (
@@ -88,13 +89,13 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
           return (
             <div
               key={stock.ticker}
-              className="flex items-center justify-between px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-zinc-600 transition-colors group"
+              className="flex items-center justify-between px-4 py-3 bg-surface border border-zinc-800 rounded-xl hover:border-zinc-600 hover:bg-surface-raised/50 transition-all group"
             >
               <Link
                 href={`/stocks/${stock.ticker}`}
                 className="flex items-center gap-4 flex-1 min-w-0"
               >
-                <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-zinc-800 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden bg-zinc-800 flex items-center justify-center">
                   {stock.logo_url ? (
                     <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
                   ) : (
@@ -119,10 +120,10 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
                     )}
                     {trendInfo && (
                       <span
-                        className={`text-[10px] ${trendInfo.color}`}
+                        className={trendInfo.color}
                         title={trend?.previous_score != null ? `prev: ${trend.previous_score}` : "first evaluation"}
                       >
-                        {trendInfo.icon}
+                        <trendInfo.Icon className="w-3.5 h-3.5" />
                       </span>
                     )}
                     <StatusBadge status={evaluation.status} />

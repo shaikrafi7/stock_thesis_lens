@@ -29,7 +29,7 @@ export default function ScoreHistoryChart({ ticker }: Props) {
 
   if (loading) {
     return (
-      <div className="animate-pulse bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      <div className="animate-pulse bg-surface border border-zinc-800 rounded-xl p-4">
         <div className="h-3 bg-zinc-800 rounded w-28 mb-3" />
         <div className="h-32 bg-zinc-800 rounded" />
       </div>
@@ -53,7 +53,7 @@ export default function ScoreHistoryChart({ ticker }: Props) {
   const trendColor = delta > 0 ? "#22c55e" : delta < 0 ? "#ef4444" : "#eab308";
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+    <div className="bg-surface border border-zinc-800 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs uppercase tracking-widest text-zinc-500">Score History</p>
         <div className="flex items-center gap-1.5">

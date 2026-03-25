@@ -40,15 +40,15 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-2xl font-semibold tracking-tight text-white mb-1">
-            Stock Thesis Lens
+            ThesisArc
           </h1>
           <p className="text-zinc-500 text-sm">
-            Is my investment thesis still valid?
+            Track the arc of your conviction
           </p>
         </div>
 

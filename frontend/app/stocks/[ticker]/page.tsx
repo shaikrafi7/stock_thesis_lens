@@ -4,6 +4,7 @@ import ThesisManager from "./ThesisManager";
 import DeleteStockButton from "@/app/components/DeleteStockButton";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
+import { ArrowLeft } from "lucide-react";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -24,11 +25,12 @@ export default async function StockPage({ params }: Props) {
   const stock = await getStock(upperTicker);
   if (!stock) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
           <p className="text-zinc-400 mb-4">Stock &quot;{upperTicker}&quot; not found.</p>
-          <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">
-            ← Back to Portfolio
+          <Link href="/" className="text-accent hover:text-accent-hover text-sm inline-flex items-center gap-1">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Portfolio
           </Link>
         </div>
       </div>
@@ -51,20 +53,21 @@ export default async function StockPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Breadcrumb */}
         <Link
           href="/"
-          className="text-zinc-600 hover:text-zinc-400 text-sm mb-8 inline-block transition-colors"
+          className="text-zinc-600 hover:text-zinc-400 text-sm mb-8 inline-flex items-center gap-1 transition-colors"
         >
-          ← Portfolio
+          <ArrowLeft className="w-4 h-4" />
+          Portfolio
         </Link>
 
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl overflow-hidden bg-surface flex items-center justify-center shrink-0 border border-zinc-800">
               {stock.logo_url ? (
                 <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
               ) : (

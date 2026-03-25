@@ -10,7 +10,7 @@ const scoreLabel = (score: number) =>
 
 export default function PortfolioGauge({ avgScore }: { avgScore: number }) {
   return (
-    <div className="flex flex-col items-center py-6 mb-8 bg-zinc-900 border border-zinc-800 rounded-xl">
+    <div className="flex flex-col items-center py-6 mb-8 bg-surface/80 backdrop-blur-sm border border-zinc-800 rounded-2xl">
       <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">
         Portfolio Thesis Health
       </p>

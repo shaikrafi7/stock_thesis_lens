@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { evaluateAll } from "@/lib/api";
+import { Activity, Loader2 } from "lucide-react";
 
 export default function EvaluateAllButton() {
   const router = useRouter();
@@ -31,8 +32,13 @@ export default function EvaluateAllButton() {
       <button
         onClick={handleClick}
         disabled={loading}
-        className="px-3 py-1.5 text-xs bg-blue-700 hover:bg-blue-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium"
       >
+        {loading ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Activity className="w-3.5 h-3.5" />
+        )}
         {loading ? "Evaluating\u2026" : "Evaluate All"}
       </button>
       {result && (

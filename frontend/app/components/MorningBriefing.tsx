@@ -8,11 +8,12 @@ import {
   type MorningBriefingResponse,
   type BriefingItem,
 } from "@/lib/api";
+import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper } from "lucide-react";
 
 const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
-  bullish: { badge: "bg-green-950 border-green-800 text-green-400", dot: "bg-green-500" },
-  bearish: { badge: "bg-red-950 border-red-800 text-red-400", dot: "bg-red-500" },
-  neutral: { badge: "bg-zinc-800 border-zinc-700 text-zinc-400", dot: "bg-zinc-500" },
+  bullish: { badge: "bg-green-950/60 border-green-800 text-green-400", dot: "bg-green-500" },
+  bearish: { badge: "bg-red-950/60 border-red-800 text-red-400", dot: "bg-red-500" },
+  neutral: { badge: "bg-zinc-800/60 border-zinc-700 text-zinc-400", dot: "bg-zinc-500" },
 };
 
 function BriefingCard({ item }: { item: BriefingItem }) {
@@ -35,7 +36,7 @@ function BriefingCard({ item }: { item: BriefingItem }) {
   }
 
   return (
-    <div className={`border rounded-lg p-3 ${styles.badge}`}>
+    <div className={`border rounded-xl p-3 ${styles.badge}`}>
       <div className="flex items-start gap-2">
         <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${styles.dot}`} />
         <div className="flex-1 min-w-0">
@@ -52,9 +53,10 @@ function BriefingCard({ item }: { item: BriefingItem }) {
               <button
                 onClick={handleAdd}
                 disabled={adding || added}
-                className="text-[10px] px-2 py-0.5 rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent-hover disabled:opacity-50 text-white transition-colors"
               >
-                {added ? "Added \u2713" : adding ? "Adding\u2026" : `Add to ${item.ticker}`}
+                {added ? <Check className="w-3 h-3" /> : adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                {added ? "Added" : adding ? "Adding\u2026" : `Add to ${item.ticker}`}
               </button>
             </div>
           )}
@@ -66,7 +68,7 @@ function BriefingCard({ item }: { item: BriefingItem }) {
 
 function BriefingSection({ data, dateLabel }: { data: MorningBriefingResponse; dateLabel: string }) {
   return (
-    <div className="px-4 py-3 bg-zinc-950">
+    <div className="px-4 py-3">
       <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-2">{dateLabel}</p>
       {data.summary && (
         <p className="text-zinc-400 text-sm leading-relaxed mb-4 border-l-2 border-zinc-700 pl-3">
@@ -116,7 +118,7 @@ export default function MorningBriefing() {
 
   if (loading) {
     return (
-      <div className="animate-pulse border border-zinc-800 rounded-xl p-4 mb-8">
+      <div className="animate-pulse border border-zinc-800 rounded-2xl p-4 mb-8">
         <div className="h-3 bg-zinc-800 rounded w-32 mb-3" />
         <div className="h-4 bg-zinc-800 rounded w-2/3 mb-2" />
         <div className="h-4 bg-zinc-800 rounded w-1/2" />
@@ -129,16 +131,17 @@ export default function MorningBriefing() {
   const today = new Date().toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="border border-zinc-800 rounded-xl mb-8 overflow-hidden">
+    <div className="border border-zinc-800 rounded-2xl mb-8 overflow-hidden bg-surface/50 backdrop-blur-sm">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-zinc-900 hover:bg-zinc-800 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors"
       >
         <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-zinc-500" />
           <span className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Today&apos;s Briefing</span>
           <span className="text-zinc-600 text-xs">{today}</span>
         </div>
-        <span className="text-zinc-500 text-xs">{open ? "\u25B2" : "\u25BC"}</span>
+        {open ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
       </button>
 
       {open && (
@@ -149,12 +152,12 @@ export default function MorningBriefing() {
           <div className="border-t border-zinc-800">
             <button
               onClick={handleToggleHistory}
-              className="w-full flex items-center justify-between px-4 py-2 bg-zinc-900 hover:bg-zinc-800 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2 bg-surface hover:bg-surface-raised/50 transition-colors"
             >
               <span className="text-[11px] text-zinc-500">
                 {historyOpen ? "Hide past briefings" : "Show past briefings"}
               </span>
-              <span className="text-zinc-600 text-[10px]">{historyOpen ? "\u25B2" : "\u25BC"}</span>
+              {historyOpen ? <ChevronUp className="w-3.5 h-3.5 text-zinc-600" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-600" />}
             </button>
 
             {historyOpen && (

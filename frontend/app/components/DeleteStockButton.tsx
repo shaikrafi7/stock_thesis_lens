@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { deleteStock } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Trash2, Loader2 } from "lucide-react";
 
 interface Props {
   ticker: string;
@@ -32,10 +33,10 @@ export default function DeleteStockButton({ ticker, redirectTo }: Props) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-zinc-600 hover:text-red-400 text-xs transition-colors disabled:opacity-50"
+      className="text-zinc-600 hover:text-red-400 transition-colors disabled:opacity-50 p-1 rounded hover:bg-red-950/30"
       title="Remove from portfolio"
     >
-      {loading ? "…" : "✕"}
+      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
     </button>
   );
 }

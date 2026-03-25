@@ -10,9 +10,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchMarketData, type MarketData } from "@/lib/api";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 function fmt(n: number | null | undefined, style: "currency" | "percent" | "decimal", decimals = 2) {
-  if (n == null) return "—";
+  if (n == null) return "\u2014";
   if (style === "currency") {
     if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
     if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
@@ -25,7 +26,7 @@ function fmt(n: number | null | undefined, style: "currency" | "percent" | "deci
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-zinc-800 last:border-0">
+    <div className="flex justify-between items-center py-1.5 border-b border-zinc-800/50 last:border-0">
       <span className="text-zinc-500 text-xs">{label}</span>
       <span className="text-zinc-200 text-xs font-medium">{value}</span>
     </div>
@@ -49,7 +50,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
   if (loading) {
     return (
       <div className="flex flex-col gap-3 animate-pulse">
-        <div className="h-40 bg-zinc-800 rounded-lg" />
+        <div className="h-40 bg-zinc-800 rounded-xl" />
         <div className="h-5 bg-zinc-800 rounded w-2/3" />
         <div className="h-4 bg-zinc-800 rounded w-1/2" />
         <div className="h-4 bg-zinc-800 rounded w-3/4" />
@@ -85,16 +86,19 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
         {company.sector && (
           <p className="text-zinc-500 text-xs mt-0.5">{company.sector} · {company.industry}</p>
         )}
-        <p className={`text-sm font-mono font-bold mt-1 ${positive ? "text-green-400" : "text-red-400"}`}>
-          ${lastClose.toFixed(2)}{" "}
-          <span className="text-xs font-normal">
-            {positive ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}% (3mo)
+        <div className={`flex items-center gap-1.5 mt-1 ${positive ? "text-green-400" : "text-red-400"}`}>
+          {positive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          <span className="text-sm font-mono font-bold">
+            ${lastClose.toFixed(2)}
           </span>
-        </p>
+          <span className="text-xs font-normal">
+            {positive ? "+" : ""}{delta.toFixed(2)}% (3mo)
+          </span>
+        </div>
       </div>
 
       {/* Price chart */}
-      <div className="h-40">
+      <div className="h-40 bg-surface rounded-xl p-2 border border-zinc-800">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={prices} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <defs>
@@ -123,7 +127,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
               tickFormatter={(v: number) => `$${v.toFixed(0)}`}
             />
             <Tooltip
-              contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: 6, fontSize: 12 }}
+              contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 }}
               labelStyle={{ color: "#a1a1aa" }}
               itemStyle={{ color: "#e4e4e7" }}
               formatter={(v) => [`$${Number(v).toFixed(2)}`, "Close"]}
@@ -142,10 +146,10 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
       </div>
 
       {/* Stats */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1">
+      <div className="bg-surface border border-zinc-800 rounded-xl px-3 py-1">
         <StatRow label="Market Cap" value={fmt(company.market_cap, "currency")} />
         <StatRow label="Beta" value={fmt(company.beta, "decimal")} />
-        <StatRow label="Analyst Target" value={company.analyst_target != null ? `$${company.analyst_target.toFixed(2)}` : "—"} />
+        <StatRow label="Analyst Target" value={company.analyst_target != null ? `$${company.analyst_target.toFixed(2)}` : "\u2014"} />
         <StatRow label="Institutional Own." value={fmt(company.institutional_ownership, "percent")} />
       </div>
     </div>

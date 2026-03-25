@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stock Thesis Lens",
-  description: "Is my investment thesis still valid?",
+  title: "ThesisArc",
+  description: "Track the arc of your conviction",
 };
 
 export default function RootLayout({

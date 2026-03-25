@@ -15,6 +15,18 @@ import {
 } from "@/lib/api";
 import { useAssistant } from "@/app/context/AssistantContext";
 import StatusBadge from "@/app/components/StatusBadge";
+import {
+  Lock,
+  Unlock,
+  Pencil,
+  X,
+  AlertTriangle,
+  Loader2,
+  RefreshCw,
+  Activity,
+  Save,
+  CircleDot,
+} from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
   competitive_moat: "Competitive Moat",
@@ -146,7 +158,6 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
   function handleFreeze(thesis: Thesis) {
     if (thesis.frozen) {
-      // Unfreezing requires confirmation
       setConfirmAction({ type: "unfreeze", thesis });
       return;
     }
@@ -231,17 +242,17 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     <div className="flex flex-col gap-8">
       {/* Frozen break alert banner */}
       {evaluation && evaluation.frozen_breaks && evaluation.frozen_breaks.length > 0 && (
-        <div className="bg-red-950 border border-red-700 rounded-lg p-4">
+        <div className="bg-red-950/60 border border-red-800 rounded-xl p-4 backdrop-blur-sm">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-red-400 text-lg">&#9888;</span>
+            <AlertTriangle className="w-5 h-5 text-red-400" />
             <h4 className="text-red-300 text-sm font-bold uppercase tracking-wide">
               Core Conviction Under Pressure
             </h4>
           </div>
           {evaluation.frozen_breaks.map((fb, i) => (
-            <div key={i} className="ml-6 mb-1">
+            <div key={i} className="ml-7 mb-1">
               <p className="text-red-200 text-sm">
-                <span className="text-red-400 font-mono mr-1">&#9679;</span>
+                <CircleDot className="w-3 h-3 text-red-400 inline mr-1.5" />
                 &quot;{fb.statement}&quot;
                 <span className="text-red-400 text-xs ml-2">&mdash; {fb.signal}</span>
               </p>
@@ -252,7 +263,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Per-stock thesis health gauge */}
       {evaluation && (
-        <div className="flex flex-col items-center py-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+        <div className="flex flex-col items-center py-4 bg-surface/80 backdrop-blur-sm border border-zinc-800 rounded-2xl">
           <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Thesis Health</p>
           <GaugeComponent
             type="semicircle"
@@ -287,16 +298,26 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-200 rounded border border-zinc-700 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-surface hover:bg-surface-raised disabled:opacity-50 text-zinc-200 rounded-lg border border-zinc-700 transition-colors"
         >
+          {generating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
           {generating ? "Generating & Evaluating..." : theses.length ? "Regenerate Thesis" : "Generate Thesis"}
         </button>
         <button
           onClick={handleEvaluate}
           disabled={evaluating || selectedCount < 3}
-          className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors"
           title={selectedCount < 3 ? `Select at least 3 points (${selectedCount} selected)` : undefined}
         >
+          {evaluating ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Activity className="w-4 h-4" />
+          )}
           {evaluating ? "Evaluating..." : `Evaluate (${selectedCount} selected)`}
         </button>
         {error && <p className="text-red-400 text-xs">{error}</p>}
@@ -304,7 +325,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Evaluation result */}
       {evaluation && (
-        <div className="border border-zinc-700 rounded-lg p-5 bg-zinc-900">
+        <div className="border border-zinc-700 rounded-xl p-5 bg-surface">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-2xl font-mono font-bold text-white">
               {evaluation.score}/100
@@ -330,7 +351,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                   </h4>
                   <div className="flex flex-col gap-2">
                     {evaluation.confirmed_points.map((cp, i) => (
-                      <div key={i} className="bg-green-950 border border-green-900 rounded p-3">
+                      <div key={i} className="bg-green-950/40 border border-green-900 rounded-lg p-3">
                         <p className="text-zinc-300 text-xs mb-1 italic">&quot;{cp.statement}&quot;</p>
                         <p className="text-green-300 text-xs">{cp.signal}</p>
                         <p className="text-zinc-600 text-xs mt-1">+{cp.credit} pts</p>
@@ -346,14 +367,14 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                   </h4>
                   <div className="flex flex-col gap-2">
                     {evaluation.broken_points.map((bp, i) => (
-                      <div key={i} className={`rounded p-3 ${
+                      <div key={i} className={`rounded-lg p-3 ${
                         frozenBreakIds.has(bp.thesis_id)
-                          ? "bg-red-950 border-2 border-red-600"
-                          : "bg-red-950 border border-red-900"
+                          ? "bg-red-950/50 border-2 border-red-600"
+                          : "bg-red-950/40 border border-red-900"
                       }`}>
                         <div className="flex items-center gap-1.5">
                           {frozenBreakIds.has(bp.thesis_id) && (
-                            <span className="text-red-400 text-xs" title="Frozen conviction point">&#128274;</span>
+                            <Lock className="w-3 h-3 text-red-400 shrink-0" />
                           )}
                           <p className="text-zinc-300 text-xs mb-1 italic">&quot;{bp.statement}&quot;</p>
                         </div>
@@ -388,26 +409,26 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                 type="checkbox"
                 checked={allSelected}
                 onChange={handleSelectAll}
-                className="accent-blue-500 cursor-pointer"
+                className="cursor-pointer"
               />
               {allSelected ? "Deselect All" : "Select All"}
             </label>
-            <span className="text-zinc-600 text-xs">|</span>
+            <span className="text-zinc-700 text-xs">|</span>
             <span className="text-zinc-500 text-xs">
               <span className="text-zinc-300">{selectedCount}</span> of {theses.length} selected
             </span>
-            <span className="text-zinc-600 text-xs">|</span>
+            <span className="text-zinc-700 text-xs">|</span>
             <span className="flex items-center gap-1 text-zinc-500 text-xs">
               <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> Important
               <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> Critical
-              <span className="text-zinc-500 ml-2">&#128274;</span> Frozen
+              <Lock className="w-3 h-3 text-zinc-500 ml-2" /> Frozen
             </span>
           </div>
 
           <p className="text-zinc-500 text-xs">
             <span className="text-zinc-300">Checked</span> points are submitted for evaluation.
             Click the lock icon to freeze core conviction points.
-            Use <span className="text-zinc-400">Research AI</span> to ask questions or add new points.
+            Use <span className="text-accent">Research AI</span> to ask questions or add new points.
           </p>
 
           {/* Render known categories in order, then any unknown categories from old data */}
@@ -416,7 +437,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             if (!items || items.length === 0) return null;
             return (
               <div key={cat}>
-                <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">
+                <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-medium">
                   {CATEGORY_LABELS[cat] ?? cat}
                 </h3>
                 <div className="flex flex-col gap-1">
@@ -429,25 +450,27 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                       /* Edit mode */
                       <div
                         key={t.id}
-                        className="flex flex-col gap-2 px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
+                        className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-600"
                       >
                         <textarea
                           value={editDraft}
                           onChange={(e) => setEditDraft(e.target.value)}
                           rows={3}
-                          className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-white resize-none focus:outline-none focus:border-blue-500"
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleSaveEdit(t.id)}
-                            className="px-3 py-1 text-xs bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors"
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-accent hover:bg-accent-hover text-white rounded-md transition-colors"
                           >
+                            <Save className="w-3 h-3" />
                             Save
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded transition-colors"
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-md transition-colors"
                           >
+                            <X className="w-3 h-3" />
                             Cancel
                           </button>
                         </div>
@@ -456,7 +479,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                       /* Normal row */
                       <div
                         key={t.id}
-                        className={`group flex items-start gap-3 px-3 py-2 rounded transition-colors ${
+                        className={`group flex items-start gap-3 px-3 py-2 rounded-lg transition-all ${
                           isFrozenBroken
                             ? "border-l-2 border-red-500 bg-red-950/40 ring-1 ring-red-800"
                             : impact?.type === "confirmed"
@@ -464,15 +487,15 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                             : impact?.type === "broken"
                             ? "border-l-2 border-red-700 bg-red-950/30"
                             : t.selected
-                            ? "bg-zinc-800 border border-zinc-600"
-                            : "bg-zinc-900 border border-zinc-800 hover:border-zinc-700"
+                            ? "bg-surface-raised/50 border border-zinc-600"
+                            : "bg-surface border border-zinc-800 hover:border-zinc-700"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={t.selected}
                           onChange={() => handleToggle(t)}
-                          className="mt-0.5 accent-blue-500 shrink-0 cursor-pointer"
+                          className="mt-0.5 shrink-0 cursor-pointer"
                         />
 
                         {/* Importance dot */}
@@ -485,9 +508,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
                         {/* Frozen indicator */}
                         {t.frozen && (
-                          <span className="text-yellow-500 text-xs shrink-0 mt-0.5" title="Frozen conviction point">
-                            &#128274;
-                          </span>
+                          <Lock className="w-3.5 h-3.5 text-yellow-500 shrink-0 mt-0.5" />
                         )}
 
                         <span
@@ -512,27 +533,27 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                           <button
                             onClick={(e) => { e.stopPropagation(); handleFreeze(t); }}
                             title={t.frozen ? "Unfreeze" : "Freeze (core conviction)"}
-                            className={`p-1 rounded text-xs leading-none transition-colors ${
+                            className={`p-1 rounded transition-colors ${
                               t.frozen
                                 ? "text-yellow-400 hover:text-yellow-200"
                                 : "text-zinc-500 hover:text-yellow-400"
                             }`}
                           >
-                            {t.frozen ? "\u{1F513}" : "\u{1F512}"}
+                            {t.frozen ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); startEdit(t); }}
                             title="Edit"
-                            className="p-1 text-zinc-500 hover:text-zinc-200 rounded text-xs leading-none transition-colors"
+                            className="p-1 text-zinc-500 hover:text-zinc-200 rounded transition-colors"
                           >
-                            &#x270E;
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); requestDelete(t); }}
                             title="Delete"
-                            className="p-1 text-zinc-500 hover:text-red-400 rounded text-xs leading-none transition-colors"
+                            className="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors"
                           >
-                            &#x2715;
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -547,10 +568,14 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Frozen point confirmation dialog */}
       {confirmAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface border border-zinc-700 rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
             <h3 className="text-zinc-100 text-sm font-semibold mb-2">
-              {confirmAction.type === "delete" ? "Delete Frozen Point?" : "Edit Frozen Point?"}
+              {confirmAction.type === "delete"
+                ? "Delete Frozen Point?"
+                : confirmAction.type === "unfreeze"
+                  ? "Unfreeze Conviction Point?"
+                  : "Edit Frozen Point?"}
             </h3>
             <p className="text-zinc-400 text-xs mb-1">
               This is a frozen conviction point:
@@ -559,23 +584,38 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
               &quot;{confirmAction.thesis.statement}&quot;
             </p>
             <p className="text-zinc-400 text-xs mb-4">
-              Frozen points represent core convictions in your thesis.
               {confirmAction.type === "delete"
-                ? " Deleting it removes a key part of your investment rationale."
-                : " Editing it changes a key part of your investment rationale."}
+                ? "Frozen points represent core convictions in your thesis. Deleting it removes a key part of your investment rationale."
+                : confirmAction.type === "unfreeze"
+                  ? "Unfreezing removes conviction protection from this point. It will no longer receive 2x weight in evaluations or trigger frozen-break alerts."
+                  : "Frozen points represent core convictions in your thesis. Editing it changes a key part of your investment rationale."}
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirmAction(null)}
-                className="px-4 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition-colors"
+                className="px-4 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmAction.type === "delete" ? confirmDeleteFrozen : confirmEditFrozen}
-                className="px-4 py-2 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors"
+                onClick={
+                  confirmAction.type === "delete"
+                    ? confirmDeleteFrozen
+                    : confirmAction.type === "unfreeze"
+                      ? () => { doFreeze(confirmAction.thesis); setConfirmAction(null); }
+                      : confirmEditFrozen
+                }
+                className={`px-4 py-2 text-xs text-white rounded-lg transition-colors ${
+                  confirmAction.type === "unfreeze"
+                    ? "bg-yellow-700 hover:bg-yellow-600"
+                    : "bg-red-700 hover:bg-red-600"
+                }`}
               >
-                {confirmAction.type === "delete" ? "Delete Anyway" : "Edit Anyway"}
+                {confirmAction.type === "delete"
+                  ? "Delete Anyway"
+                  : confirmAction.type === "unfreeze"
+                    ? "Unfreeze"
+                    : "Edit Anyway"}
               </button>
             </div>
           </div>
