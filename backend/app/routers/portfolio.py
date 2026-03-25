@@ -159,9 +159,54 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
                 headline=item.get("headline", ""),
                 impact=item.get("impact", "neutral"),
                 suggestion=suggestion,
+                source_url=item.get("source_url") or None,
             )
         )
     return result
+
+
+async def _generate_and_store_briefing(db: Session) -> MorningBriefingResponse:
+    """Generate a fresh briefing, store it in DB, and return the response."""
+    today = date.today()
+
+    portfolio_data = _build_portfolio_data(db)
+    tickers = [s["ticker"] for s in portfolio_data]
+    ticker_names = {s["ticker"]: s["name"] for s in portfolio_data}
+
+    news_items = await fetch_news(tickers, ticker_names=ticker_names, limit_per_ticker=5)
+    briefing = morning_briefing_agent.generate_briefing(portfolio_data, news_items)
+
+    # Serialize items for DB storage
+    items_for_db = []
+    for item in briefing.items:
+        entry = {
+            "ticker": item.ticker,
+            "headline": item.headline,
+            "impact": item.impact,
+            "suggestion": item.suggestion,  # already a dict or None
+            "source_url": item.source_url,
+        }
+        items_for_db.append(entry)
+
+    # Persist to DB (replace existing today's entry if any)
+    existing = db.query(Briefing).filter(Briefing.date == today).first()
+    if existing:
+        existing.summary = briefing.summary
+        existing.items = json.dumps(items_for_db)
+    else:
+        db_briefing = Briefing(
+            date=today,
+            summary=briefing.summary,
+            items=json.dumps(items_for_db),
+        )
+        db.add(db_briefing)
+    db.commit()
+
+    return MorningBriefingResponse(
+        summary=briefing.summary,
+        items=_briefing_items_to_schema(items_for_db),
+        date=str(today),
+    )
 
 
 @router.get("/morning-briefing", response_model=MorningBriefingResponse)
@@ -178,40 +223,13 @@ async def morning_briefing(db: Session = Depends(get_db)):
             date=str(existing.date),
         )
 
-    # Generate fresh briefing
-    portfolio_data = _build_portfolio_data(db)
-    tickers = [s["ticker"] for s in portfolio_data]
-    ticker_names = {s["ticker"]: s["name"] for s in portfolio_data}
+    return await _generate_and_store_briefing(db)
 
-    news_items = await fetch_news(tickers, ticker_names=ticker_names, limit_per_ticker=5)
-    briefing = morning_briefing_agent.generate_briefing(portfolio_data, news_items)
 
-    # Serialize items for DB storage
-    items_for_db = []
-    for item in briefing.items:
-        entry = {
-            "ticker": item.ticker,
-            "headline": item.headline,
-            "impact": item.impact,
-            "suggestion": item.suggestion,  # already a dict or None
-        }
-        items_for_db.append(entry)
-
-    # Persist to DB
-    db_briefing = Briefing(
-        date=today,
-        summary=briefing.summary,
-        items=json.dumps(items_for_db),
-    )
-    db.add(db_briefing)
-    db.commit()
-
-    # Build response
-    return MorningBriefingResponse(
-        summary=briefing.summary,
-        items=_briefing_items_to_schema(items_for_db),
-        date=str(today),
-    )
+@router.post("/morning-briefing/refresh", response_model=MorningBriefingResponse)
+async def refresh_morning_briefing(db: Session = Depends(get_db)):
+    """Force-regenerate today's briefing with fresh news data."""
+    return await _generate_and_store_briefing(db)
 
 
 @router.get("/briefing-history", response_model=list[MorningBriefingResponse])

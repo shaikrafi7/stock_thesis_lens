@@ -71,6 +71,7 @@ export async function streamChat(
               break;
             case "suggestion":
             case "action":
+            case "evaluation":
               onMeta(eventType, data);
               break;
             case "done":

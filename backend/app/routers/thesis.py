@@ -62,17 +62,20 @@ def generate_and_evaluate(ticker: str, db: Session = Depends(get_db)):
     if not stock:
         raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found. Add it first via POST /stocks.")
 
-    # Preserve frozen points from previous generation
+    # Preserve frozen + manually added points from previous generation
     existing = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
-    frozen_points = [t for t in existing if t.frozen]
+    preserved_points = [t for t in existing if t.frozen or getattr(t, "source", "ai") == "manual"]
 
-    # Delete non-frozen points
-    db.query(Thesis).filter(Thesis.stock_id == stock.id, Thesis.frozen == False).delete()  # noqa: E712
+    # Delete only AI-generated, non-frozen points
+    for t in existing:
+        if not t.frozen and getattr(t, "source", "ai") != "manual":
+            db.delete(t)
+    db.flush()
 
     generated = generate_thesis(ticker, stock.name)
 
-    # Avoid duplicating frozen points (by statement text)
-    frozen_statements = {t.statement for t in frozen_points}
+    # Avoid duplicating preserved points (by statement text)
+    preserved_statements = {t.statement for t in preserved_points}
 
     theses = [
         Thesis(
@@ -84,7 +87,7 @@ def generate_and_evaluate(ticker: str, db: Session = Depends(get_db)):
             selected=True,  # all points auto-selected
         )
         for item in generated
-        if item.statement not in frozen_statements
+        if item.statement not in preserved_statements
     ]
     db.add_all(theses)
     db.commit()
@@ -115,6 +118,7 @@ def add_manual_thesis(ticker: str, payload: ThesisCreate, db: Session = Depends(
         statement=payload.statement,
         weight=1.0,
         selected=True,  # auto-select manual points
+        source="manual",
     )
     db.add(thesis)
     db.commit()

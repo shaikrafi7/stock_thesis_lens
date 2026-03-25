@@ -18,6 +18,7 @@ class ThesisRead(BaseModel):
     weight: float
     importance: str = "standard"  # standard | important | critical
     frozen: bool = False
+    source: str = "ai"  # ai | manual
     created_at: datetime
     last_confirmed: Optional[datetime] = None
 
@@ -99,6 +100,7 @@ class BriefingItemSchema(BaseModel):
     headline: str
     impact: str  # "bullish" | "bearish" | "neutral"
     suggestion: Optional[ThesisSuggestionSchema] = None
+    source_url: Optional[str] = None
 
 
 class MorningBriefingResponse(BaseModel):

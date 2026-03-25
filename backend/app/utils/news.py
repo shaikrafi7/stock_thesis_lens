@@ -6,17 +6,18 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
-def _search_one_ticker(ticker: str, company_name: str, limit: int) -> list[dict]:
+def _search_one_ticker(ticker: str, company_name: str, limit: int, days: int = 3) -> list[dict]:
     """Synchronous Tavily search for a single ticker. Called via executor."""
     from app.core.config import settings
     from tavily import TavilyClient
 
     client = TavilyClient(api_key=settings.TAVILY_API_KEY)
-    query = f"{company_name} {ticker} stock news latest"
+    query = f"{company_name} {ticker} stock news"
     try:
         response = client.search(
             query=query,
-            search_depth="advanced",
+            topic="news",
+            days=days,
             max_results=limit,
         )
         results = []
@@ -27,6 +28,7 @@ def _search_one_ticker(ticker: str, company_name: str, limit: int) -> list[dict]
                     "title": r.get("title", ""),
                     "description": r.get("content", "") or "",
                     "published_utc": r.get("published_date", ""),
+                    "url": r.get("url", ""),
                 }
             )
         return results
@@ -39,8 +41,9 @@ async def fetch_news(
     tickers: list[str],
     ticker_names: Optional[dict[str, str]] = None,
     limit_per_ticker: int = 5,
+    days: int = 3,
 ) -> list[dict]:
-    """Return a flat list of news dicts: {ticker, title, description, published_utc}.
+    """Return a flat list of news dicts: {ticker, title, description, published_utc, url}.
 
     Fetches all tickers in parallel via asyncio.gather + thread executor.
     Returns [] if TAVILY_API_KEY is not set or tickers is empty.
@@ -55,7 +58,7 @@ async def fetch_news(
     async def fetch_one(ticker: str) -> list[dict]:
         name = (ticker_names or {}).get(ticker, ticker)
         return await loop.run_in_executor(
-            None, _search_one_ticker, ticker, name, limit_per_ticker
+            None, _search_one_ticker, ticker, name, limit_per_ticker, days
         )
 
     results = await asyncio.gather(*[fetch_one(t) for t in tickers], return_exceptions=True)

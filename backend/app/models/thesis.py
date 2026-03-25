@@ -15,6 +15,7 @@ class Thesis(Base):
     weight = Column(Float, default=1.0, nullable=False)
     importance = Column(String(20), default="standard", nullable=False)  # standard | important | critical
     frozen = Column(Boolean, default=False, nullable=False)
+    source = Column(String(10), default="ai", nullable=False)  # ai | manual
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_confirmed = Column(DateTime, nullable=True)
 

@@ -14,6 +14,29 @@ import { streamChat } from "@/lib/streaming";
 import { useAssistant } from "@/app/context/AssistantContext";
 import { X, Send, Plus, Loader2, MessageSquare, Bot } from "lucide-react";
 
+function renderMessageContent(text: string) {
+  // Convert markdown links [text](url) to clickable <a> tags
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (match) {
+      return (
+        <a
+          key={i}
+          href={match[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 decoration-zinc-500 hover:decoration-zinc-300 transition-colors"
+        >
+          {match[1]}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   competitive_moat: "Competitive Moat",
   growth_trajectory: "Growth Trajectory",
@@ -51,7 +74,7 @@ function saveHistory(ticker: string | null, history: ChatMessage[]) {
 
 export default function AssistantPanel() {
   const router = useRouter();
-  const { isOpen, togglePanel, ticker, fireThesisAdded } = useAssistant();
+  const { isOpen, togglePanel, ticker, fireThesisAdded, fireEvaluationTriggered } = useAssistant();
   const isPortfolioMode = ticker === null;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -131,6 +154,14 @@ export default function AssistantPanel() {
             setPendingSuggestion(data as unknown as ThesisSuggestion);
           } else if (event === "action") {
             setPendingAction(data as unknown as PortfolioAction);
+          } else if (event === "evaluation") {
+            // Chat triggered an evaluation — run it and append result message
+            fireEvaluationTriggered().then((result) => {
+              if (result) {
+                const evalMsg = `Evaluation complete: **${result.score}/100** (${result.status}). ${result.explanation ?? ""}`;
+                setChatHistory((prev) => [...prev, { role: "assistant", content: evalMsg }]);
+              }
+            });
           }
         },
         onDone() {
@@ -222,7 +253,7 @@ export default function AssistantPanel() {
       {isOpen && (
         <div
           onClick={togglePanel}
-          className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[2px]"
+          className="fixed inset-0 z-20 bg-black/10"
         />
       )}
 
@@ -274,7 +305,7 @@ export default function AssistantPanel() {
                     : "bg-zinc-800 text-zinc-200"
                 }`}
               >
-                {msg.content}
+                {msg.role === "assistant" ? renderMessageContent(msg.content) : msg.content}
               </div>
             </div>
           ))}

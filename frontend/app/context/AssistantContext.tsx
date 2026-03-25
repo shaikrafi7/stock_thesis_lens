@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { Thesis } from "@/lib/api";
+import type { Thesis, Evaluation } from "@/lib/api";
 
 interface AssistantContextValue {
   isOpen: boolean;
@@ -19,6 +19,10 @@ interface AssistantContextValue {
   registerThesisAdded: (cb: ((t: Thesis) => void) | null) => void;
   /** Called by AssistantPanel after a suggestion is saved to the DB. */
   fireThesisAdded: (t: Thesis) => void;
+  /** ThesisManager registers a callback so the panel can trigger evaluation and receive the result. */
+  registerEvaluationTriggered: (cb: (() => Promise<Evaluation | null>) | null) => void;
+  /** Called by AssistantPanel when chat triggers an evaluation. */
+  fireEvaluationTriggered: () => Promise<Evaluation | null>;
 }
 
 const AssistantContext = createContext<AssistantContextValue>({
@@ -28,12 +32,15 @@ const AssistantContext = createContext<AssistantContextValue>({
   setTicker: () => {},
   registerThesisAdded: () => {},
   fireThesisAdded: () => {},
+  registerEvaluationTriggered: () => {},
+  fireEvaluationTriggered: async () => null,
 });
 
 export function AssistantProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [ticker, setTicker] = useState<string | null>(null);
   const onThesisAddedRef = useRef<((t: Thesis) => void) | null>(null);
+  const onEvalTriggeredRef = useRef<(() => Promise<Evaluation | null>) | null>(null);
 
   const togglePanel = useCallback(() => setIsOpen((p) => !p), []);
 
@@ -48,9 +55,27 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     onThesisAddedRef.current?.(t);
   }, []);
 
+  const registerEvaluationTriggered = useCallback(
+    (cb: (() => Promise<Evaluation | null>) | null) => {
+      onEvalTriggeredRef.current = cb;
+    },
+    []
+  );
+
+  const fireEvaluationTriggered = useCallback(async (): Promise<Evaluation | null> => {
+    if (onEvalTriggeredRef.current) {
+      return onEvalTriggeredRef.current();
+    }
+    return null;
+  }, []);
+
   return (
     <AssistantContext.Provider
-      value={{ isOpen, togglePanel, ticker, setTicker, registerThesisAdded, fireThesisAdded }}
+      value={{
+        isOpen, togglePanel, ticker, setTicker,
+        registerThesisAdded, fireThesisAdded,
+        registerEvaluationTriggered, fireEvaluationTriggered,
+      }}
     >
       {children}
     </AssistantContext.Provider>

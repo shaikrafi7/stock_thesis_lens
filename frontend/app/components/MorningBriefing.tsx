@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import {
   getMorningBriefing,
+  refreshMorningBriefing,
   getBriefingHistory,
   addManualThesis,
   type MorningBriefingResponse,
   type BriefingItem,
 } from "@/lib/api";
-import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper, RefreshCw, ExternalLink } from "lucide-react";
 
 const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
   bullish: { badge: "bg-green-950/60 border-green-800 text-green-400", dot: "bg-green-500" },
@@ -44,7 +45,21 @@ function BriefingCard({ item }: { item: BriefingItem }) {
             <span className="text-xs font-mono font-bold text-zinc-300">{item.ticker}</span>
             <span className="text-[10px] uppercase tracking-wide opacity-70">{item.impact}</span>
           </div>
-          <p className="text-zinc-300 text-xs leading-relaxed">{item.headline}</p>
+          <p className="text-zinc-300 text-xs leading-relaxed">
+            {item.headline}
+            {item.source_url && (
+              <a
+                href={item.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center ml-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                title="Open source article"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </p>
           {item.suggestion && (
             <div className="mt-2 pt-2 border-t border-current opacity-60">
               <p className="text-[11px] italic leading-snug mb-1.5">
@@ -93,6 +108,22 @@ export default function MorningBriefing() {
   const [history, setHistory] = useState<MorningBriefingResponse[] | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      const fresh = await refreshMorningBriefing();
+      setData(fresh);
+      // Reset history so it re-fetches if opened
+      setHistory(null);
+      setHistoryOpen(false);
+    } catch {
+      // silent
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     getMorningBriefing()
@@ -132,17 +163,27 @@ export default function MorningBriefing() {
 
   return (
     <div className="border border-zinc-800 rounded-2xl mb-8 overflow-hidden bg-surface/50 backdrop-blur-sm">
-      <button
+      <div
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none"
       >
         <div className="flex items-center gap-2">
           <Newspaper className="w-4 h-4 text-zinc-500" />
           <span className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Today&apos;s Briefing</span>
           <span className="text-zinc-600 text-xs">{today}</span>
         </div>
-        {open ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
-      </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
+            disabled={refreshing}
+            className="p-1 rounded hover:bg-zinc-700 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+            title="Refresh briefing with latest news"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+          {open ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+        </div>
+      </div>
 
       {open && (
         <>

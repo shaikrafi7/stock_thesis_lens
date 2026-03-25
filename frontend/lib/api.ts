@@ -16,6 +16,7 @@ export interface Thesis {
   weight: number;
   importance: "standard" | "important" | "critical";
   frozen: boolean;
+  source: "ai" | "manual";
   created_at: string;
   last_confirmed: string | null;
 }
@@ -28,6 +29,31 @@ export interface CompanyInfo {
   beta: number | null;
   analyst_target: number | null;
   institutional_ownership: number | null;
+  // Analyst consensus
+  recommendation: string | null;
+  analyst_count: number | null;
+  target_low: number | null;
+  target_high: number | null;
+  target_median: number | null;
+  // Valuation
+  trailing_pe: number | null;
+  forward_pe: number | null;
+  peg_ratio: number | null;
+  price_to_book: number | null;
+  // Earnings
+  eps_trailing: number | null;
+  eps_forward: number | null;
+  // Dividend
+  dividend_yield: number | null;
+  ex_dividend_date: string | null;
+  // 52-week range
+  fifty_two_week_low: number | null;
+  fifty_two_week_high: number | null;
+  // Short interest
+  short_percent: number | null;
+  // Profitability
+  profit_margin: number | null;
+  revenue_growth: number | null;
 }
 
 export interface PricePoint {
@@ -205,6 +231,7 @@ export interface BriefingItem {
   headline: string;
   impact: "bullish" | "bearish" | "neutral";
   suggestion?: ThesisSuggestion | null;
+  source_url?: string | null;
 }
 
 export interface MorningBriefingResponse {
@@ -247,6 +274,9 @@ export const evaluateAll = (): Promise<EvaluateAllResult> =>
 
 export const getMorningBriefing = (): Promise<MorningBriefingResponse> =>
   apiFetch("/portfolio/morning-briefing");
+
+export const refreshMorningBriefing = (): Promise<MorningBriefingResponse> =>
+  apiFetch("/portfolio/morning-briefing/refresh", { method: "POST" });
 
 export const getBriefingHistory = (limit = 7): Promise<MorningBriefingResponse[]> =>
   apiFetch(`/portfolio/briefing-history?limit=${limit}`);

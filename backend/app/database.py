@@ -56,6 +56,9 @@ def _run_migrations():
         if "frozen" not in thesis_columns:
             conn.execute(text("ALTER TABLE theses ADD COLUMN frozen BOOLEAN DEFAULT 0"))
             conn.commit()
+        if "source" not in thesis_columns:
+            conn.execute(text("ALTER TABLE theses ADD COLUMN source TEXT DEFAULT 'ai'"))
+            conn.commit()
 
 
 def create_all_tables():

@@ -10,6 +10,7 @@ import {
   updateThesisFrozen,
   deleteThesis,
   runEvaluation,
+  addManualThesis,
   type Thesis,
   type Evaluation,
 } from "@/lib/api";
@@ -26,6 +27,9 @@ import {
   Activity,
   Save,
   CircleDot,
+  ChevronUp,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -92,17 +96,32 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ type: "edit" | "delete" | "unfreeze"; thesis: Thesis } | null>(null);
+  const [evalCollapsed, setEvalCollapsed] = useState(false);
+  const [addCategory, setAddCategory] = useState(CATEGORY_ORDER[0]);
+  const [addStatement, setAddStatement] = useState("");
+  const [addingManual, setAddingManual] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  const { setTicker, registerThesisAdded } = useAssistant();
+  const { setTicker, registerThesisAdded, registerEvaluationTriggered } = useAssistant();
 
   useEffect(() => {
     setTicker(ticker);
     registerThesisAdded((t) => setTheses((prev) => [...prev, t]));
+    registerEvaluationTriggered(async () => {
+      try {
+        const result = await runEvaluation(ticker);
+        setEvaluation(result);
+        return result;
+      } catch {
+        return null;
+      }
+    });
     return () => {
       setTicker(null);
       registerThesisAdded(null);
+      registerEvaluationTriggered(null);
     };
-  }, [ticker, setTicker, registerThesisAdded]);
+  }, [ticker, setTicker, registerThesisAdded, registerEvaluationTriggered]);
 
   const selectedCount = theses.filter((t) => t.selected).length;
   const allSelected = theses.length > 0 && selectedCount === theses.length;
@@ -235,6 +254,28 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     }
   }
 
+  async function handleAddManual(e: React.FormEvent) {
+    e.preventDefault();
+    const stmt = addStatement.trim();
+    if (!stmt || stmt.length < 10 || addingManual) return;
+    setAddingManual(true);
+    setError("");
+    try {
+      const added = await addManualThesis(ticker, addCategory, stmt);
+      setTheses((prev) => [...prev, added]);
+      setAddStatement("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add point");
+    } finally {
+      setAddingManual(false);
+    }
+  }
+
+  const lockedCount = theses.filter((t) => t.frozen).length;
+  const criticalCount = theses.filter((t) => t.importance === "critical").length;
+  const importantCount = theses.filter((t) => t.importance === "important").length;
+  const manualCount = theses.filter((t) => t.source === "manual").length;
+
   const scoreColor = (s: number) => s >= 75 ? "#22c55e" : s >= 50 ? "#eab308" : "#ef4444";
   const scoreLabel = (s: number) => s >= 75 ? "Thesis Strong" : s >= 50 ? "Under Pressure" : "At Risk";
 
@@ -323,19 +364,27 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         {error && <p className="text-red-400 text-xs">{error}</p>}
       </div>
 
-      {/* Evaluation result */}
+      {/* Evaluation result — collapsible */}
       {evaluation && (
-        <div className="border border-zinc-700 rounded-xl p-5 bg-surface">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="border border-zinc-700 rounded-xl bg-surface overflow-hidden">
+          <button
+            onClick={() => setEvalCollapsed((c) => !c)}
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-raised/30 transition-colors"
+          >
             <span className="text-2xl font-mono font-bold text-white">
               {evaluation.score}/100
             </span>
             <StatusBadge status={evaluation.status} />
-            <span className="text-zinc-600 text-xs ml-auto">
+            <span className="text-zinc-600 text-xs ml-auto mr-2">
               {new Date(evaluation.timestamp).toLocaleString()}
             </span>
-          </div>
+            {evalCollapsed
+              ? <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
+              : <ChevronUp className="w-4 h-4 text-zinc-500 shrink-0" />}
+          </button>
 
+          {!evalCollapsed && (
+            <div className="px-5 pb-5">
           {evaluation.explanation && (
             <p className="text-sm text-zinc-300 leading-relaxed mb-4 border-l-2 border-zinc-600 pl-3">
               {evaluation.explanation}
@@ -392,6 +441,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
               )}
             </div>
           )}
+            </div>
+          )}
         </div>
       )}
 
@@ -402,8 +453,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         </p>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* Select all + legend */}
-          <div className="flex items-center gap-4">
+          {/* Select all + counts + add point */}
+          <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 cursor-pointer text-zinc-400 text-xs hover:text-zinc-200 transition-colors">
               <input
                 type="checkbox"
@@ -415,20 +466,85 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             </label>
             <span className="text-zinc-700 text-xs">|</span>
             <span className="text-zinc-500 text-xs">
-              <span className="text-zinc-300">{selectedCount}</span> of {theses.length} selected
+              <span className="text-zinc-300">{selectedCount}</span>/{theses.length} selected
             </span>
+
+            {/* Counts */}
+            <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+              {lockedCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-yellow-500" /> {lockedCount} locked
+                </span>
+              )}
+              {criticalCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {criticalCount} critical
+                </span>
+              )}
+              {importantCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> {importantCount} important
+                </span>
+              )}
+              {manualCount > 0 && (
+                <span className="text-zinc-500">{manualCount} manual</span>
+              )}
+            </div>
+
             <span className="text-zinc-700 text-xs">|</span>
-            <span className="flex items-center gap-1 text-zinc-500 text-xs">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> Important
-              <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> Critical
-              <Lock className="w-3 h-3 text-zinc-500 ml-2" /> Frozen
-            </span>
+            <button
+              onClick={() => setShowAddForm((s) => !s)}
+              className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Point
+            </button>
           </div>
+
+          {/* Manual add form */}
+          {showAddForm && (
+            <form onSubmit={handleAddManual} className="flex flex-col gap-2 bg-surface border border-zinc-700 rounded-xl p-4">
+              <div className="flex gap-2">
+                <select
+                  value={addCategory}
+                  onChange={(e) => setAddCategory(e.target.value)}
+                  className="px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-accent"
+                >
+                  {CATEGORY_ORDER.map((cat) => (
+                    <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  type="button"
+                  className="ml-auto text-zinc-500 hover:text-zinc-300 p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={addStatement}
+                  onChange={(e) => setAddStatement(e.target.value)}
+                  placeholder="Enter thesis point (min 10 characters)..."
+                  className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+                />
+                <button
+                  type="submit"
+                  disabled={addingManual || addStatement.trim().length < 10}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors"
+                >
+                  {addingManual ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                  Add
+                </button>
+              </div>
+            </form>
+          )}
 
           <p className="text-zinc-500 text-xs">
             <span className="text-zinc-300">Checked</span> points are submitted for evaluation.
-            Click the lock icon to freeze core conviction points.
-            Use <span className="text-accent">Research AI</span> to ask questions or add new points.
+            Locked and manual points are preserved on regeneration.
           </p>
 
           {/* Render known categories in order, then any unknown categories from old data */}

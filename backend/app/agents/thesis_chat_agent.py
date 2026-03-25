@@ -27,6 +27,7 @@ Rules:
 - Focus on structural, durable factors for a 1+ year time horizon
 - Keep responses concise (3–5 sentences unless more detail is requested)
 - When market data is available, reference specific numbers (price, change%, volume) to ground your analysis
+- When referencing news, include a markdown link to the source: [headline](url). Only link sources provided in the context — never fabricate URLs.
 
 You MUST always respond with valid JSON in this exact format:
 
@@ -85,10 +86,13 @@ def _build_context(
         for n in recent_news[:5]:
             title = n.get("title", "")
             desc = n.get("description", "")
+            url = n.get("url", "")
             snippet = desc[:150] + "…" if len(desc) > 150 else desc
             lines.append(f"  - {title}")
             if snippet:
                 lines.append(f"    {snippet}")
+            if url:
+                lines.append(f"    Source: {url}")
 
     if existing_theses:
         by_category: dict[str, list[str]] = {}
@@ -169,7 +173,9 @@ Rules:
 - Focus on structural, durable factors for a 1+ year time horizon
 - Keep responses concise (3–5 sentences unless more detail is requested)
 - When market data is available, reference specific numbers (price, change%, volume) to ground your analysis
+- When referencing news, include a markdown link to the source: [headline](url). Only link sources provided in the context — never fabricate URLs.
 - If you identify a specific, well-formed thesis point worth adding, use the suggest_thesis tool to propose it
+- If the user asks to evaluate, re-evaluate, check their thesis score, or run an evaluation, use the run_evaluation tool
 
 Categories: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks"""
 
@@ -192,6 +198,18 @@ SUGGEST_THESIS_TOOL = {
                 },
             },
             "required": ["category", "statement"],
+        },
+    },
+}
+
+RUN_EVALUATION_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "run_evaluation",
+        "description": "Run a full thesis evaluation for this stock when the user asks to evaluate, re-evaluate, or check their thesis score",
+        "parameters": {
+            "type": "object",
+            "properties": {},
         },
     },
 }
@@ -223,15 +241,14 @@ def chat_stream(
         stream = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=openai_messages,
-            tools=[SUGGEST_THESIS_TOOL],
+            tools=[SUGGEST_THESIS_TOOL, RUN_EVALUATION_TOOL],
             temperature=0.4,
             max_tokens=600,
             stream=True,
         )
 
-        tool_call_id = ""
-        tool_call_name = ""
-        tool_call_args = ""
+        # Accumulate all tool calls (there may be multiple)
+        tool_calls: dict[int, dict] = {}  # index -> {id, name, args}
 
         for chunk in stream:
             delta = chunk.choices[0].delta if chunk.choices else None
@@ -242,27 +259,33 @@ def chat_stream(
             if delta.content:
                 yield {"event": "token", "data": {"content": delta.content}}
 
-            # Accumulate tool call
+            # Accumulate tool calls
             if delta.tool_calls:
                 for tc in delta.tool_calls:
+                    idx = tc.index if tc.index is not None else 0
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {"id": "", "name": "", "args": ""}
                     if tc.id:
-                        tool_call_id = tc.id
+                        tool_calls[idx]["id"] = tc.id
                     if tc.function:
                         if tc.function.name:
-                            tool_call_name = tc.function.name
+                            tool_calls[idx]["name"] = tc.function.name
                         if tc.function.arguments:
-                            tool_call_args += tc.function.arguments
+                            tool_calls[idx]["args"] += tc.function.arguments
 
-        # Parse tool call if present
-        if tool_call_name == "suggest_thesis" and tool_call_args:
-            try:
-                args = json.loads(tool_call_args)
-                cat = args.get("category", "")
-                stmt = args.get("statement", "").strip()
-                if cat in CATEGORIES and len(stmt) >= 10:
-                    yield {"event": "suggestion", "data": {"category": cat, "statement": stmt}}
-            except json.JSONDecodeError:
-                pass
+        # Process all tool calls
+        for tc_data in tool_calls.values():
+            if tc_data["name"] == "suggest_thesis" and tc_data["args"]:
+                try:
+                    args = json.loads(tc_data["args"])
+                    cat = args.get("category", "")
+                    stmt = args.get("statement", "").strip()
+                    if cat in CATEGORIES and len(stmt) >= 10:
+                        yield {"event": "suggestion", "data": {"category": cat, "statement": stmt}}
+                except json.JSONDecodeError:
+                    pass
+            elif tc_data["name"] == "run_evaluation":
+                yield {"event": "evaluation", "data": {}}
 
         yield {"event": "done", "data": {}}
 

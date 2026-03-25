@@ -28,6 +28,9 @@ Rules:
 - Maximum 6 items total across all stocks
 - Be concise and investor-focused (not journalistic)
 - No buy/sell recommendations
+- The suggestion statement must provide ANALYTICAL INSIGHT beyond the headline — frame it as what this means for the investor's thesis, not a restatement of the news. Bad: "Company X reported strong earnings." Good: "Earnings beat confirms pricing power thesis with 200bps margin expansion."
+- If you cannot add genuine insight beyond the headline, set suggestion to null
+- Each news item has a source_url — pass it through unchanged in your response
 
 You MUST respond with valid JSON in this exact format:
 
@@ -38,12 +41,14 @@ You MUST respond with valid JSON in this exact format:
       "ticker": "AAPL",
       "headline": "short version of the headline",
       "impact": "bullish",
+      "source_url": "https://example.com/article",
       "suggestion": null
     },
     {
       "ticker": "NVDA",
       "headline": "short version of the headline",
       "impact": "bearish",
+      "source_url": "https://example.com/article2",
       "suggestion": {
         "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
         "statement": "A complete sentence under 25 words written from a buyer's investment perspective"
@@ -53,6 +58,7 @@ You MUST respond with valid JSON in this exact format:
 }
 
 impact must be one of: bullish, bearish, neutral
+source_url: pass through the URL from the news item you are summarizing
 suggestion is null unless you have a specific, well-formed thesis point to propose."""
 
 
@@ -62,6 +68,7 @@ class BriefingItemResult:
     headline: str
     impact: str
     suggestion: Optional[dict] = None  # {category, statement}
+    source_url: Optional[str] = None
 
 
 @dataclass
@@ -102,7 +109,9 @@ def _build_context(portfolio_data: list[dict], news_items: list[dict]) -> str:
             for a in articles:
                 title = a.get("title", "")
                 desc = a.get("description", "")
-                lines.append(f"  [{ticker}] {title}")
+                url = a.get("url", "")
+                url_str = f" ({url})" if url else ""
+                lines.append(f"  [{ticker}] {title}{url_str}")
                 if desc:
                     lines.append(f"    {desc[:200]}")
     else:
@@ -160,8 +169,13 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict]) -> Mor
                 if cat in CATEGORIES and len(stmt) >= 10:
                     suggestion = {"category": cat, "statement": stmt}
 
+            source_url = item.get("source_url", "") or ""
+
             if ticker and headline:
-                items.append(BriefingItemResult(ticker=ticker, headline=headline, impact=impact, suggestion=suggestion))
+                items.append(BriefingItemResult(
+                    ticker=ticker, headline=headline, impact=impact,
+                    suggestion=suggestion, source_url=source_url or None,
+                ))
 
         return MorningBriefingResult(summary=summary, items=items[:6])
 
