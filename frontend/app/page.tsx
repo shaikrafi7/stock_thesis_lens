@@ -43,13 +43,16 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-2xl font-semibold tracking-tight text-white mb-1">
-            ThesisArc
-          </h1>
-          <p className="text-zinc-500 text-sm">
-            Track the arc of your conviction
-          </p>
+        <div className="mb-10 flex items-center gap-3">
+          <img src="/thesisarc-logo.png" alt="ThesisArc" className="h-9 w-auto" />
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight mb-0.5">
+              <span className="text-white">Thesis</span><span className="text-accent">Arc</span>
+            </h1>
+            <p className="text-zinc-500 text-sm">
+              The arc of conviction, stress-tested daily
+            </p>
+          </div>
         </div>
 
         {/* Portfolio Gauge */}

@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ThesisArc",
-  description: "Track the arc of your conviction",
+  description: "The arc of conviction, stress-tested daily",
+  icons: {
+    icon: "/thesisarc-logo.png",
+  },
 };
 
 export default function RootLayout({
