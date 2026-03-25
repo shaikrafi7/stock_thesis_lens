@@ -126,6 +126,7 @@ def _polygon_snapshot(ticker: str, api_key: str) -> dict:
         f"https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}",
         params={"apiKey": api_key},
         timeout=10,
+        follow_redirects=True,
     )
     resp.raise_for_status()
     return resp.json().get("ticker", {})
@@ -138,6 +139,7 @@ def _polygon_aggs(ticker: str, api_key: str, days: int = 60) -> list[dict]:
         f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start}/{end}",
         params={"adjusted": "true", "sort": "asc", "limit": 100, "apiKey": api_key},
         timeout=10,
+        follow_redirects=True,
     )
     resp.raise_for_status()
     return resp.json().get("results", [])
@@ -227,6 +229,7 @@ def _collect_news(ticker: str, company_name: str) -> list[NewsSignal]:
             headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
             json={"q": f"{company_name} {ticker} stock", "num": 8},
             timeout=10,
+            follow_redirects=True,
         )
         resp.raise_for_status()
         items = resp.json().get("news", [])

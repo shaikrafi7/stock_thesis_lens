@@ -16,10 +16,11 @@ def get_earnings(ticker: str) -> dict:
         return {}
     try:
         resp = httpx.get(
-            f"{_BASE}/earnings",
+            f"{_BASE}/earnings/",
             params={"ticker": ticker, "limit": 2},
             headers={"X-API-KEY": settings.FINANCIAL_DATASETS_API_KEY},
             timeout=8,
+            follow_redirects=True,
         )
         resp.raise_for_status()
         data = resp.json()

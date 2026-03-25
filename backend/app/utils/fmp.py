@@ -19,6 +19,7 @@ def get_company_profile(ticker: str) -> dict:
             f"{_BASE}/profile/{ticker}",
             params={"apikey": settings.FMP_API_KEY},
             timeout=8,
+            follow_redirects=True,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -48,6 +49,7 @@ def get_fundamentals(ticker: str) -> dict:
             f"{_BASE}/key-metrics/{ticker}",
             params={"limit": 1, "period": "quarter", "apikey": settings.FMP_API_KEY},
             timeout=8,
+            follow_redirects=True,
         )
         resp.raise_for_status()
         data = resp.json()
