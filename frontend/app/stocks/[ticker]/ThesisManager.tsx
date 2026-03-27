@@ -30,6 +30,8 @@ import {
   ChevronUp,
   ChevronDown,
   Plus,
+  Zap,
+  Star,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -50,10 +52,10 @@ const CATEGORY_ORDER = [
   "risks",
 ];
 
-const IMPORTANCE_DOTS: Record<string, { color: string; label: string } | null> = {
+const IMPORTANCE_ICONS: Record<string, { Icon: typeof Zap; className: string; label: string } | null> = {
   standard: null,
-  important: { color: "bg-yellow-500", label: "Important" },
-  critical: { color: "bg-red-500", label: "Critical" },
+  important: { Icon: Star, className: "w-3.5 h-3.5 text-yellow-400", label: "Important" },
+  critical: { Icon: Zap, className: "w-3.5 h-3.5 text-red-400", label: "Critical" },
 };
 
 function groupByCategory(theses: Thesis[]): Record<string, Thesis[]> {
@@ -97,10 +99,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [editDraft, setEditDraft] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ type: "edit" | "delete" | "unfreeze"; thesis: Thesis } | null>(null);
   const [evalCollapsed, setEvalCollapsed] = useState(false);
-  const [addCategory, setAddCategory] = useState(CATEGORY_ORDER[0]);
+  const [addForCategory, setAddForCategory] = useState<string | null>(null);
   const [addStatement, setAddStatement] = useState("");
   const [addingManual, setAddingManual] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
 
   const { setTicker, registerThesisAdded, registerEvaluationTriggered } = useAssistant();
 
@@ -257,13 +258,14 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   async function handleAddManual(e: React.FormEvent) {
     e.preventDefault();
     const stmt = addStatement.trim();
-    if (!stmt || stmt.length < 10 || addingManual) return;
+    if (!stmt || stmt.length < 10 || addingManual || !addForCategory) return;
     setAddingManual(true);
     setError("");
     try {
-      const added = await addManualThesis(ticker, addCategory, stmt);
+      const added = await addManualThesis(ticker, addForCategory, stmt);
       setTheses((prev) => [...prev, added]);
       setAddStatement("");
+      setAddForCategory(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to add point");
     } finally {
@@ -312,8 +314,11 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             minValue={0}
             maxValue={100}
             arc={{
-              colorArray: ["#ef4444", "#eab308", "#22c55e"],
-              subArcs: [{ limit: 50 }, { limit: 75 }, { limit: 100 }],
+              subArcs: [
+                { limit: 50, color: "#ef4444", tooltip: { text: "At Risk (0\u201350)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
+                { limit: 75, color: "#eab308", tooltip: { text: "Under Pressure (50\u201375)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
+                { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Strong (75\u2013100)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
+              ],
               padding: 0.02,
               width: 0.25,
             }}
@@ -330,6 +335,19 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             <p className="text-zinc-600 text-xs mt-0.5">
               {new Date(evaluation.timestamp).toLocaleDateString()}
             </p>
+          </div>
+          {/* Zone legend */}
+          <div className="flex gap-2 mt-2">
+            {[
+              { color: "#ef4444", label: "At Risk" },
+              { color: "#eab308", label: "Pressure" },
+              { color: "#22c55e", label: "Strong" },
+            ].map((z) => (
+              <div key={z.label} className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+                <span className="text-[8px] text-zinc-500">{z.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -478,69 +496,19 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
               )}
               {criticalCount > 0 && (
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {criticalCount} critical
+                  <Zap className="w-3 h-3 text-red-400" /> {criticalCount} critical
                 </span>
               )}
               {importantCount > 0 && (
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" /> {importantCount} important
+                  <Star className="w-3 h-3 text-yellow-400" /> {importantCount} important
                 </span>
               )}
               {manualCount > 0 && (
                 <span className="text-zinc-500">{manualCount} manual</span>
               )}
             </div>
-
-            <span className="text-zinc-700 text-xs">|</span>
-            <button
-              onClick={() => setShowAddForm((s) => !s)}
-              className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Point
-            </button>
           </div>
-
-          {/* Manual add form */}
-          {showAddForm && (
-            <form onSubmit={handleAddManual} className="flex flex-col gap-2 bg-surface border border-zinc-700 rounded-xl p-4">
-              <div className="flex gap-2">
-                <select
-                  value={addCategory}
-                  onChange={(e) => setAddCategory(e.target.value)}
-                  className="px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-accent"
-                >
-                  {CATEGORY_ORDER.map((cat) => (
-                    <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  type="button"
-                  className="ml-auto text-zinc-500 hover:text-zinc-300 p-1"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={addStatement}
-                  onChange={(e) => setAddStatement(e.target.value)}
-                  placeholder="Enter thesis point (min 10 characters)..."
-                  className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
-                />
-                <button
-                  type="submit"
-                  disabled={addingManual || addStatement.trim().length < 10}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors"
-                >
-                  {addingManual ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                  Add
-                </button>
-              </div>
-            </form>
-          )}
 
           <p className="text-zinc-500 text-xs">
             <span className="text-zinc-300">Checked</span> points are submitted for evaluation.
@@ -553,14 +521,54 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             if (!items || items.length === 0) return null;
             return (
               <div key={cat}>
-                <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-medium">
-                  {CATEGORY_LABELS[cat] ?? cat}
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs uppercase tracking-widest text-zinc-500 font-medium">
+                    {CATEGORY_LABELS[cat] ?? cat}
+                  </h3>
+                  <button
+                    onClick={() => setAddForCategory(addForCategory === cat ? null : cat)}
+                    className="p-0.5 text-zinc-600 hover:text-accent transition-colors rounded"
+                    title={`Add point to ${CATEGORY_LABELS[cat] ?? cat}`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Per-section inline add form */}
+                {addForCategory === cat && (
+                  <form onSubmit={handleAddManual} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={addStatement}
+                      onChange={(e) => setAddStatement(e.target.value)}
+                      placeholder="Enter thesis point (min 10 chars)..."
+                      autoFocus
+                      className="flex-1 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+                    />
+                    <button
+                      type="submit"
+                      disabled={addingManual || addStatement.trim().length < 10}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors shrink-0"
+                    >
+                      {addingManual ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAddForCategory(null); setAddStatement(""); }}
+                      className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                )}
+
                 <div className="flex flex-col gap-1">
                   {items.map((t) => {
                     const impact = impactMap.get(t.id);
-                    const importanceDot = IMPORTANCE_DOTS[t.importance];
+                    const importanceIcon = IMPORTANCE_ICONS[t.importance];
                     const isFrozenBroken = frozenBreakIds.has(t.id);
+                    const isNeutral = evaluation && t.selected && !impactMap.has(t.id);
 
                     return editingId === t.id ? (
                       /* Edit mode */
@@ -602,6 +610,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                             ? "border-l-2 border-green-700 bg-green-950/30"
                             : impact?.type === "broken"
                             ? "border-l-2 border-red-700 bg-red-950/30"
+                            : isNeutral
+                            ? "border border-dashed border-zinc-600 bg-surface"
                             : t.selected
                             ? "bg-surface-raised/50 border border-zinc-600"
                             : "bg-surface border border-zinc-800 hover:border-zinc-700"
@@ -614,12 +624,11 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                           className="mt-0.5 shrink-0 cursor-pointer"
                         />
 
-                        {/* Importance dot */}
-                        {importanceDot && (
-                          <span
-                            className={`w-2 h-2 rounded-full ${importanceDot.color} shrink-0 mt-1.5`}
-                            title={importanceDot.label}
-                          />
+                        {/* Importance icon */}
+                        {importanceIcon && (
+                          <span title={importanceIcon.label} className="shrink-0 mt-0.5">
+                            <importanceIcon.Icon className={importanceIcon.className} />
+                          </span>
                         )}
 
                         {/* Frozen indicator */}

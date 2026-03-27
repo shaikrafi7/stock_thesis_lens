@@ -66,8 +66,8 @@ export interface MarketData {
   prices: PricePoint[];
 }
 
-export const fetchMarketData = (ticker: string): Promise<MarketData> =>
-  apiFetch(`/stocks/${ticker}/market-data`);
+export const fetchMarketData = (ticker: string, period = "3mo"): Promise<MarketData> =>
+  apiFetch(`/stocks/${ticker}/market-data?period=${period}`);
 
 export interface BrokenPoint {
   thesis_id: number;
@@ -293,3 +293,51 @@ export interface GenerateAndEvaluateResponse {
 
 export const generateAndEvaluate = (ticker: string): Promise<GenerateAndEvaluateResponse> =>
   apiFetch(`/stocks/${ticker}/generate-and-evaluate`, { method: "POST" });
+
+export interface NewsItem {
+  title: string;
+  url: string;
+  published_utc: string;
+}
+
+export const fetchStockNews = (ticker: string): Promise<NewsItem[]> =>
+  apiFetch(`/stocks/${ticker}/news`);
+
+export const getChatHistory = (ticker: string): Promise<ChatMessage[]> =>
+  apiFetch(`/stocks/${ticker}/chat/history`);
+
+export const clearChatHistory = (ticker: string): Promise<void> =>
+  apiFetch(`/stocks/${ticker}/chat/history`, { method: "DELETE" });
+
+export const getPortfolioChatHistory = (): Promise<ChatMessage[]> =>
+  apiFetch("/portfolio/chat/history");
+
+export const clearPortfolioChatHistory = (): Promise<void> =>
+  apiFetch("/portfolio/chat/history", { method: "DELETE" });
+
+export interface StockReturn {
+  ticker: string;
+  return_pct: number;
+}
+
+export interface PortfolioReturnsData {
+  portfolio_return: number;
+  benchmark_return: number;
+  alpha: number;
+  period: string;
+  stocks: StockReturn[];
+}
+
+export const getPortfolioReturns = (period = "3mo"): Promise<PortfolioReturnsData> =>
+  apiFetch(`/portfolio/returns?period=${period}`);
+
+export const getPortfolioSparklines = (): Promise<Record<string, number[]>> =>
+  apiFetch("/portfolio/sparklines");
+
+export interface SectorEntry {
+  ticker: string;
+  sector: string;
+}
+
+export const getPortfolioSectors = (): Promise<SectorEntry[]> =>
+  apiFetch("/portfolio/sectors");

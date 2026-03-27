@@ -167,8 +167,34 @@ def _call_openai(ticker: str, company_name: str, profile: dict | None = None, fi
 IMPORTANCE_WEIGHTS = {"critical": 2.0, "important": 1.5, "standard": 1.0}
 
 
+def _is_duplicate(stmt: str, existing: list[str], threshold: float = 0.6) -> bool:
+    """Check if a statement is too similar to any existing statement."""
+    import re
+    # Extract key numbers and metric words for comparison
+    stmt_lower = stmt.lower()
+    stmt_nums = set(re.findall(r"\d+\.?\d*", stmt_lower))
+    stmt_words = set(re.findall(r"[a-z]{4,}", stmt_lower))
+
+    for existing_stmt in existing:
+        ex_lower = existing_stmt.lower()
+        ex_nums = set(re.findall(r"\d+\.?\d*", ex_lower))
+        ex_words = set(re.findall(r"[a-z]{4,}", ex_lower))
+
+        # If they share the same specific numbers AND similar words, it's a duplicate
+        shared_nums = stmt_nums & ex_nums
+        shared_words = stmt_words & ex_words
+        all_words = stmt_words | ex_words
+
+        if shared_nums and len(shared_nums) >= 1 and all_words:
+            word_overlap = len(shared_words) / len(all_words)
+            if word_overlap >= threshold:
+                return True
+    return False
+
+
 def _parse_bullets(data: dict) -> list[GeneratedThesis]:
     results = []
+    seen_statements: list[str] = []
     for category in CATEGORIES:
         items = data.get(category, [])
         if not isinstance(items, list):
@@ -184,13 +210,14 @@ def _parse_bullets(data: dict) -> list[GeneratedThesis]:
                 importance = "standard"
             else:
                 continue
-            if statement:
+            if statement and not _is_duplicate(statement, seen_statements):
                 results.append(GeneratedThesis(
                     category=category,
                     statement=statement,
                     weight=IMPORTANCE_WEIGHTS.get(importance, 1.0),
                     importance=importance,
                 ))
+                seen_statements.append(statement)
     return results
 
 

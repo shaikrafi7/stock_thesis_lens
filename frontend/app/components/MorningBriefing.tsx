@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   getMorningBriefing,
   refreshMorningBriefing,
@@ -9,15 +10,15 @@ import {
   type MorningBriefingResponse,
   type BriefingItem,
 } from "@/lib/api";
-import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper, RefreshCw, ExternalLink } from "lucide-react";
+import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper, RefreshCw, ExternalLink, Globe } from "lucide-react";
 
-const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
+export const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
   bullish: { badge: "bg-green-950/60 border-green-800 text-green-400", dot: "bg-green-500" },
   bearish: { badge: "bg-red-950/60 border-red-800 text-red-400", dot: "bg-red-500" },
   neutral: { badge: "bg-zinc-800/60 border-zinc-700 text-zinc-400", dot: "bg-zinc-500" },
 };
 
-function BriefingCard({ item }: { item: BriefingItem }) {
+export function BriefingCard({ item }: { item: BriefingItem }) {
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -42,7 +43,19 @@ function BriefingCard({ item }: { item: BriefingItem }) {
         <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${styles.dot}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-xs font-mono font-bold text-zinc-300">{item.ticker}</span>
+            {item.ticker === "MACRO" ? (
+              <span className="flex items-center gap-1 text-xs font-mono font-bold text-zinc-400">
+                <Globe className="w-3 h-3" />Macro
+              </span>
+            ) : (
+              <Link
+                href={`/stocks/${item.ticker}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-mono font-bold text-zinc-300 hover:text-accent transition-colors"
+              >
+                {item.ticker}
+              </Link>
+            )}
             <span className="text-[10px] uppercase tracking-wide opacity-70">{item.impact}</span>
           </div>
           <p className="text-zinc-300 text-xs leading-relaxed">
@@ -162,7 +175,7 @@ export default function MorningBriefing() {
   const today = new Date().toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="border border-zinc-800 rounded-2xl mb-8 overflow-hidden bg-surface/50 backdrop-blur-sm">
+    <div className="border border-zinc-800 rounded-2xl mb-4 overflow-hidden bg-surface/50 backdrop-blur-sm">
       <div
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none"

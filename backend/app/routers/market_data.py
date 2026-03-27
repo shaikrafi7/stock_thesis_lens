@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 import yfinance as yf
+
+VALID_PERIODS = {"5d", "1mo", "3mo", "6mo", "1y", "5y"}
 
 router = APIRouter(prefix="/stocks", tags=["market-data"])
 
@@ -51,8 +53,10 @@ class MarketDataResponse(BaseModel):
 
 
 @router.get("/{ticker}/market-data", response_model=MarketDataResponse)
-def get_market_data(ticker: str):
+def get_market_data(ticker: str, period: str = Query("3mo")):
     ticker = ticker.upper()
+    if period not in VALID_PERIODS:
+        raise HTTPException(status_code=400, detail=f"Invalid period '{period}'. Must be one of: {', '.join(sorted(VALID_PERIODS))}")
     try:
         t = yf.Ticker(ticker)
         info = t.info or {}
@@ -114,11 +118,13 @@ def get_market_data(ticker: str):
             revenue_growth=info.get("revenueGrowth"),
         )
 
-        hist = t.history(period="3mo", interval="1d")
+        interval = "1h" if period == "5d" else "1d"
+        hist = t.history(period=period, interval=interval)
         prices: list[PricePoint] = []
+        date_fmt = "%Y-%m-%d %H:%M" if period == "5d" else "%Y-%m-%d"
         for dt, row in hist.iterrows():
             prices.append(PricePoint(
-                date=dt.strftime("%Y-%m-%d"),
+                date=dt.strftime(date_fmt),
                 close=round(float(row["Close"]), 2),
             ))
 

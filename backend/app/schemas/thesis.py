@@ -109,6 +109,19 @@ class MorningBriefingResponse(BaseModel):
     date: Optional[str] = None  # ISO date string, e.g. "2026-03-23"
 
 
+class NewsItemSchema(BaseModel):
+    title: str
+    url: str
+    published_utc: str
+
+
+class ChatHistoryMessage(BaseModel):
+    role: str
+    content: str
+
+    model_config = {"from_attributes": True}
+
+
 class GenerateAndEvaluateResponse(BaseModel):
     theses: list[ThesisRead]
     evaluation: Optional[EvaluationRead] = None

@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   addManualThesis,
   addStock,
   deleteStock,
+  getChatHistory,
+  getPortfolioChatHistory,
+  clearChatHistory,
+  clearPortfolioChatHistory,
   type ChatMessage,
   type ThesisSuggestion,
   type PortfolioAction,
@@ -46,29 +50,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   risks: "Risks & Bear Case",
 };
 
-const PORTFOLIO_KEY = "chat___portfolio___";
-const MAX_STORED_MESSAGES = 40;
-
-function storageKey(ticker: string | null) {
-  return ticker ? `chat_history_${ticker}` : PORTFOLIO_KEY;
-}
-
-function loadHistory(ticker: string | null): ChatMessage[] {
+async function fetchHistory(ticker: string | null): Promise<ChatMessage[]> {
   try {
-    const raw = localStorage.getItem(storageKey(ticker));
-    if (!raw) return [];
-    return JSON.parse(raw) as ChatMessage[];
+    return ticker ? await getChatHistory(ticker) : await getPortfolioChatHistory();
   } catch {
     return [];
-  }
-}
-
-function saveHistory(ticker: string | null, history: ChatMessage[]) {
-  try {
-    const trimmed = history.slice(-MAX_STORED_MESSAGES);
-    localStorage.setItem(storageKey(ticker), JSON.stringify(trimmed));
-  } catch {
-    // localStorage unavailable — silent fail
   }
 }
 
@@ -80,35 +66,25 @@ export default function AssistantPanel() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [pendingSuggestion, setPendingSuggestion] = useState<ThesisSuggestion | null>(null);
   const [pendingAction, setPendingAction] = useState<PortfolioAction | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Ref tracks the ticker that chatHistory belongs to — prevents cross-contamination on switch
-  const activeTicker = useRef<string | null>(ticker);
-
-  // Load persisted history whenever ticker changes
+  // Load persisted history from server whenever ticker changes
   useEffect(() => {
-    activeTicker.current = ticker;
-    setChatHistory(loadHistory(ticker));
+    setChatHistory([]);
     setChatInput("");
     setPendingSuggestion(null);
     setPendingAction(null);
     setError("");
+    setHistoryLoading(true);
+    fetchHistory(ticker)
+      .then(setChatHistory)
+      .finally(() => setHistoryLoading(false));
   }, [ticker]);
-
-  // Persist whenever history changes — only if we're still on the same ticker
-  const persistHistory = useCallback((history: ChatMessage[]) => {
-    if (history.length > 0) {
-      saveHistory(activeTicker.current, history);
-    }
-  }, []);
-
-  useEffect(() => {
-    persistHistory(chatHistory);
-  }, [chatHistory, persistHistory]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -286,7 +262,12 @@ export default function AssistantPanel() {
 
         {/* Chat history */}
         <div className="flex-1 flex flex-col gap-3 px-4 py-3 overflow-y-auto">
-          {chatHistory.length === 0 && (
+          {historyLoading && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+            </div>
+          )}
+          {!historyLoading && chatHistory.length === 0 && (
             <p className="text-zinc-600 text-xs text-center py-8 leading-relaxed">
               {isPortfolioMode
                 ? "Ask about your portfolio \u2014 \"Which stock is weakest?\", \"Add Microsoft\", \"Suggest a risk point for NVDA\""

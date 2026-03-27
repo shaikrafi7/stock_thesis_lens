@@ -12,6 +12,15 @@ router = APIRouter(prefix="/stocks", tags=["stocks"])
 # Valid ticker: 1–10 chars, starts with a letter, allows letters/digits/dots/dashes
 _TICKER_RE = re.compile(r'^[A-Z][A-Z0-9\.\-]{0,9}$')
 
+_NAME_SUFFIX_RE = re.compile(
+    r"\s*[-–—]?\s*(Class\s+[A-Z]\s+)?(Common\s+Stock|Ordinary\s+Shares?|American\s+Depositary\s+Shares?|ADR).*$",
+    re.IGNORECASE,
+)
+
+def _clean_name(raw: str) -> str:
+    cleaned = _NAME_SUFFIX_RE.sub("", raw).strip().rstrip(",").strip()
+    return cleaned or raw
+
 
 def _validate_and_get_metadata(ticker: str) -> tuple[str, str | None]:
     """Validate ticker format and existence via Polygon.
@@ -40,7 +49,7 @@ def _validate_and_get_metadata(ticker: str) -> tuple[str, str | None]:
         )
         if resp.status_code == 200:
             results = resp.json().get("results", {})
-            name = results.get("name", ticker) or ticker
+            name = _clean_name(results.get("name", ticker) or ticker)
             icon_url = results.get("branding", {}).get("icon_url")
             logo_url = f"{icon_url}?apiKey={settings.POLYGON_API_KEY}" if icon_url else None
             return name, logo_url
@@ -79,7 +88,17 @@ def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[StockRead])
 def list_stocks(db: Session = Depends(get_db)):
-    return db.query(Stock).order_by(Stock.ticker).all()
+    stocks = db.query(Stock).order_by(Stock.ticker).all()
+    # Auto-clean legacy names with share-class suffixes
+    dirty = False
+    for s in stocks:
+        cleaned = _clean_name(s.name)
+        if cleaned != s.name:
+            s.name = cleaned
+            dirty = True
+    if dirty:
+        db.commit()
+    return stocks
 
 
 @router.get("/{ticker}", response_model=StockRead)

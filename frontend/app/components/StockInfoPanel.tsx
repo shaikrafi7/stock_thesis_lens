@@ -74,13 +74,20 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+const PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "5y"] as const;
+const PERIOD_LABELS: Record<string, string> = {
+  "5d": "1W", "1mo": "1M", "3mo": "3M", "6mo": "6M", "1y": "1Y", "5y": "5Y",
+};
+
+
 export default function StockInfoPanel({ ticker }: { ticker: string }) {
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [hiddenStats, setHiddenStats] = useState<Set<string>>(new Set());
+  const [period, setPeriod] = useState("3mo");
 
   useEffect(() => {
     setHiddenStats(loadHiddenStats());
@@ -89,11 +96,11 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
   useEffect(() => {
     setLoading(true);
     setError("");
-    fetchMarketData(ticker)
+    fetchMarketData(ticker, period)
       .then(setData)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
-  }, [ticker]);
+  }, [ticker, period]);
 
   function toggleStat(key: string) {
     setHiddenStats((prev) => {
@@ -201,7 +208,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
             ${lastClose.toFixed(2)}
           </span>
           <span className="text-xs font-normal">
-            {positive ? "+" : ""}{delta.toFixed(2)}% (3mo)
+            {positive ? "+" : ""}{delta.toFixed(2)}% ({PERIOD_LABELS[period]})
           </span>
         </div>
         {/* Analyst recommendation badge */}
@@ -219,7 +226,22 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
         )}
       </div>
 
-      {/* Price chart */}
+      {/* Period selector + Price chart */}
+      <div className="flex gap-1 mb-1">
+        {PERIODS.map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${
+              period === p
+                ? "bg-accent/20 text-accent border border-accent/40"
+                : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+            }`}
+          >
+            {PERIOD_LABELS[p]}
+          </button>
+        ))}
+      </div>
       <div className="h-40 bg-surface rounded-xl p-2 border border-zinc-800">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={prices} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -234,6 +256,9 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
               ticks={xTicks}
               tickFormatter={(v: string) => {
                 const d = new Date(v);
+                if (period === "5d") {
+                  return `${d.toLocaleString("default", { weekday: "short" })} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+                }
                 return `${d.toLocaleString("default", { month: "short" })} ${d.getDate()}`;
               }}
               tick={{ fill: "#71717a", fontSize: 10 }}
@@ -314,7 +339,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
         )}
 
         {!collapsed && (
-          <div className="px-3 py-1">
+          <div className="px-3 py-1 max-h-[400px] overflow-y-auto">
             {(["overview", "analyst", "valuation", "dividend"] as const).map((group) => {
               const groupStats = visibleStats.filter((s) => s.group === group);
               if (groupStats.length === 0) return null;

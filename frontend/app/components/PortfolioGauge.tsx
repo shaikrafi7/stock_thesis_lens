@@ -1,51 +1,97 @@
 "use client";
 
-import GaugeComponent from "react-gauge-component";
+import { useState } from "react";
+import dynamic from "next/dynamic";
+
+const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: false });
+
+const TOOLTIP_STYLE = {
+  fontSize: "12px",
+  backgroundColor: "#18181b",
+  color: "#e4e4e7",
+  border: "1px solid #3f3f46",
+  borderRadius: "8px",
+  padding: "4px 8px",
+};
 
 const scoreColor = (score: number) =>
-  score >= 75 ? "#22c55e" : score >= 50 ? "#eab308" : "#ef4444";
+  score >= 80 ? "#22c55e" : score >= 60 ? "#a3e635" : score >= 40 ? "#eab308" : "#ef4444";
 
 const scoreLabel = (score: number) =>
-  score >= 75 ? "Thesis Strong" : score >= 50 ? "Under Pressure" : "At Risk";
+  score >= 80 ? "Thesis Strong" : score >= 60 ? "Holding" : score >= 40 ? "Under Pressure" : "At Risk";
+
+const ZONES = [
+  { color: "#ef4444", label: "At Risk", range: "0\u201340" },
+  { color: "#eab308", label: "Under Pressure", range: "40\u201360" },
+  { color: "#a3e635", label: "Holding", range: "60\u201380" },
+  { color: "#22c55e", label: "Thesis Strong", range: "80\u2013100" },
+];
 
 export default function PortfolioGauge({ avgScore }: { avgScore: number }) {
+  const [hoveredZone, setHoveredZone] = useState<number | null>(null);
+  const color = scoreColor(avgScore);
+
   return (
-    <div className="flex flex-col items-center py-6 mb-8 bg-surface/80 backdrop-blur-sm border border-zinc-800 rounded-2xl">
-      <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">
+    <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden border border-zinc-700/50 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-md shadow-lg">
+      {/* Glassy overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none" />
+
+      <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1 relative z-10">
         Portfolio Thesis Health
       </p>
-      <GaugeComponent
-        type="semicircle"
-        value={avgScore}
-        minValue={0}
-        maxValue={100}
-        arc={{
-          colorArray: ["#ef4444", "#eab308", "#22c55e"],
-          subArcs: [{ limit: 50 }, { limit: 75 }, { limit: 100 }],
-          padding: 0.02,
-          width: 0.25,
-        }}
-        pointer={{
-          color: scoreColor(avgScore),
-          animationDelay: 0,
-        }}
-        labels={{
-          valueLabel: { hide: true },
-          tickLabels: { hideMinMax: true, ticks: [] },
-        }}
-        style={{ width: "100%", maxWidth: "320px" }}
-      />
-      <div className="text-center mt-2">
-        <span className="text-4xl font-mono font-bold text-white">
+      <div className="relative z-10 w-full flex justify-center -mb-4">
+        <GaugeComponent
+          type="semicircle"
+          value={avgScore}
+          minValue={0}
+          maxValue={100}
+          arc={{
+            subArcs: [
+              { limit: 40, color: "#ef4444", tooltip: { text: "At Risk (0\u201340)", style: TOOLTIP_STYLE } },
+              { limit: 60, color: "#eab308", tooltip: { text: "Under Pressure (40\u201360)", style: TOOLTIP_STYLE } },
+              { limit: 80, color: "#a3e635", tooltip: { text: "Holding (60\u201380)", style: TOOLTIP_STYLE } },
+              { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Strong (80\u2013100)", style: TOOLTIP_STYLE } },
+            ],
+            padding: 0.02,
+            width: 0.25,
+          }}
+          pointer={{ color, animationDelay: 0 }}
+          labels={{ valueLabel: { hide: true }, tickLabels: { hideMinMax: true, ticks: [] } }}
+          style={{ width: "100%", maxWidth: "340px" }}
+        />
+      </div>
+      <div className="text-center mt-2 relative z-10">
+        <span
+          className="text-4xl font-mono font-bold text-white"
+          style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}
+        >
           {avgScore.toFixed(1)}
         </span>
         <span className="text-zinc-500 text-sm ml-1">/100</span>
-        <p
-          className="text-xs mt-1 font-semibold tracking-wide"
-          style={{ color: scoreColor(avgScore) }}
-        >
+        <p className="text-xs mt-1 font-semibold tracking-wide" style={{ color }}>
           {scoreLabel(avgScore)}
         </p>
+      </div>
+
+      {/* Zone legend with hover tooltips */}
+      <div className="flex gap-3 mt-3 relative z-10">
+        {ZONES.map((zone, i) => (
+          <div
+            key={i}
+            className="relative flex items-center gap-1 cursor-default"
+            onMouseEnter={() => setHoveredZone(i)}
+            onMouseLeave={() => setHoveredZone(null)}
+          >
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: zone.color }} />
+            <span className="text-[9px] text-zinc-500">{zone.label}</span>
+            {hoveredZone === i && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300 whitespace-nowrap z-20">
+                {zone.range}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

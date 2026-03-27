@@ -481,21 +481,41 @@ def _llm_news_mapping(
 # ── Merge & interpret ──────────────────────────────────────────────────────
 
 def _merge_mappings(*mapping_lists: list[ThesisSignalMapping]) -> list[ThesisSignalMapping]:
-    """Merge all mapping lists. For same thesis_id, keep the highest-confidence negative."""
-    combined: dict[int, ThesisSignalMapping] = {}
+    """Merge all mapping lists.
 
+    Two-stage dedup:
+    1. Per thesis_id: keep highest-confidence negative, or highest-confidence overall.
+    2. Per signal_summary: if the same signal text maps to multiple thesis points,
+       keep only the single best match (highest confidence) to avoid score inflation.
+    """
+    # Stage 1: dedup by thesis_id
+    by_thesis: dict[int, ThesisSignalMapping] = {}
     for maps in mapping_lists:
         for m in maps:
-            existing = combined.get(m.thesis_id)
+            existing = by_thesis.get(m.thesis_id)
             if not existing:
-                combined[m.thesis_id] = m
+                by_thesis[m.thesis_id] = m
             else:
                 if m.sentiment == "negative" and existing.sentiment != "negative":
-                    combined[m.thesis_id] = m
+                    by_thesis[m.thesis_id] = m
                 elif m.sentiment == existing.sentiment and m.confidence > existing.confidence:
-                    combined[m.thesis_id] = m
+                    by_thesis[m.thesis_id] = m
 
-    return list(combined.values())
+    # Stage 2: dedup by signal_summary — one signal should only credit/deduct once
+    by_signal: dict[str, ThesisSignalMapping] = {}
+    for m in by_thesis.values():
+        key = m.signal_summary.strip().lower()
+        existing = by_signal.get(key)
+        if not existing:
+            by_signal[key] = m
+        else:
+            # Prefer negative signals, then higher confidence
+            if m.sentiment == "negative" and existing.sentiment != "negative":
+                by_signal[key] = m
+            elif m.sentiment == existing.sentiment and m.confidence > existing.confidence:
+                by_signal[key] = m
+
+    return list(by_signal.values())
 
 
 def interpret_signals(signals: CollectedSignals, selected_theses: list[dict]) -> list[ThesisSignalMapping]:

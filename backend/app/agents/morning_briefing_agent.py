@@ -15,17 +15,22 @@ CATEGORIES = [
 SYSTEM_PROMPT = """You are a financial research assistant generating a morning portfolio briefing for a long-term retail investor.
 
 You receive:
-1. The investor's current portfolio with thesis points and evaluation scores
+1. The investor's current portfolio with thesis points, evaluation scores, and each company's sector/industry classification
 2. Recent news headlines for each stock
 
+You also receive:
+3. Macro/market-level headlines (Fed, sector rotation, market sentiment)
+
 Your task:
-- Write a 1–2 sentence overall summary of what matters most today across the portfolio
+- Write a 1–2 sentence overall summary of what matters most today across the portfolio (consider macro context too)
 - For each significant news item, assess whether it is bullish, bearish, or neutral for the investor's thesis
 - When a news item clearly supports or challenges an existing thesis, or reveals a new thesis point, include a specific thesis suggestion
+- If a macro event is relevant to the portfolio, include it with ticker "MACRO"
 
 Rules:
+- CRITICAL: Only associate a news item with a stock if the news is directly relevant to that company's sector and business. A healthcare company is NOT affected by oil prices. Check the sector/industry classification before tagging.
 - Only include news items that are genuinely relevant (skip press releases, minor events)
-- Maximum 6 items total across all stocks
+- Maximum 8 items total (stock-specific + up to 2 MACRO items)
 - Be concise and investor-focused (not journalistic)
 - No buy/sell recommendations
 - The suggestion statement must provide ANALYTICAL INSIGHT beyond the headline — frame it as what this means for the investor's thesis, not a restatement of the news. Bad: "Company X reported strong earnings." Good: "Earnings beat confirms pricing power thesis with 200bps margin expansion."
@@ -77,7 +82,7 @@ class MorningBriefingResult:
     items: list[BriefingItemResult] = field(default_factory=list)
 
 
-def _build_context(portfolio_data: list[dict], news_items: list[dict]) -> str:
+def _build_context(portfolio_data: list[dict], news_items: list[dict], macro_news: list[dict] | None = None) -> str:
     lines = []
 
     # Portfolio section
@@ -91,13 +96,29 @@ def _build_context(portfolio_data: list[dict], news_items: list[dict]) -> str:
             selected = [t["statement"] for t in theses if t.get("selected")]
 
             score_str = f"Score {score:.0f}" if score is not None else "Not evaluated"
-            lines.append(f"  {ticker} ({name}) — {score_str}")
+            sector = s.get("sector", "")
+            industry = s.get("industry", "")
+            sector_str = f" [{sector}: {industry}]" if sector else ""
+            lines.append(f"  {ticker} ({name}){sector_str} — {score_str}")
             for stmt in selected[:3]:
                 lines.append(f"    • {stmt}")
     else:
         lines.append("Portfolio: empty")
 
     lines.append("")
+
+    # Macro context section
+    if macro_news:
+        lines.append("Macro Context:")
+        for a in macro_news:
+            title = a.get("title", "")
+            url = a.get("url", "")
+            url_str = f" ({url})" if url else ""
+            lines.append(f"  [MACRO] {title}{url_str}")
+            desc = a.get("description", "")
+            if desc:
+                lines.append(f"    {desc[:200]}")
+        lines.append("")
 
     # News section
     if news_items:
@@ -120,7 +141,7 @@ def _build_context(portfolio_data: list[dict], news_items: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def generate_briefing(portfolio_data: list[dict], news_items: list[dict]) -> MorningBriefingResult:
+def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_news: list[dict] | None = None) -> MorningBriefingResult:
     if not settings.OPENAI_API_KEY:
         return MorningBriefingResult(summary="API key not configured — briefing unavailable.")
 
@@ -133,7 +154,7 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict]) -> Mor
     from openai import OpenAI
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    context = _build_context(portfolio_data, news_items)
+    context = _build_context(portfolio_data, news_items, macro_news=macro_news)
 
     try:
         response = client.chat.completions.create(
@@ -177,7 +198,9 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict]) -> Mor
                     suggestion=suggestion, source_url=source_url or None,
                 ))
 
-        return MorningBriefingResult(summary=summary, items=items[:6])
+        # Macro items first, then stock-specific
+        items.sort(key=lambda x: (0 if x.ticker == "MACRO" else 1))
+        return MorningBriefingResult(summary=summary, items=items[:8])
 
     except Exception as exc:
         logger.error("morning_briefing_agent: error (%s)", exc)

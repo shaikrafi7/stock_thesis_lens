@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage
 from app.schemas.evaluation import EvaluationRead
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as thesis_chat_stream
+from app.models.chat import ChatMessage as ChatMessageModel
 from app.services.evaluation_service import run_evaluation_for_stock
 from app.utils.market_snapshot import get_snapshot, format_snapshot
 from app.utils.news import _search_one_ticker
@@ -188,12 +189,26 @@ def chat_with_assistant_stream(ticker: str, payload: ChatRequest, db: Session = 
         recent_news = []
 
     def event_generator():
+        accumulated = ""
         for event in thesis_chat_stream(
             ticker, stock.name, thesis_dicts, messages,
             market_data=market_data,
             recent_news=recent_news,
         ):
+            if event["event"] == "token":
+                accumulated += event["data"].get("text", "")
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
+
+        # Persist the conversation after streaming completes
+        try:
+            user_content = messages[-1]["content"] if messages else ""
+            if user_content:
+                db.add(ChatMessageModel(context_key=ticker, role="user", content=user_content))
+            if accumulated:
+                db.add(ChatMessageModel(context_key=ticker, role="assistant", content=accumulated))
+            db.commit()
+        except Exception:
+            logger.warning("Failed to persist chat for %s", ticker)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -221,6 +236,46 @@ def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Sessio
     db.commit()
     db.refresh(thesis)
     return thesis
+
+
+@router.get("/{ticker}/news", response_model=list[NewsItemSchema])
+def get_stock_news(ticker: str, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker}' not found")
+
+    articles = _search_one_ticker(ticker, stock.name, limit=5, days=3)
+    return [
+        NewsItemSchema(
+            title=a.get("title", ""),
+            url=a.get("url", ""),
+            published_utc=a.get("published_utc", ""),
+        )
+        for a in articles
+        if a.get("title")
+    ]
+
+
+@router.get("/{ticker}/chat/history", response_model=list[ChatHistoryMessage])
+def get_chat_history(ticker: str, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    messages = (
+        db.query(ChatMessageModel)
+        .filter(ChatMessageModel.context_key == ticker)
+        .order_by(ChatMessageModel.created_at.asc())
+        .limit(40)
+        .all()
+    )
+    return [ChatHistoryMessage(role=m.role, content=m.content) for m in messages]
+
+
+@router.delete("/{ticker}/chat/history", status_code=204)
+def clear_chat_history(ticker: str, db: Session = Depends(get_db)):
+    ticker = ticker.upper()
+    db.query(ChatMessageModel).filter(ChatMessageModel.context_key == ticker).delete()
+    db.commit()
+    return None
 
 
 @router.delete("/{ticker}/theses/{thesis_id}", status_code=204)

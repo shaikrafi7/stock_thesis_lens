@@ -1,9 +1,20 @@
-import { fetchStocks, getLatestEvaluation, getPortfolioTrends, getPortfolioScoreHistories, type Stock, type Evaluation, type StockTrend } from "@/lib/api";
-import AddStockForm from "./components/AddStockForm";
+import {
+  fetchStocks,
+  getLatestEvaluation,
+  getPortfolioTrends,
+  getPortfolioScoreHistories,
+  getPortfolioSparklines,
+  type Stock,
+  type Evaluation,
+  type StockTrend,
+  type EvaluationSummary,
+} from "@/lib/api";
 import PortfolioGauge from "./components/PortfolioGauge";
+import PortfolioReturns from "./components/PortfolioReturns";
 import MorningBriefing from "./components/MorningBriefing";
 import EvaluateAllButton from "./components/EvaluateAllButton";
 import PortfolioTable from "./components/PortfolioTable";
+import AddStockInline from "./components/AddStockInline";
 
 async function getEvaluationSafe(ticker: string): Promise<Evaluation | null> {
   try {
@@ -13,6 +24,13 @@ async function getEvaluationSafe(ticker: string): Promise<Evaluation | null> {
   }
 }
 
+async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return fallback;
+  }
+}
 
 export default async function DashboardPage() {
   let stocks: Stock[] = [];
@@ -22,13 +40,17 @@ export default async function DashboardPage() {
     // backend may not be running yet
   }
 
-  const [evaluations, trends, scoreHistories] = await Promise.all([
+  const [evaluations, trends, scoreHistories, priceSparklines] = await Promise.all([
     Promise.all(stocks.map((s) => getEvaluationSafe(s.ticker))),
-    getPortfolioTrends().catch(() => [] as StockTrend[]),
-    getPortfolioScoreHistories(10).catch(() => ({} as Record<string, never>)),
+    safeFetch(getPortfolioTrends, [] as StockTrend[]),
+    safeFetch(() => getPortfolioScoreHistories(10), {} as Record<string, EvaluationSummary[]>),
+    safeFetch(getPortfolioSparklines, {} as Record<string, number[]>),
   ]);
+
   const trendMap: Record<string, StockTrend> = {};
-  for (const t of trends) trendMap[t.ticker] = t;
+  for (const t of trends) {
+    trendMap[t.ticker] = t;
+  }
 
   const evaluatedScores = evaluations
     .filter((e): e is Evaluation => e !== null)
@@ -40,61 +62,48 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="mb-10 flex items-center gap-3">
-          <img src="/thesisarc-logo.png" alt="ThesisArc" className="h-9 w-auto" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight mb-0.5">
-              <span className="text-white">Thesis</span><span className="text-accent">Arc</span>
-            </h1>
-            <p className="text-zinc-500 text-sm">
-              The arc of conviction, stress-tested daily
-            </p>
-          </div>
-        </div>
+    <div className="max-w-5xl mx-auto px-6 pt-2 pb-4">
+      {/* Health gauge — full width hero */}
+      {avgScore !== null && <PortfolioGauge avgScore={avgScore} />}
 
-        {/* Portfolio Gauge */}
-        {avgScore !== null && <PortfolioGauge avgScore={avgScore} />}
-
-        {/* Morning Briefing */}
-        {stocks.length > 0 && <MorningBriefing />}
-
-        {/* Add Stock */}
-        <div className="mb-10">
-          <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-3">
-            Add to Portfolio
-          </h2>
-          <AddStockForm />
-          <p className="text-zinc-600 text-xs mt-2">
-            Enter a ticker symbol (e.g. AAPL) — company name is looked up automatically.
-          </p>
-        </div>
-
-        {/* Portfolio */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs uppercase tracking-widest text-zinc-500">
-              Portfolio ({stocks.length})
-            </h2>
-            {stocks.length > 0 && <EvaluateAllButton />}
+      {stocks.length > 0 ? (
+        <>
+          {/* Two-column: briefing (left) | returns gauge (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
+            <div className="min-w-0">
+              <MorningBriefing />
+            </div>
+            <div className="lg:sticky lg:top-0 lg:self-start">
+              <PortfolioReturns />
+            </div>
           </div>
 
-          {stocks.length === 0 ? (
-            <p className="text-zinc-600 text-sm">
-              No stocks yet. Add a ticker above to get started.
-            </p>
-          ) : (
-            <PortfolioTable
-              stocks={stocks}
-              evaluations={evaluations}
-              trendMap={trendMap}
-              scoreHistories={scoreHistories}
-            />
-          )}
+          {/* Portfolio header with actions */}
+          <div className="border-t border-zinc-800 pt-4 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Portfolio Stocks</h2>
+              <div className="flex items-center gap-3">
+                <EvaluateAllButton />
+                <AddStockInline />
+              </div>
+            </div>
+          </div>
+
+          {/* Stock list */}
+          <PortfolioTable
+            stocks={stocks}
+            evaluations={evaluations}
+            trendMap={trendMap}
+            scoreHistories={scoreHistories}
+            priceSparklines={priceSparklines}
+          />
+        </>
+      ) : (
+        <div className="text-center py-16">
+          <p className="text-zinc-500 text-sm mb-4">No stocks in your portfolio yet.</p>
+          <AddStockInline />
         </div>
-      </div>
+      )}
     </div>
   );
 }
