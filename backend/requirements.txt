@@ -8,5 +8,7 @@ openai
 tavily-python
 langsmith
 httpx
+bcrypt
+python-jose[cryptography]
 pytest
 pytest-asyncio

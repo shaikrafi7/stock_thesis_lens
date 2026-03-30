@@ -12,6 +12,7 @@ from app.agents.signal_collector import collect_signals
 from app.agents.signal_interpreter import interpret_signals
 from app.agents.thesis_evaluator import evaluate_thesis
 from app.agents.explanation_agent import generate_explanation
+from app.agents.thesis_generator import generate_thesis
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,12 @@ def run_evaluation_for_stock(stock: Stock, db: Session) -> Evaluation | None:
         return None
 
 
-def evaluate_all_stocks(db: Session) -> dict:
+def evaluate_all_stocks(db: Session, user_id: int | None = None) -> dict:
     """Evaluate all eligible stocks. Returns summary dict."""
-    stocks = db.query(Stock).order_by(Stock.ticker).all()
+    query = db.query(Stock)
+    if user_id is not None:
+        query = query.filter(Stock.user_id == user_id)
+    stocks = query.order_by(Stock.ticker).all()
 
     evaluated = []
     skipped = []
@@ -84,6 +88,29 @@ def evaluate_all_stocks(db: Session) -> dict:
 
     for stock in stocks:
         try:
+            # Auto-generate theses for stocks that don't have enough
+            selected_count = (
+                db.query(Thesis)
+                .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
+                .count()
+            )
+            if selected_count < MIN_SELECTED:
+                generated = generate_thesis(stock.ticker, stock.name)
+                new_theses = [
+                    Thesis(
+                        stock_id=stock.id,
+                        category=item.category,
+                        statement=item.statement,
+                        weight=item.weight,
+                        importance=item.importance,
+                        selected=True,
+                    )
+                    for item in generated
+                ]
+                db.add_all(new_theses)
+                db.commit()
+                logger.info("evaluate_all: auto-generated %d theses for %s", len(new_theses), stock.ticker)
+
             result = run_evaluation_for_stock(stock, db)
             if result is None:
                 skipped.append(stock.ticker)

@@ -15,9 +15,13 @@ export async function streamChat(
   const { onToken, onMeta, onDone, onError } = callbacks;
 
   try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("thesisarc_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const response = await fetch(`${BASE_URL}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
     });
 

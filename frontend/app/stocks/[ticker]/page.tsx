@@ -1,29 +1,68 @@
+"use client";
+
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { getTheses, getLatestEvaluation, type Thesis, type Evaluation } from "@/lib/api";
+import {
+  fetchStocks,
+  getTheses,
+  getLatestEvaluation,
+  type Stock,
+  type Thesis,
+  type Evaluation,
+} from "@/lib/api";
 import ThesisManager from "./ThesisManager";
 import StockDetailLayout from "./StockDetailLayout";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
 import StockNews from "@/app/components/StockNews";
-import { ArrowLeft } from "lucide-react";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-
-async function getStock(ticker: string) {
-  const res = await fetch(`${BASE_URL}/stocks/${ticker}`, { cache: "no-store" });
-  if (!res.ok) return null;
-  return res.json() as Promise<{ id: number; ticker: string; name: string; logo_url: string | null }>;
-}
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 interface Props {
   params: Promise<{ ticker: string }>;
 }
 
-export default async function StockPage({ params }: Props) {
-  const { ticker } = await params;
+export default function StockPage({ params }: Props) {
+  const { ticker } = use(params);
   const upperTicker = ticker.toUpperCase();
 
-  const stock = await getStock(upperTicker);
+  const [loading, setLoading] = useState(true);
+  const [stock, setStock] = useState<Stock | null>(null);
+  const [theses, setTheses] = useState<Thesis[]>([]);
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        // Fetch stock from the list (scoped by user via token)
+        const stocks = await fetchStocks();
+        const found = stocks.find((s) => s.ticker === upperTicker) ?? null;
+        setStock(found);
+
+        if (found) {
+          const [t, e] = await Promise.all([
+            getTheses(upperTicker).catch(() => [] as Thesis[]),
+            getLatestEvaluation(upperTicker).catch(() => null),
+          ]);
+          setTheses(t);
+          setEvaluation(e);
+        }
+      } catch {
+        // handled
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [upperTicker]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   if (!stock) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -38,24 +77,8 @@ export default async function StockPage({ params }: Props) {
     );
   }
 
-  let theses: Thesis[] = [];
-  let evaluation: Evaluation | null = null;
-
-  try {
-    theses = await getTheses(upperTicker);
-  } catch {
-    // none yet
-  }
-
-  try {
-    evaluation = await getLatestEvaluation(upperTicker);
-  } catch {
-    // none yet
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-6 py-3">
-      {/* Breadcrumb + Header compact */}
       <div className="flex items-center gap-3 mb-4">
         <Link
           href="/"
@@ -77,7 +100,6 @@ export default async function StockPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Collapsible layout: left panel (chart/metrics/news) + center (thesis) */}
       <StockDetailLayout
         leftPanel={
           <>

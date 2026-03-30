@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchStocks,
   getLatestEvaluation,
@@ -15,42 +18,51 @@ import MorningBriefing from "./components/MorningBriefing";
 import EvaluateAllButton from "./components/EvaluateAllButton";
 import PortfolioTable from "./components/PortfolioTable";
 import AddStockInline from "./components/AddStockInline";
+import SectorChart from "./components/SectorChart";
+import { Loader2 } from "lucide-react";
 
-async function getEvaluationSafe(ticker: string): Promise<Evaluation | null> {
-  try {
-    return await getLatestEvaluation(ticker);
-  } catch {
-    return null;
-  }
-}
+export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
+  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
+  const [trendMap, setTrendMap] = useState<Record<string, StockTrend>>({});
+  const [scoreHistories, setScoreHistories] = useState<Record<string, EvaluationSummary[]>>({});
+  const [priceSparklines, setPriceSparklines] = useState<Record<string, number[]>>({});
 
-async function safeFetch<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch {
-    return fallback;
-  }
-}
+  const loadData = useCallback(async () => {
+    try {
+      const stockList = await fetchStocks();
+      setStocks(stockList);
 
-export default async function DashboardPage() {
-  let stocks: Stock[] = [];
-  try {
-    stocks = await fetchStocks();
-  } catch {
-    // backend may not be running yet
-  }
+      const [evals, trends, histories, sparklines] = await Promise.all([
+        Promise.all(
+          stockList.map((s) =>
+            getLatestEvaluation(s.ticker).catch(() => null)
+          )
+        ),
+        getPortfolioTrends().catch(() => [] as StockTrend[]),
+        getPortfolioScoreHistories(10).catch(() => ({}) as Record<string, EvaluationSummary[]>),
+        getPortfolioSparklines().catch(() => ({}) as Record<string, number[]>),
+      ]);
 
-  const [evaluations, trends, scoreHistories, priceSparklines] = await Promise.all([
-    Promise.all(stocks.map((s) => getEvaluationSafe(s.ticker))),
-    safeFetch(getPortfolioTrends, [] as StockTrend[]),
-    safeFetch(() => getPortfolioScoreHistories(10), {} as Record<string, EvaluationSummary[]>),
-    safeFetch(getPortfolioSparklines, {} as Record<string, number[]>),
-  ]);
+      setEvaluations(evals);
 
-  const trendMap: Record<string, StockTrend> = {};
-  for (const t of trends) {
-    trendMap[t.ticker] = t;
-  }
+      const tm: Record<string, StockTrend> = {};
+      for (const t of trends) tm[t.ticker] = t;
+      setTrendMap(tm);
+
+      setScoreHistories(histories);
+      setPriceSparklines(sparklines);
+    } catch {
+      // API errors handled per-call above
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const evaluatedScores = evaluations
     .filter((e): e is Evaluation => e !== null)
@@ -61,35 +73,43 @@ export default async function DashboardPage() {
       ? evaluatedScores.reduce((sum, s) => sum + s, 0) / evaluatedScores.length
       : null;
 
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-6 pt-16 flex justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-6 pt-2 pb-4">
-      {/* Health gauge — full width hero */}
-      {avgScore !== null && <PortfolioGauge avgScore={avgScore} />}
+      {/* Health gauge — full width at top */}
+      <PortfolioGauge avgScore={avgScore ?? 0} hasEvaluations={avgScore !== null} />
 
       {stocks.length > 0 ? (
         <>
-          {/* Two-column: briefing (left) | returns gauge (right) */}
+          {/* Two-column: left = news, right = returns + sector */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
             <div className="min-w-0">
               <MorningBriefing />
             </div>
-            <div className="lg:sticky lg:top-0 lg:self-start">
+            <div className="flex flex-col gap-4">
               <PortfolioReturns />
+              <SectorChart compact />
             </div>
           </div>
 
-          {/* Portfolio header with actions */}
+          {/* Stocks header + table */}
           <div className="border-t border-zinc-800 pt-4 mb-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Portfolio Stocks</h2>
               <div className="flex items-center gap-3">
                 <EvaluateAllButton />
-                <AddStockInline />
+                <AddStockInline onAdded={loadData} />
               </div>
             </div>
           </div>
 
-          {/* Stock list */}
           <PortfolioTable
             stocks={stocks}
             evaluations={evaluations}
@@ -101,7 +121,7 @@ export default async function DashboardPage() {
       ) : (
         <div className="text-center py-16">
           <p className="text-zinc-500 text-sm mb-4">No stocks in your portfolio yet.</p>
-          <AddStockInline />
+          <AddStockInline onAdded={loadData} />
         </div>
       )}
     </div>

@@ -19,21 +19,85 @@ body {
 }
 
 /* Smooth scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+input[type="checkbox"] { accent-color: var(--color-accent); }
+
+/* ── Light theme ──
+   Tailwind v4 puts utilities in @layer, so unlayered CSS wins without !important. */
+html[data-theme="light"] {
+  --color-background: #f4f4f5;
+  --color-foreground: #18181b;
+  --color-surface: #ffffff;
+  --color-surface-raised: #e4e4e7;
 }
 
-/* Custom accent checkbox */
-input[type="checkbox"] {
-  accent-color: var(--color-accent);
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background: #a1a1aa; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #71717a; }
+
+/* Background overrides */
+html[data-theme="light"] .bg-zinc-800 { background-color: #e4e4e7; }
+html[data-theme="light"] .bg-zinc-800\/50 { background-color: rgba(228,228,231,0.5); }
+html[data-theme="light"] .bg-zinc-800\/60 { background-color: rgba(228,228,231,0.6); }
+html[data-theme="light"] .bg-zinc-700 { background-color: #d4d4d8; }
+html[data-theme="light"] .bg-zinc-900 { background-color: #f4f4f5; }
+html[data-theme="light"] .bg-zinc-900\/90 { background-color: rgba(255,255,255,0.9); }
+html[data-theme="light"] .bg-zinc-950\/90 { background-color: rgba(244,244,245,0.9); }
+html[data-theme="light"] .bg-black\/30 { background-color: rgba(0,0,0,0.1); }
+
+/* Text overrides */
+html[data-theme="light"] .text-white { color: #18181b; }
+html[data-theme="light"] .text-zinc-100 { color: #27272a; }
+html[data-theme="light"] .text-zinc-200 { color: #27272a; }
+html[data-theme="light"] .text-zinc-300 { color: #3f3f46; }
+html[data-theme="light"] .text-zinc-400 { color: #52525b; }
+html[data-theme="light"] .text-zinc-500 { color: #71717a; }
+html[data-theme="light"] .text-zinc-600 { color: #a1a1aa; }
+html[data-theme="light"] .text-zinc-700 { color: #d4d4d8; }
+html[data-theme="light"] .text-zinc-800 { color: #e4e4e7; }
+
+/* Border overrides */
+html[data-theme="light"] .border-zinc-600 { border-color: #d4d4d8; }
+html[data-theme="light"] .border-zinc-700 { border-color: #d4d4d8; }
+html[data-theme="light"] .border-zinc-700\/50 { border-color: rgba(212,212,216,0.5); }
+html[data-theme="light"] .border-zinc-800 { border-color: #d4d4d8; }
+html[data-theme="light"] .divide-zinc-800 > :not(:first-child) { border-color: #d4d4d8; }
+
+/* Placeholder overrides */
+html[data-theme="light"] .placeholder-zinc-500::placeholder { color: #a1a1aa; }
+
+/* Hover state overrides */
+html[data-theme="light"] .hover\:text-zinc-200:hover { color: #18181b; }
+html[data-theme="light"] .hover\:text-zinc-300:hover { color: #27272a; }
+html[data-theme="light"] .hover\:text-zinc-400:hover { color: #3f3f46; }
+html[data-theme="light"] .hover\:bg-zinc-700:hover { background-color: #d4d4d8; }
+html[data-theme="light"] .hover\:bg-zinc-800:hover { background-color: #e4e4e7; }
+html[data-theme="light"] .hover\:bg-zinc-600:hover { background-color: #d4d4d8; }
+html[data-theme="light"] .hover\:border-zinc-700:hover { border-color: #d4d4d8; }
+
+/* Decoration overrides */
+html[data-theme="light"] .decoration-zinc-500 { text-decoration-color: #a1a1aa; }
+html[data-theme="light"] .hover\:decoration-zinc-300:hover { text-decoration-color: #52525b; }
+
+/* Disabled state overrides */
+html[data-theme="light"] .disabled\:bg-zinc-800:disabled { background-color: #e4e4e7; }
+html[data-theme="light"] .disabled\:text-zinc-500:disabled { color: #a1a1aa; }
+html[data-theme="light"] .disabled\:text-zinc-600:disabled { color: #a1a1aa; }
+
+/* Gradient overrides */
+html[data-theme="light"] .from-zinc-900\/90 { --tw-gradient-from: rgba(255,255,255,0.9); }
+html[data-theme="light"] .from-zinc-900 { --tw-gradient-from: #f4f4f5; }
+html[data-theme="light"] .to-zinc-950\/90 { --tw-gradient-to: rgba(244,244,245,0.9); }
+html[data-theme="light"] .to-zinc-950 { --tw-gradient-to: #f4f4f5; }
+html[data-theme="light"] .from-white\/\[0\.03\] { --tw-gradient-from: rgba(0,0,0,0.03); }
+
+/* Glass morphism overrides */
+html[data-theme="light"] .shadow-\[inset_0_1px_1px_rgba\(255\,255\,255\,0\.05\)\] {
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.05);
 }
+
+/* Focus states */
+html[data-theme="light"] .focus\:border-accent:focus { border-color: var(--color-accent); }

@@ -1,5 +1,11 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("thesisarc_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export interface Stock {
   id: number;
   ticker: string;
@@ -100,7 +106,20 @@ export interface Evaluation {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, init);
+  const authHeaders = getAuthHeaders();
+  const mergedHeaders = {
+    ...authHeaders,
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers: mergedHeaders });
+  if (res.status === 401) {
+    // Token expired or invalid — clear and redirect to login
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("thesisarc_token");
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired. Please log in again.");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { detail?: string }).detail ?? `API error ${res.status}: ${path}`);

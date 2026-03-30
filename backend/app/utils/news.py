@@ -6,6 +6,16 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def _is_relevant(article: dict, ticker: str, company_name: str) -> bool:
+    """Check if article actually mentions the ticker or exact company name."""
+    text = (article.get("title", "") + " " + article.get("description", "")).lower()
+    if ticker.lower() in text:
+        return True
+    if company_name.lower() != ticker.lower() and company_name.lower() in text:
+        return True
+    return False
+
+
 def _search_one_ticker(ticker: str, company_name: str, limit: int, days: int = 3) -> list[dict]:
     """Synchronous Tavily search for a single ticker. Called via executor."""
     from app.core.config import settings
@@ -18,7 +28,7 @@ def _search_one_ticker(ticker: str, company_name: str, limit: int, days: int = 3
             query=query,
             topic="news",
             days=days,
-            max_results=limit,
+            max_results=limit * 2,
         )
         results = []
         for r in response.get("results", []):
@@ -31,7 +41,10 @@ def _search_one_ticker(ticker: str, company_name: str, limit: int, days: int = 3
                     "url": r.get("url", ""),
                 }
             )
-        return results
+        # Filter to articles that actually mention this company
+        if ticker != "MACRO":
+            results = [r for r in results if _is_relevant(r, ticker, company_name)]
+        return results[:limit]
     except Exception as exc:
         logger.warning("Tavily news fetch failed for %s: %s", ticker, exc)
         return []

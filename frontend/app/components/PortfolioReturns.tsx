@@ -72,23 +72,23 @@ export default function PortfolioReturns() {
   const r = data.portfolio_return;
   const color = returnColor(r);
 
-  // Dynamic gauge range
+  // Symmetric gauge range anchored at 0
   const allReturns = [r, data.benchmark_return, ...data.stocks.map((s) => s.return_pct)];
-  const minR = Math.min(...allReturns, -5);
-  const maxR = Math.max(...allReturns, 5);
-  const rangeMin = Math.floor(minR / 5) * 5 - 5;
-  const rangeMax = Math.ceil(maxR / 5) * 5 + 5;
+  const absMax = Math.max(...allReturns.map(Math.abs), 5);
+  const bound = Math.ceil(absMax / 5) * 5 + 5;
+  const rangeMin = -bound;
+  const rangeMax = bound;
   const span = rangeMax - rangeMin;
 
-  // Normalized 0-100 for gauge
+  // Normalized 0-100 for gauge (0% return = 50 = center)
   const normalizedValue = Math.max(0, Math.min(100, ((r - rangeMin) / span) * 100));
 
   const maxBar = Math.max(...data.stocks.map((s) => Math.abs(s.return_pct)), 1);
 
   // Tooltip labels for each quarter of the range
-  const q1 = Math.round(rangeMin + span * 0.25);
-  const q2 = Math.round(rangeMin + span * 0.5);
-  const q3 = Math.round(rangeMin + span * 0.75);
+  const q1 = Math.round(rangeMin * 0.5);
+  const q2 = 0;
+  const q3 = Math.round(rangeMax * 0.5);
 
   return (
     <div className="relative flex flex-col items-center rounded-2xl overflow-hidden border border-zinc-700/50 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-md shadow-lg">
@@ -127,7 +127,7 @@ export default function PortfolioReturns() {
           </div>
 
           {/* Gauge — per-subArc colors with tooltips (matching ThesisManager pattern) */}
-          <div className="relative z-10 w-full flex justify-center -mb-2">
+          <div className="relative z-10 w-full flex justify-center mb-0">
             <GaugeComponent
               key={`returns-${normalizedValue.toFixed(1)}`}
               type="semicircle"
@@ -144,14 +144,14 @@ export default function PortfolioReturns() {
                 padding: 0.02,
                 width: 0.25,
               }}
-              pointer={{ color, animationDelay: 0 }}
+              pointer={{ type: "needle", color, animate: true, animationDelay: 0, length: 0.7, width: 15 }}
               labels={{ valueLabel: { hide: true }, tickLabels: { hideMinMax: true, ticks: [] } }}
               style={{ width: "100%", maxWidth: "280px" }}
             />
           </div>
 
           {/* Score + label */}
-          <div className="text-center relative z-10">
+          <div className="text-center mt-3 relative z-10">
             <span
               className="text-3xl font-mono font-bold text-white"
               style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}

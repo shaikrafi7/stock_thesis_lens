@@ -27,7 +27,7 @@ const ZONES = [
   { color: "#22c55e", label: "Thesis Strong", range: "80\u2013100" },
 ];
 
-export default function PortfolioGauge({ avgScore }: { avgScore: number }) {
+export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { avgScore: number; hasEvaluations?: boolean }) {
   const [hoveredZone, setHoveredZone] = useState<number | null>(null);
   const color = scoreColor(avgScore);
 
@@ -40,7 +40,7 @@ export default function PortfolioGauge({ avgScore }: { avgScore: number }) {
       <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1 relative z-10">
         Portfolio Thesis Health
       </p>
-      <div className="relative z-10 w-full flex justify-center -mb-4">
+      <div className="relative z-10 w-full flex justify-center mb-0">
         <GaugeComponent
           type="semicircle"
           value={avgScore}
@@ -56,22 +56,32 @@ export default function PortfolioGauge({ avgScore }: { avgScore: number }) {
             padding: 0.02,
             width: 0.25,
           }}
-          pointer={{ color, animationDelay: 0 }}
+          pointer={{ type: "needle", color, animate: true, animationDelay: 0, length: 0.7, width: 15 }}
           labels={{ valueLabel: { hide: true }, tickLabels: { hideMinMax: true, ticks: [] } }}
           style={{ width: "100%", maxWidth: "340px" }}
         />
       </div>
-      <div className="text-center mt-2 relative z-10">
-        <span
-          className="text-4xl font-mono font-bold text-white"
-          style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}
-        >
-          {avgScore.toFixed(1)}
-        </span>
-        <span className="text-zinc-500 text-sm ml-1">/100</span>
-        <p className="text-xs mt-1 font-semibold tracking-wide" style={{ color }}>
-          {scoreLabel(avgScore)}
-        </p>
+      <div className="text-center mt-4 relative z-10">
+        {hasEvaluations ? (
+          <>
+            <span
+              className="text-4xl font-mono font-bold text-white"
+              style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}
+            >
+              {avgScore.toFixed(1)}
+            </span>
+            <span className="text-zinc-500 text-sm ml-1">/100</span>
+            <p className="text-xs mt-1 font-semibold tracking-wide" style={{ color }}>
+              {scoreLabel(avgScore)}
+            </p>
+          </>
+        ) : (
+          <>
+            <span className="text-2xl font-mono font-bold text-zinc-500">--</span>
+            <span className="text-zinc-500 text-sm ml-1">/100</span>
+            <p className="text-xs mt-1 text-zinc-500">No evaluations yet</p>
+          </>
+        )}
       </div>
 
       {/* Zone legend with hover tooltips */}

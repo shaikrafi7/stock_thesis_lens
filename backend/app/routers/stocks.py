@@ -1,15 +1,17 @@
 import re
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.stock import Stock
+from app.models.user import User
 from app.schemas.stock import StockCreate, StockRead
 from app.core.config import settings
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
-# Valid ticker: 1–10 chars, starts with a letter, allows letters/digits/dots/dashes
 _TICKER_RE = re.compile(r'^[A-Z][A-Z0-9\.\-]{0,9}$')
 
 _NAME_SUFFIX_RE = re.compile(
@@ -23,12 +25,6 @@ def _clean_name(raw: str) -> str:
 
 
 def _validate_and_get_metadata(ticker: str) -> tuple[str, str | None]:
-    """Validate ticker format and existence via Polygon.
-
-    Returns (company_name, logo_url).
-    Raises HTTPException 422 if format is invalid or Polygon says ticker doesn't exist.
-    Falls back gracefully on Polygon errors or missing key.
-    """
     if not _TICKER_RE.match(ticker):
         raise HTTPException(
             status_code=422,
@@ -39,7 +35,7 @@ def _validate_and_get_metadata(ticker: str) -> tuple[str, str | None]:
         )
 
     if not settings.POLYGON_API_KEY:
-        return ticker, None  # can't validate without key; allow through
+        return ticker, None
 
     try:
         resp = httpx.get(
@@ -63,33 +59,51 @@ def _validate_and_get_metadata(ticker: str) -> tuple[str, str | None]:
     except Exception:
         pass
 
-    return ticker, None  # Polygon error → don't block user on API outage
+    return ticker, None
+
+
+def get_user_stock(ticker: str, user: User, db: Session) -> Stock:
+    """Fetch a stock scoped to the current user, or 404."""
+    stock = db.query(Stock).filter(Stock.ticker == ticker.upper(), Stock.user_id == user.id).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail=f"Stock '{ticker.upper()}' not found")
+    return stock
 
 
 @router.post("", response_model=StockRead, status_code=201)
-def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
-    existing = db.query(Stock).filter(Stock.ticker == payload.ticker).first()
+def create_stock(
+    payload: StockCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = db.query(Stock).filter(
+        Stock.ticker == payload.ticker, Stock.user_id == current_user.id
+    ).first()
     if existing:
         raise HTTPException(status_code=409, detail=f"Stock '{payload.ticker}' already exists")
 
-    # If name is supplied (e.g. in tests), skip Polygon validation.
-    # In the normal frontend flow, name is always empty and validation runs.
     if payload.name:
         name, logo_url = payload.name, None
     else:
         name, logo_url = _validate_and_get_metadata(payload.ticker)
 
-    stock = Stock(ticker=payload.ticker, name=name, logo_url=logo_url)
+    stock = Stock(ticker=payload.ticker, name=name, logo_url=logo_url, user_id=current_user.id)
     db.add(stock)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Stock '{payload.ticker}' already exists")
     db.refresh(stock)
     return stock
 
 
 @router.get("", response_model=list[StockRead])
-def list_stocks(db: Session = Depends(get_db)):
-    stocks = db.query(Stock).order_by(Stock.ticker).all()
-    # Auto-clean legacy names with share-class suffixes
+def list_stocks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
     dirty = False
     for s in stocks:
         cleaned = _clean_name(s.name)
@@ -102,17 +116,20 @@ def list_stocks(db: Session = Depends(get_db)):
 
 
 @router.get("/{ticker}", response_model=StockRead)
-def get_stock(ticker: str, db: Session = Depends(get_db)):
-    stock = db.query(Stock).filter(Stock.ticker == ticker.upper()).first()
-    if not stock:
-        raise HTTPException(status_code=404, detail=f"Stock '{ticker.upper()}' not found")
-    return stock
+def get_stock(
+    ticker: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_user_stock(ticker, current_user, db)
 
 
 @router.delete("/{ticker}", status_code=204)
-def delete_stock(ticker: str, db: Session = Depends(get_db)):
-    stock = db.query(Stock).filter(Stock.ticker == ticker.upper()).first()
-    if not stock:
-        raise HTTPException(status_code=404, detail=f"Stock '{ticker.upper()}' not found")
+def delete_stock(
+    ticker: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stock = get_user_stock(ticker, current_user, db)
     db.delete(stock)
     db.commit()

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_all_tables, SessionLocal
-from app.routers import stocks, thesis, evaluate, market_data, portfolio
+from app.routers import auth, stocks, thesis, evaluate, market_data, portfolio
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 
@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(stocks.router)
 app.include_router(thesis.router)
 app.include_router(evaluate.router)

@@ -1,26 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { addStock } from "@/lib/api";
 import { Plus, Loader2 } from "lucide-react";
 
-export default function AddStockInline() {
-  const router = useRouter();
+export default function AddStockInline({ onAdded }: { onAdded?: () => void | Promise<void> }) {
   const [ticker, setTicker] = useState("");
   const [adding, setAdding] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const t = ticker.trim().toUpperCase();
-    if (!t || adding) return;
+    const raw = ticker.trim().toUpperCase();
+    if (!raw || adding) return;
+
+    const tickers = raw.split(",").map((t) => t.trim()).filter(Boolean);
+    if (tickers.length === 0) return;
+
     setAdding(true);
     try {
-      await addStock(t);
+      for (const t of tickers) {
+        try {
+          await addStock(t);
+        } catch {
+          // continue with remaining tickers
+        }
+      }
       setTicker("");
-      router.refresh();
-    } catch {
-      // silent
+      await onAdded?.();
     } finally {
       setAdding(false);
     }
@@ -32,8 +38,8 @@ export default function AddStockInline() {
         type="text"
         value={ticker}
         onChange={(e) => setTicker(e.target.value)}
-        placeholder="Add ticker..."
-        className="w-28 px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent"
+        placeholder="AAPL, NVDA..."
+        className="w-40 px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent"
       />
       <button
         type="submit"

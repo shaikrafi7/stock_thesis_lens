@@ -153,36 +153,32 @@ def _compute_ma(bars: list[dict], n: int) -> float:
 
 
 def _collect_price(ticker: str) -> PriceSignal | None:
+    """Collect price signals using Polygon aggregates (free-tier compatible)."""
     api_key = settings.POLYGON_API_KEY
     if not api_key:
         logger.warning("signal_collector: POLYGON_API_KEY not set, skipping price signals")
         return None
     try:
-        snap = _polygon_snapshot(ticker, api_key)
-        day = snap.get("day", {})
-        prev_day = snap.get("prevDay", {})
-        last_trade = snap.get("lastTrade", {})
-
-        current_price = day.get("c") or last_trade.get("p") or prev_day.get("c") or 0.0
-        prev_close = prev_day.get("c") or current_price
-        day_change_pct = snap.get("todaysChangePerc", 0.0)
-
         bars = _polygon_aggs(ticker, api_key, days=60)
+        if len(bars) < 2:
+            logger.warning("signal_collector: not enough bars for %s", ticker)
+            return None
 
-        if len(bars) >= 2:
-            price_5d_ago = bars[-5]["c"] if len(bars) >= 5 else bars[0]["c"]
-            price_30d_ago = bars[-22]["c"] if len(bars) >= 22 else bars[0]["c"]
-            week_change_pct = ((current_price - price_5d_ago) / price_5d_ago * 100) if price_5d_ago else 0.0
-            month_change_pct = ((current_price - price_30d_ago) / price_30d_ago * 100) if price_30d_ago else 0.0
-        else:
-            week_change_pct = month_change_pct = 0.0
+        current_price = bars[-1]["c"]
+        prev_close = bars[-2]["c"]
+        day_change_pct = ((current_price - prev_close) / prev_close * 100) if prev_close else 0.0
 
-        fifty_two_week_high = max((b["h"] for b in bars), default=current_price)
-        fifty_two_week_low = min((b["l"] for b in bars), default=current_price)
+        price_5d_ago = bars[-5]["c"] if len(bars) >= 5 else bars[0]["c"]
+        price_30d_ago = bars[-22]["c"] if len(bars) >= 22 else bars[0]["c"]
+        week_change_pct = ((current_price - price_5d_ago) / price_5d_ago * 100) if price_5d_ago else 0.0
+        month_change_pct = ((current_price - price_30d_ago) / price_30d_ago * 100) if price_30d_ago else 0.0
+
+        fifty_two_week_high = max(b["h"] for b in bars)
+        fifty_two_week_low = min(b["l"] for b in bars)
 
         volumes = [b["v"] for b in bars[-10:] if b.get("v")]
         avg_vol = sum(volumes) / len(volumes) if volumes else 0.0
-        current_vol = day.get("v") or (volumes[-1] if volumes else 0.0)
+        current_vol = volumes[-1] if volumes else 0.0
         vol_ratio = (current_vol / avg_vol) if avg_vol else 1.0
 
         ma_20 = _compute_ma(bars, 20)
