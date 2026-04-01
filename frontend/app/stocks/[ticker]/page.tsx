@@ -15,6 +15,7 @@ import StockDetailLayout from "./StockDetailLayout";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
 import StockNews from "@/app/components/StockNews";
+import PortfolioSidebar from "@/app/components/PortfolioSidebar";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 interface Props {
@@ -33,7 +34,6 @@ export default function StockPage({ params }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        // Fetch stock from the list (scoped by user via token)
         const stocks = await fetchStocks();
         const found = stocks.find((s) => s.ticker === upperTicker) ?? null;
         setStock(found);
@@ -78,8 +78,9 @@ export default function StockPage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col h-[calc(100vh-48px)] overflow-hidden">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="max-w-7xl mx-auto px-6 py-3">
+      {/* Stock header — full width */}
+      <div className="flex items-center gap-3 mb-6">
         <Link
           href="/"
           className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
@@ -100,20 +101,22 @@ export default function StockPage({ params }: Props) {
         </div>
       </div>
 
+      {/* 2-column layout below header */}
       <StockDetailLayout
         leftPanel={
-          <>
-            <StockInfoPanel ticker={upperTicker} />
-            <ScoreHistoryChart ticker={upperTicker} />
-            <StockNews ticker={upperTicker} />
-          </>
-        }
-        centerPanel={
           <ThesisManager
             ticker={upperTicker}
             initialTheses={theses}
             initialEvaluation={evaluation}
           />
+        }
+        rightPanel={
+          <>
+            <StockInfoPanel ticker={upperTicker} />
+            <ScoreHistoryChart ticker={upperTicker} />
+            <StockNews ticker={upperTicker} />
+            <PortfolioSidebar />
+          </>
         }
       />
     </div>

@@ -1,69 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
 interface Props {
   leftPanel: React.ReactNode;
-  centerPanel: React.ReactNode;
+  rightPanel: React.ReactNode;
 }
 
-const STORAGE_KEY = "stock_left_panel_collapsed";
-
-export default function StockDetailLayout({ leftPanel, centerPanel }: Props) {
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "true") setLeftCollapsed(true);
-    } catch {
-      // SSR or localStorage unavailable
-    }
-  }, []);
-
-  function toggleLeft() {
-    setLeftCollapsed((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(STORAGE_KEY, String(next)); } catch {}
-      return next;
-    });
-  }
-
+export default function StockDetailLayout({ leftPanel, rightPanel }: Props) {
   return (
-    <div className="flex gap-0 relative flex-1 overflow-hidden">
-      {/* Left panel — collapsible */}
-      {!leftCollapsed ? (
-        <div className="w-[340px] shrink-0 h-full transition-all duration-200">
-          <div className="flex flex-col gap-4 pr-4 h-full overflow-y-auto">
-            <div className="flex justify-end">
-              <button
-                onClick={toggleLeft}
-                className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-                title="Collapse info panel"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            </div>
-            {leftPanel}
-          </div>
-        </div>
-      ) : (
-        <div className="w-8 shrink-0 flex flex-col items-center pt-2 border-r border-zinc-800">
-          <button
-            onClick={toggleLeft}
-            className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-            title="Expand info panel"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+      {/* Left column — thesis gauge, buttons, thesis cards */}
+      <div className="min-w-0">{leftPanel}</div>
 
-      {/* Center panel — fills remaining space */}
-      <div className="flex-1 min-w-0 pl-4 h-full overflow-y-auto">
-        {centerPanel}
-      </div>
+      {/* Right column — stock info, chart, score history, news, portfolio */}
+      <div className="flex flex-col gap-4">{rightPanel}</div>
     </div>
   );
 }

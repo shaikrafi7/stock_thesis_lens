@@ -12,7 +12,7 @@ import {
 } from "@/lib/api";
 import StatusBadge from "./StatusBadge";
 import DeleteStockButton from "./DeleteStockButton";
-import { Plus, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Plus, Loader2, Clock } from "lucide-react";
 
 function evalAge(history: EvaluationSummary[] | undefined): { label: string; color: string } | null {
   if (!history || history.length === 0) return null;
@@ -29,12 +29,7 @@ function evalAge(history: EvaluationSummary[] | undefined): { label: string; col
   return { label: `${diffDays}d ago`, color };
 }
 
-interface Props {
-  collapsed: boolean;
-  onToggle: () => void;
-}
-
-export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
+export default function PortfolioSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -85,7 +80,7 @@ export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
       setScoreHistories(h);
       setLoading(false);
     });
-  }, [pathname]); // refetch when navigating
+  }, [pathname]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -105,66 +100,42 @@ export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
     }
   }
 
-  // Extract active ticker from path
   const activeTicker = pathname.startsWith("/stocks/")
     ? pathname.split("/")[2]?.toUpperCase()
     : null;
 
-  if (collapsed) {
-    return (
-      <div className="w-10 shrink-0 border-l border-zinc-800 bg-surface flex flex-col items-center pt-[72px] py-3">
-        <button
-          onClick={onToggle}
-          className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
-          title="Expand portfolio"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-52 shrink-0 border-l border-zinc-800 bg-surface flex flex-col h-full overflow-hidden pt-[72px]">
+    <div className="bg-surface border border-zinc-800 rounded-xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-800">
         <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
           Portfolio
         </span>
-        <button
-          onClick={onToggle}
-          className="p-0.5 text-zinc-500 hover:text-zinc-300 transition-colors"
-          title="Collapse"
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Sort controls */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-zinc-800">
-        <span className="text-[9px] text-zinc-600 uppercase tracking-widest">Sort</span>
-        <button
-          onClick={() => toggleSort("ticker")}
-          className={`text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
-            sortField === "ticker" ? "text-zinc-200 bg-zinc-800" : "text-zinc-500 hover:text-zinc-300"
-          }`}
-        >
-          A-Z{arrow("ticker")}
-        </button>
-        <button
-          onClick={() => toggleSort("score")}
-          className={`text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
-            sortField === "score" ? "text-zinc-200 bg-zinc-800" : "text-zinc-500 hover:text-zinc-300"
-          }`}
-        >
-          Score{arrow("score")}
-        </button>
+        {/* Sort controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => toggleSort("ticker")}
+            className={`text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
+              sortField === "ticker" ? "text-zinc-200 bg-zinc-800" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            A-Z{arrow("ticker")}
+          </button>
+          <button
+            onClick={() => toggleSort("score")}
+            className={`text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded transition-colors ${
+              sortField === "score" ? "text-zinc-200 bg-zinc-800" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            Score{arrow("score")}
+          </button>
+        </div>
       </div>
 
       {/* Stock list */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="py-1">
         {loading ? (
-          <div className="flex justify-center py-6">
+          <div className="flex justify-center py-4">
             <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
           </div>
         ) : stocks.length === 0 ? (
@@ -213,7 +184,7 @@ export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
                       {status && <StatusBadge status={status} />}
                     </>
                   ) : (
-                    <span className="text-[9px] text-zinc-600">—</span>
+                    <span className="text-[9px] text-zinc-600">--</span>
                   )}
                 </div>
               </Link>

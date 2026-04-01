@@ -3,8 +3,6 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAssistant } from "@/app/context/AssistantContext";
-import PortfolioSidebar from "./PortfolioSidebar";
 import EvaluateAllButton from "./EvaluateAllButton";
 import { useAuth } from "@/app/context/AuthContext";
 import { Menu, X, Home, Settings, LogOut } from "lucide-react";
@@ -12,8 +10,6 @@ import { Menu, X, Home, Settings, LogOut } from "lucide-react";
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const [leftOpen, setLeftOpen] = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
-  const { isOpen: assistantOpen } = useAssistant();
   const pathname = usePathname();
 
   return (
@@ -95,21 +91,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         )}
 
         {/* Center content — scrollable */}
-        <main
-          className={`flex-1 overflow-y-auto transition-all duration-200 ${
-            assistantOpen ? "mr-96" : ""
-          }`}
-        >
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
-
-        {/* Right sidebar — portfolio list (stock pages only) */}
-        {pathname.startsWith("/stocks/") && (
-          <PortfolioSidebar
-            collapsed={rightCollapsed}
-            onToggle={() => setRightCollapsed((c) => !c)}
-          />
-        )}
       </div>
     </div>
   );
