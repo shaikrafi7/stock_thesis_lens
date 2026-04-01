@@ -15,7 +15,7 @@ from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as the
 from app.models.chat import ChatMessage as ChatMessageModel
 from app.services.evaluation_service import run_evaluation_for_stock
 from app.utils.market_snapshot import get_snapshot, format_snapshot
-from app.utils.news import _search_one_ticker
+from app.utils.news import _fetch_polygon_news
 from app.core.auth import get_current_user
 from app.routers.stocks import get_user_stock
 
@@ -128,7 +128,7 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, db: Session = Depends
     snap = get_snapshot(stock.ticker)
     market_data = format_snapshot(snap)
     try:
-        recent_news = _search_one_ticker(stock.ticker, stock.name, limit=3)
+        recent_news = _fetch_polygon_news(stock.ticker, limit=3)
     except Exception:
         recent_news = []
 
@@ -158,32 +158,39 @@ def chat_with_assistant_stream(ticker: str, payload: ChatRequest, db: Session = 
     snap = get_snapshot(stock.ticker)
     market_data = format_snapshot(snap)
     try:
-        recent_news = _search_one_ticker(stock.ticker, stock.name, limit=3)
+        recent_news = _fetch_polygon_news(stock.ticker, limit=3)
     except Exception:
         recent_news = []
 
     user_id = current_user.id
 
+    context_key = stock.ticker
+
+    # Collect all events first, then stream + persist
+    all_events = list(thesis_chat_stream(
+        stock.ticker, stock.name, thesis_dicts, messages,
+        market_data=market_data,
+        recent_news=recent_news,
+    ))
+    accumulated = "".join(
+        e["data"].get("content", "") or e["data"].get("text", "")
+        for e in all_events if e["event"] == "token"
+    )
+
     def event_generator():
-        accumulated = ""
-        for event in thesis_chat_stream(
-            stock.ticker, stock.name, thesis_dicts, messages,
-            market_data=market_data,
-            recent_news=recent_news,
-        ):
-            if event["event"] == "token":
-                accumulated += event["data"].get("text", "")
+        for event in all_events:
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
 
-        try:
-            user_content = messages[-1]["content"] if messages else ""
-            if user_content:
-                db.add(ChatMessageModel(context_key=stock.ticker, role="user", content=user_content, user_id=user_id))
-            if accumulated:
-                db.add(ChatMessageModel(context_key=stock.ticker, role="assistant", content=accumulated, user_id=user_id))
-            db.commit()
-        except Exception:
-            logger.warning("Failed to persist chat for %s", stock.ticker)
+    # Persist before streaming — guarantees it runs
+    try:
+        user_content = messages[-1]["content"] if messages else ""
+        if user_content:
+            db.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
+        if accumulated:
+            db.add(ChatMessageModel(context_key=context_key, role="assistant", content=accumulated, user_id=user_id))
+        db.commit()
+    except Exception:
+        logger.warning("Failed to persist chat for %s", context_key)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -214,7 +221,7 @@ def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Sessio
 def get_stock_news(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     stock = get_user_stock(ticker, current_user, db)
 
-    articles = _search_one_ticker(stock.ticker, stock.name, limit=5, days=3)
+    articles = _fetch_polygon_news(stock.ticker, limit=5, days=3)
     return [
         NewsItemSchema(
             title=a.get("title", ""),

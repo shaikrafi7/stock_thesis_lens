@@ -7,9 +7,9 @@ const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: fal
 
 const TOOLTIP_STYLE = {
   fontSize: "12px",
-  backgroundColor: "#18181b",
-  color: "#e4e4e7",
-  border: "1px solid #3f3f46",
+  backgroundColor: "#1e222d",
+  color: "#d1d4dc",
+  border: "1px solid #363a45",
   borderRadius: "8px",
   padding: "4px 8px",
 };

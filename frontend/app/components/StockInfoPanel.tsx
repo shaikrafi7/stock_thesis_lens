@@ -274,7 +274,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
               tickFormatter={(v: number) => `$${v.toFixed(0)}`}
             />
             <Tooltip
-              contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: "#1e222d", border: "1px solid #363a45", borderRadius: 8, fontSize: 12 }}
               labelStyle={{ color: "#a1a1aa" }}
               itemStyle={{ color: "#e4e4e7" }}
               formatter={(v) => [`$${Number(v).toFixed(2)}`, "Close"]}
@@ -339,7 +339,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
         )}
 
         {!collapsed && (
-          <div className="px-3 py-1 max-h-[400px] overflow-y-auto">
+          <div className="px-3 py-1">
             {(["overview", "analyst", "valuation", "dividend"] as const).map((group) => {
               const groupStats = visibleStats.filter((s) => s.group === group);
               if (groupStats.length === 0) return null;

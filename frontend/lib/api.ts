@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function getAuthHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -291,8 +291,8 @@ export interface EvaluateAllResult {
 export const evaluateAll = (): Promise<EvaluateAllResult> =>
   apiFetch("/portfolio/evaluate-all", { method: "POST" });
 
-export const getMorningBriefing = (): Promise<MorningBriefingResponse> =>
-  apiFetch("/portfolio/morning-briefing");
+export const getMorningBriefing = (signal?: AbortSignal): Promise<MorningBriefingResponse> =>
+  apiFetch("/portfolio/morning-briefing", signal ? { signal } : undefined);
 
 export const refreshMorningBriefing = (): Promise<MorningBriefingResponse> =>
   apiFetch("/portfolio/morning-briefing/refresh", { method: "POST" });

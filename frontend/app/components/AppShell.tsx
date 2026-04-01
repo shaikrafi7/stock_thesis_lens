@@ -7,12 +7,10 @@ import { useAssistant } from "@/app/context/AssistantContext";
 import PortfolioSidebar from "./PortfolioSidebar";
 import EvaluateAllButton from "./EvaluateAllButton";
 import { useAuth } from "@/app/context/AuthContext";
-import { useTheme } from "@/app/context/ThemeContext";
-import { Menu, X, Home, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { Menu, X, Home, Settings, LogOut } from "lucide-react";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const { theme, toggle: toggleTheme } = useTheme();
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const { isOpen: assistantOpen } = useAssistant();
@@ -45,13 +43,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               {user.username}
             </span>
           )}
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
           <button
             onClick={logout}
             className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"

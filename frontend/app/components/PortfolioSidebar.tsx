@@ -112,7 +112,7 @@ export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
 
   if (collapsed) {
     return (
-      <div className="w-10 shrink-0 border-l border-zinc-800 bg-surface flex flex-col items-center pt-16 py-3">
+      <div className="w-10 shrink-0 border-l border-zinc-800 bg-surface flex flex-col items-center pt-[72px] py-3">
         <button
           onClick={onToggle}
           className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
@@ -125,7 +125,7 @@ export default function PortfolioSidebar({ collapsed, onToggle }: Props) {
   }
 
   return (
-    <div className="w-52 shrink-0 border-l border-zinc-800 bg-surface flex flex-col h-full overflow-hidden pt-12">
+    <div className="w-52 shrink-0 border-l border-zinc-800 bg-surface flex flex-col h-full overflow-hidden pt-[72px]">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-800">
         <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">

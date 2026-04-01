@@ -10,7 +10,7 @@ import { TrendingUp, TrendingDown, Minus, CircleDot, Clock } from "lucide-react"
 
 function evalAge(history: EvaluationSummary[] | undefined): { label: string; color: string } | null {
   if (!history || history.length === 0) return null;
-  const latest = history[0]; // most recent
+  const latest = history[history.length - 1]; // most recent (sorted asc by backend)
   const ts = new Date(latest.timestamp);
   const now = new Date();
   const diffMs = now.getTime() - ts.getTime();

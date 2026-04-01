@@ -1,0 +1,36 @@
+# --- Database (Critical for SQLite) ---
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# --- Dependencies & Package Managers ---
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+.poetry/
+.uv/
+
+# --- Build & Output ---
+dist/
+build/
+out/
+*.log
+*.tmp
+
+# --- Secrets & Config (Security) ---
+.env
+.env.*
+!.env.example
+.vercel/
+.capoo/
+
+# --- IDE & Tools ---
+.vscode/
+.idea/
+.DS_Store
+.cursor/

@@ -78,7 +78,7 @@ export default function StockPage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-3">
+    <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col h-[calc(100vh-48px)] overflow-hidden">
       <div className="flex items-center gap-3 mb-4">
         <Link
           href="/"

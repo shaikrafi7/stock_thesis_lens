@@ -1,52 +1,56 @@
-"""Fetch recent news articles from Tavily for a list of tickers."""
+"""Fetch recent news articles from Polygon.io for a list of tickers."""
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from typing import Optional
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
 
-def _is_relevant(article: dict, ticker: str, company_name: str) -> bool:
-    """Check if article actually mentions the ticker or exact company name."""
-    text = (article.get("title", "") + " " + article.get("description", "")).lower()
-    if ticker.lower() in text:
-        return True
-    if company_name.lower() != ticker.lower() and company_name.lower() in text:
-        return True
-    return False
-
-
-def _search_one_ticker(ticker: str, company_name: str, limit: int, days: int = 3) -> list[dict]:
-    """Synchronous Tavily search for a single ticker. Called via executor."""
+def _fetch_polygon_news(ticker: str, limit: int, days: int = 3) -> list[dict]:
+    """Fetch news for a single ticker from Polygon.io reference/news endpoint."""
     from app.core.config import settings
-    from tavily import TavilyClient
 
-    client = TavilyClient(api_key=settings.TAVILY_API_KEY)
-    query = f"{company_name} {ticker} stock news"
+    if not settings.POLYGON_API_KEY:
+        return []
+
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    params = {
+        "apiKey": settings.POLYGON_API_KEY,
+        "limit": limit,
+        "published_utc.gte": since,
+        "order": "desc",
+        "sort": "published_utc",
+    }
+    if ticker != "MACRO":
+        params["ticker"] = ticker
+
     try:
-        response = client.search(
-            query=query,
-            topic="news",
-            days=days,
-            max_results=limit * 2,
+        resp = httpx.get(
+            "https://api.polygon.io/v2/reference/news",
+            params=params,
+            timeout=15,
+            follow_redirects=True,
         )
+        resp.raise_for_status()
+        data = resp.json()
+
         results = []
-        for r in response.get("results", []):
-            results.append(
-                {
-                    "ticker": ticker,
-                    "title": r.get("title", ""),
-                    "description": r.get("content", "") or "",
-                    "published_utc": r.get("published_date", ""),
-                    "url": r.get("url", ""),
-                }
-            )
-        # Filter to articles that actually mention this company
-        if ticker != "MACRO":
-            results = [r for r in results if _is_relevant(r, ticker, company_name)]
+        for article in data.get("results", []):
+            # For macro queries without a ticker filter, include all results
+            # For ticker queries, Polygon already filters by ticker
+            results.append({
+                "ticker": ticker,
+                "title": article.get("title", ""),
+                "description": article.get("description", "") or "",
+                "published_utc": article.get("published_utc", ""),
+                "url": article.get("article_url", ""),
+            })
         return results[:limit]
     except Exception as exc:
-        logger.warning("Tavily news fetch failed for %s: %s", ticker, exc)
+        logger.warning("Polygon news fetch failed for %s: %s", ticker, exc)
         return []
 
 
@@ -59,19 +63,17 @@ async def fetch_news(
     """Return a flat list of news dicts: {ticker, title, description, published_utc, url}.
 
     Fetches all tickers in parallel via asyncio.gather + thread executor.
-    Returns [] if TAVILY_API_KEY is not set or tickers is empty.
     """
     from app.core.config import settings
 
-    if not settings.TAVILY_API_KEY or not tickers:
+    if not settings.POLYGON_API_KEY or not tickers:
         return []
 
     loop = asyncio.get_running_loop()
 
     async def fetch_one(ticker: str) -> list[dict]:
-        name = (ticker_names or {}).get(ticker, ticker)
         return await loop.run_in_executor(
-            None, _search_one_ticker, ticker, name, limit_per_ticker, days
+            None, _fetch_polygon_news, ticker, limit_per_ticker, days
         )
 
     results = await asyncio.gather(*[fetch_one(t) for t in tickers], return_exceptions=True)

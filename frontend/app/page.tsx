@@ -83,19 +83,19 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 pt-2 pb-4">
-      {/* Health gauge — full width at top */}
-      <PortfolioGauge avgScore={avgScore ?? 0} hasEvaluations={avgScore !== null} />
-
       {stocks.length > 0 ? (
         <>
+          {/* Health gauge — full width at top */}
+          <PortfolioGauge avgScore={avgScore ?? 0} hasEvaluations={avgScore !== null} />
+
           {/* Two-column: left = news, right = returns + sector */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
             <div className="min-w-0">
               <MorningBriefing />
             </div>
             <div className="flex flex-col gap-4">
-              <PortfolioReturns />
               <SectorChart compact />
+              <PortfolioReturns />
             </div>
           </div>
 

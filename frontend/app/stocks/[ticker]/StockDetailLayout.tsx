@@ -31,11 +31,11 @@ export default function StockDetailLayout({ leftPanel, centerPanel }: Props) {
   }
 
   return (
-    <div className="flex gap-0 relative">
+    <div className="flex gap-0 relative flex-1 overflow-hidden">
       {/* Left panel — collapsible */}
       {!leftCollapsed ? (
-        <div className="w-[340px] shrink-0 transition-all duration-200">
-          <div className="flex flex-col gap-4 pr-4 sticky top-0 self-start max-h-[calc(100vh-120px)] overflow-y-auto">
+        <div className="w-[340px] shrink-0 h-full transition-all duration-200">
+          <div className="flex flex-col gap-4 pr-4 h-full overflow-y-auto">
             <div className="flex justify-end">
               <button
                 onClick={toggleLeft}
@@ -61,7 +61,7 @@ export default function StockDetailLayout({ leftPanel, centerPanel }: Props) {
       )}
 
       {/* Center panel — fills remaining space */}
-      <div className="flex-1 min-w-0 pl-4">
+      <div className="flex-1 min-w-0 pl-4 h-full overflow-y-auto">
         {centerPanel}
       </div>
     </div>

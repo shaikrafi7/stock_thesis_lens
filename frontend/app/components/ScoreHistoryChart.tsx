@@ -98,13 +98,13 @@ export default function ScoreHistoryChart({ ticker }: Props) {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#18181b",
-                  border: "1px solid #3f3f46",
+                  backgroundColor: "#1e222d",
+                  border: "1px solid #363a45",
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                labelStyle={{ color: "#a1a1aa" }}
-                itemStyle={{ color: "#e4e4e7" }}
+                labelStyle={{ color: "#787b86" }}
+                itemStyle={{ color: "#d1d4dc" }}
                 formatter={(value) => [`${value}/100`, "Score"]}
               />
               <ReferenceLine y={75} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.3} />

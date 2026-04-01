@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addStock } from "@/lib/api";
+import { addStock, generateAndEvaluate } from "@/lib/api";
 import { Plus, Loader2 } from "lucide-react";
 
 export default function AddStockInline({ onAdded }: { onAdded?: () => void | Promise<void> }) {
@@ -21,6 +21,7 @@ export default function AddStockInline({ onAdded }: { onAdded?: () => void | Pro
       for (const t of tickers) {
         try {
           await addStock(t);
+          await generateAndEvaluate(t);
         } catch {
           // continue with remaining tickers
         }

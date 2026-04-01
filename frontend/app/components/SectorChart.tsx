@@ -6,9 +6,9 @@ import { getPortfolioSectors, type SectorEntry } from "@/lib/api";
 import { ChevronUp, ChevronDown, PieChart as PieIcon, Loader2 } from "lucide-react";
 
 const COLORS = [
-  "#14b8a6", "#6366f1", "#f59e0b", "#ef4444", "#22c55e",
-  "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#84cc16",
-  "#a855f7", "#64748b",
+  "#2962ff", "#26a69a", "#f59e0b", "#ef5350", "#42a5f5",
+  "#ab47bc", "#66bb6a", "#ff7043", "#5c6bc0", "#8d6e63",
+  "#78909c", "#ec407a",
 ];
 
 interface SectorData {
@@ -94,8 +94,8 @@ export default function SectorChart({ compact = false }: { compact?: boolean }) 
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #3f3f46",
+                    background: "#1e222d",
+                    border: "1px solid #363a45",
                     borderRadius: 8,
                     fontSize: 11,
                   }}

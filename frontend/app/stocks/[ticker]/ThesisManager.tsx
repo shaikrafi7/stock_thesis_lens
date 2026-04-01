@@ -158,6 +158,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   }
 
   async function handleToggle(thesis: Thesis) {
+    if (thesis.frozen) return;
     const updated = await updateThesisSelection(ticker, thesis.id, !thesis.selected);
     setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
@@ -165,7 +166,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const handleSelectAll = useCallback(async () => {
     const newSelected = !allSelected;
     const updates = theses
-      .filter((t) => t.selected !== newSelected)
+      .filter((t) => !t.frozen && t.selected !== newSelected)
       .map((t) => updateThesisSelection(ticker, t.id, newSelected));
     const results = await Promise.all(updates);
     setTheses((prev) =>
@@ -315,9 +316,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             maxValue={100}
             arc={{
               subArcs: [
-                { limit: 50, color: "#ef4444", tooltip: { text: "At Risk (0\u201350)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
-                { limit: 75, color: "#eab308", tooltip: { text: "Under Pressure (50\u201375)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
-                { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Strong (75\u2013100)", style: { fontSize: "12px", backgroundColor: "#18181b", color: "#e4e4e7", border: "1px solid #3f3f46", borderRadius: "8px", padding: "4px 8px" } } },
+                { limit: 50, color: "#ef4444", tooltip: { text: "At Risk (0\u201350)", style: { fontSize: "12px", backgroundColor: "#1e222d", color: "#d1d4dc", border: "1px solid #363a45", borderRadius: "8px", padding: "4px 8px" } } },
+                { limit: 75, color: "#eab308", tooltip: { text: "Under Pressure (50\u201375)", style: { fontSize: "12px", backgroundColor: "#1e222d", color: "#d1d4dc", border: "1px solid #363a45", borderRadius: "8px", padding: "4px 8px" } } },
+                { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Strong (75\u2013100)", style: { fontSize: "12px", backgroundColor: "#1e222d", color: "#d1d4dc", border: "1px solid #363a45", borderRadius: "8px", padding: "4px 8px" } } },
               ],
               padding: 0.02,
               width: 0.25,
@@ -621,7 +622,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                           type="checkbox"
                           checked={t.selected}
                           onChange={() => handleToggle(t)}
-                          className="mt-0.5 shrink-0 cursor-pointer"
+                          disabled={t.frozen}
+                          className={`mt-0.5 shrink-0 ${t.frozen ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                         />
 
                         {/* Importance icon */}

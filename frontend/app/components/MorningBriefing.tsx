@@ -139,10 +139,15 @@ export default function MorningBriefing() {
   }
 
   useEffect(() => {
-    getMorningBriefing()
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    getMorningBriefing(controller.signal)
       .then(setData)
       .catch(() => {/* silent — section just won't render */})
-      .finally(() => setLoading(false));
+      .finally(() => { clearTimeout(timeout); setLoading(false); });
+
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, []);
 
   function handleToggleHistory() {

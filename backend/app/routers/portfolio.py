@@ -26,7 +26,7 @@ from app.core.auth import get_current_user
 
 PORTFOLIO_CONTEXT_KEY = "__portfolio__"
 from app.agents import portfolio_chat_agent, morning_briefing_agent
-from app.utils.news import fetch_news, _search_one_ticker
+from app.utils.news import fetch_news, _fetch_polygon_news
 from app.utils.market_snapshot import get_snapshot
 from app.services.evaluation_service import evaluate_all_stocks
 
@@ -105,22 +105,27 @@ def portfolio_chat_stream(payload: ChatRequest, db: Session = Depends(get_db), c
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
     user_id = current_user.id
 
+    # Collect all events first, then stream + persist
+    all_events = list(portfolio_chat_agent.chat_stream(portfolio_data, messages))
+    accumulated = "".join(
+        e["data"].get("content", "") or e["data"].get("text", "")
+        for e in all_events if e["event"] == "token"
+    )
+
     def event_generator():
-        accumulated = ""
-        for event in portfolio_chat_agent.chat_stream(portfolio_data, messages):
-            if event["event"] == "token":
-                accumulated += event["data"].get("text", "")
+        for event in all_events:
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
 
-        try:
-            user_content = messages[-1]["content"] if messages else ""
-            if user_content:
-                db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="user", content=user_content, user_id=user_id))
-            if accumulated:
-                db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="assistant", content=accumulated, user_id=user_id))
-            db.commit()
-        except Exception:
-            logger.warning("Failed to persist portfolio chat")
+    # Persist before streaming — guarantees it runs
+    try:
+        user_content = messages[-1]["content"] if messages else ""
+        if user_content:
+            db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="user", content=user_content, user_id=user_id))
+        if accumulated:
+            db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="assistant", content=accumulated, user_id=user_id))
+        db.commit()
+    except Exception as exc:
+        logger.warning("Failed to persist portfolio chat: %s", exc)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -174,7 +179,7 @@ def portfolio_score_histories(
                     "id": e.id,
                     "score": e.score,
                     "status": e.status,
-                    "timestamp": str(e.timestamp),
+                    "timestamp": e.timestamp.isoformat() + "Z",
                 }
                 for e in evals
             ]
@@ -227,7 +232,7 @@ async def _generate_and_store_briefing(db: Session, user: User) -> MorningBriefi
     loop = asyncio.get_running_loop()
     try:
         macro_news = await loop.run_in_executor(
-            None, _search_one_ticker, "MACRO", "stock market economy Fed interest rates", 3, 2
+            None, _fetch_polygon_news, "MACRO", 3, 2
         )
     except Exception:
         macro_news = []
