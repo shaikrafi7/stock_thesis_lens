@@ -307,8 +307,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Per-stock thesis health gauge */}
       {evaluation && (
-        <div className="flex flex-col items-center py-4 bg-surface/80 backdrop-blur-sm border border-zinc-800 rounded-2xl">
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Thesis Health</p>
+        <div className="flex items-center gap-6 py-4 px-6 bg-surface/80 backdrop-blur-sm border border-zinc-800 rounded-2xl">
           <GaugeComponent
             type="semicircle"
             value={evaluation.score}
@@ -325,30 +324,29 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             }}
             pointer={{ color: scoreColor(evaluation.score), animationDelay: 0 }}
             labels={{ valueLabel: { hide: true }, tickLabels: { hideMinMax: true, ticks: [] } }}
-            style={{ width: "100%", maxWidth: "200px" }}
+            style={{ width: "280px" }}
           />
-          <div className="text-center -mt-2">
-            <span className="text-3xl font-mono font-bold text-white">{evaluation.score}</span>
-            <span className="text-zinc-500 text-xs ml-1">/100</span>
-            <p className="text-xs mt-0.5 font-semibold tracking-wide" style={{ color: scoreColor(evaluation.score) }}>
+          <div className="-ml-4">
+            <span className="text-4xl font-mono font-bold text-white">{evaluation.score}</span>
+            <span className="text-zinc-500 text-sm ml-1">/100</span>
+            <p className="text-sm mt-0.5 font-semibold tracking-wide" style={{ color: scoreColor(evaluation.score) }}>
               {scoreLabel(evaluation.score)}
             </p>
-            <p className="text-zinc-600 text-xs mt-0.5">
+            <p className="text-zinc-600 text-xs mt-1">
               {new Date(evaluation.timestamp).toLocaleDateString()}
             </p>
-          </div>
-          {/* Zone legend */}
-          <div className="flex gap-2 mt-2">
-            {[
-              { color: "#ef4444", label: "At Risk" },
-              { color: "#eab308", label: "Pressure" },
-              { color: "#22c55e", label: "Strong" },
-            ].map((z) => (
-              <div key={z.label} className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
-                <span className="text-[8px] text-zinc-500">{z.label}</span>
-              </div>
-            ))}
+            <div className="flex gap-2 mt-2">
+              {[
+                { color: "#ef4444", label: "At Risk" },
+                { color: "#eab308", label: "Pressure" },
+                { color: "#22c55e", label: "Strong" },
+              ].map((z) => (
+                <div key={z.label} className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+                  <span className="text-[9px] text-zinc-500">{z.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
