@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_all_tables, SessionLocal
+from app.core.config import settings
 from app.routers import auth, stocks, thesis, evaluate, market_data, portfolio
 from app.services.scheduler import start_scheduler, stop_scheduler
 
@@ -18,7 +19,7 @@ app = FastAPI(title="Stock Thesis Lens", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

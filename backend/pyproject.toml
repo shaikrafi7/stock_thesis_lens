@@ -16,6 +16,7 @@ dependencies = [
     "httpx",
     "yfinance",
     "apscheduler>=3.11.2",
+    "psycopg2-binary",
 ]
 
 [dependency-groups]

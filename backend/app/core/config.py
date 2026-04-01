@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     FINANCIAL_DATASETS_API_KEY: str = ""
     SECRET_KEY: str = "change-me-in-production-use-a-real-secret"
     DATABASE_URL: str = "sqlite:///./stock_thesis.db"
+    CORS_ORIGINS: str = "http://localhost:3000"
     LANGCHAIN_TRACING_V2: str = "false"
     LANGCHAIN_PROJECT: str = "stock-thesis-lens"
     LANGSMITH_API_KEY: str = ""
