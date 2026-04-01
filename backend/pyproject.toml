@@ -17,6 +17,8 @@ dependencies = [
     "yfinance",
     "apscheduler>=3.11.2",
     "psycopg2-binary",
+    "bcrypt",
+    "python-jose[cryptography]",
 ]
 
 [dependency-groups]
