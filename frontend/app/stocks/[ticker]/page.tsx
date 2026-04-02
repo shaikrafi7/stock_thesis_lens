@@ -103,20 +103,20 @@ export default function StockPage({ params }: Props) {
 
       {/* 2-column layout below header */}
       <StockDetailLayout
-        leftPanel={
-          <ThesisManager
-            ticker={upperTicker}
-            initialTheses={theses}
-            initialEvaluation={evaluation}
-          />
-        }
-        rightPanel={
+        sidePanel={
           <>
             <StockInfoPanel ticker={upperTicker} />
             <ScoreHistoryChart ticker={upperTicker} />
             <StockNews ticker={upperTicker} />
             <PortfolioSidebar />
           </>
+        }
+        centerPanel={
+          <ThesisManager
+            ticker={upperTicker}
+            initialTheses={theses}
+            initialEvaluation={evaluation}
+          />
         }
       />
     </div>
