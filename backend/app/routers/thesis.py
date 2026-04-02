@@ -1,7 +1,7 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -25,8 +25,8 @@ router = APIRouter(prefix="/stocks", tags=["thesis"])
 
 
 @router.post("/{ticker}/generate-thesis", response_model=list[ThesisRead])
-def generate_stock_thesis(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def generate_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     db.query(Thesis).filter(Thesis.stock_id == stock.id).delete()
 
@@ -52,8 +52,8 @@ def generate_stock_thesis(ticker: str, db: Session = Depends(get_db), current_us
 
 
 @router.post("/{ticker}/generate-and-evaluate", response_model=GenerateAndEvaluateResponse)
-def generate_and_evaluate(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
     preserved_points = [t for t in existing if t.frozen or getattr(t, "source", "ai") == "manual"]
@@ -94,8 +94,8 @@ def generate_and_evaluate(ticker: str, db: Session = Depends(get_db), current_us
 
 
 @router.post("/{ticker}/theses", response_model=ThesisRead, status_code=201)
-def add_manual_thesis(ticker: str, payload: ThesisCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def add_manual_thesis(ticker: str, payload: ThesisCreate, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     thesis = Thesis(
         stock_id=stock.id,
@@ -112,14 +112,14 @@ def add_manual_thesis(ticker: str, payload: ThesisCreate, db: Session = Depends(
 
 
 @router.get("/{ticker}/theses", response_model=list[ThesisRead])
-def get_theses(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def get_theses(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
     return db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
 
 
 @router.post("/{ticker}/chat", response_model=ChatResponse)
-def chat_with_assistant(ticker: str, payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def chat_with_assistant(ticker: str, payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
     thesis_dicts = [{"category": t.category, "statement": t.statement} for t in existing_theses]
@@ -148,8 +148,8 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, db: Session = Depends
 
 
 @router.post("/{ticker}/chat/stream")
-def chat_with_assistant_stream(ticker: str, payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def chat_with_assistant_stream(ticker: str, payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
     thesis_dicts = [{"category": t.category, "statement": t.statement} for t in existing_theses]
@@ -196,8 +196,8 @@ def chat_with_assistant_stream(ticker: str, payload: ChatRequest, db: Session = 
 
 
 @router.patch("/{ticker}/theses/{thesis_id}", response_model=ThesisRead)
-def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     thesis = db.query(Thesis).filter(Thesis.id == thesis_id, Thesis.stock_id == stock.id).first()
     if not thesis:
@@ -218,8 +218,8 @@ def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, db: Sessio
 
 
 @router.get("/{ticker}/news", response_model=list[NewsItemSchema])
-def get_stock_news(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def get_stock_news(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     articles = _fetch_polygon_news(stock.ticker, limit=5, days=3)
     return [
@@ -257,8 +257,8 @@ def clear_chat_history(ticker: str, db: Session = Depends(get_db), current_user:
 
 
 @router.delete("/{ticker}/theses/{thesis_id}", status_code=204)
-def delete_thesis(ticker: str, thesis_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def delete_thesis(ticker: str, thesis_id: int, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     thesis = db.query(Thesis).filter(Thesis.id == thesis_id, Thesis.stock_id == stock.id).first()
     if not thesis:

@@ -16,6 +16,7 @@ import {
 } from "@/lib/api";
 import { streamChat } from "@/lib/streaming";
 import { useAssistant } from "@/app/context/AssistantContext";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import { X, Send, Plus, Loader2, MessageSquare, Bot } from "lucide-react";
 
 function renderMessageContent(text: string) {
@@ -50,9 +51,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   risks: "Risks & Bear Case",
 };
 
-async function fetchHistory(ticker: string | null): Promise<ChatMessage[]> {
+async function fetchHistory(ticker: string | null, portfolioId?: number | null): Promise<ChatMessage[]> {
   try {
-    return ticker ? await getChatHistory(ticker) : await getPortfolioChatHistory();
+    return ticker ? await getChatHistory(ticker) : await getPortfolioChatHistory(portfolioId);
   } catch {
     return [];
   }
@@ -61,6 +62,7 @@ async function fetchHistory(ticker: string | null): Promise<ChatMessage[]> {
 export default function AssistantPanel() {
   const router = useRouter();
   const { isOpen, togglePanel, ticker, fireThesisAdded, fireEvaluationTriggered } = useAssistant();
+  const { activePortfolioId } = usePortfolio();
   const isPortfolioMode = ticker === null;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -81,10 +83,10 @@ export default function AssistantPanel() {
     setPendingAction(null);
     setError("");
     setHistoryLoading(true);
-    fetchHistory(ticker)
+    fetchHistory(ticker, activePortfolioId)
       .then(setChatHistory)
       .finally(() => setHistoryLoading(false));
-  }, [ticker]);
+  }, [ticker, activePortfolioId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

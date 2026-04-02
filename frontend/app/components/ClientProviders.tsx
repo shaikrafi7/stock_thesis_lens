@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/app/context/AuthContext";
 import { AssistantProvider } from "@/app/context/AssistantContext";
 import { ThemeProvider } from "@/app/context/ThemeContext";
+import { PortfolioProvider } from "@/app/context/PortfolioContext";
 import AssistantPanel from "./AssistantPanel";
 import AppShell from "./AppShell";
 import { Loader2 } from "lucide-react";
@@ -42,10 +43,12 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   // Authenticated — render full app
   return (
-    <AssistantProvider>
-      <AppShell>{children}</AppShell>
-      <AssistantPanel />
-    </AssistantProvider>
+    <PortfolioProvider>
+      <AssistantProvider>
+        <AppShell>{children}</AppShell>
+        <AssistantPanel />
+      </AssistantProvider>
+    </PortfolioProvider>
   );
 }
 

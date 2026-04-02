@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { evaluateAll } from "@/lib/api";
 import { Activity, Loader2 } from "lucide-react";
 
-export default function EvaluateAllButton() {
+export default function EvaluateAllButton({ portfolioId }: { portfolioId?: number | null } = {}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -17,7 +17,7 @@ export default function EvaluateAllButton() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await evaluateAll();
+      const res = await evaluateAll(portfolioId);
       setResult({ evaluated: res.evaluated, skipped: res.skipped });
       router.refresh();
     } catch {

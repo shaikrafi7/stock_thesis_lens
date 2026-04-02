@@ -44,7 +44,7 @@ function dollarEquivalent(returnPct: number): string {
   return result.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
 
-export default function PortfolioReturns() {
+export default function PortfolioReturns({ portfolioId }: { portfolioId?: number | null } = {}) {
   const [data, setData] = useState<PortfolioReturnsData | null>(null);
   const [period, setPeriod] = useState<string>("3mo");
   const [loading, setLoading] = useState(true);
@@ -53,11 +53,11 @@ export default function PortfolioReturns() {
 
   useEffect(() => {
     setLoading(true);
-    getPortfolioReturns(period)
+    getPortfolioReturns(period, portfolioId)
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [period]);
+  }, [period, portfolioId]);
 
   if (loading) {
     return (

@@ -114,7 +114,7 @@ function BriefingSection({ data, dateLabel }: { data: MorningBriefingResponse; d
   );
 }
 
-export default function MorningBriefing() {
+export default function MorningBriefing({ portfolioId }: { portfolioId?: number | null } = {}) {
   const [data, setData] = useState<MorningBriefingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(true);
@@ -126,7 +126,7 @@ export default function MorningBriefing() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const fresh = await refreshMorningBriefing();
+      const fresh = await refreshMorningBriefing(portfolioId);
       setData(fresh);
       // Reset history so it re-fetches if opened
       setHistory(null);
@@ -142,18 +142,18 @@ export default function MorningBriefing() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-    getMorningBriefing(controller.signal)
+    getMorningBriefing(portfolioId, controller.signal)
       .then(setData)
       .catch(() => {/* silent — section just won't render */})
       .finally(() => { clearTimeout(timeout); setLoading(false); });
 
     return () => { clearTimeout(timeout); controller.abort(); };
-  }, []);
+  }, [portfolioId]);
 
   function handleToggleHistory() {
     if (!historyOpen && !history) {
       setHistoryLoading(true);
-      getBriefingHistory(7)
+      getBriefingHistory(7, portfolioId)
         .then((h) => {
           // Filter out today's briefing (already shown above)
           const past = h.filter((b) => b.date !== data?.date);

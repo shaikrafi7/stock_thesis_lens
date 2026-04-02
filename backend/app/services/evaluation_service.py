@@ -75,10 +75,12 @@ def run_evaluation_for_stock(stock: Stock, db: Session) -> Evaluation | None:
         return None
 
 
-def evaluate_all_stocks(db: Session, user_id: int | None = None) -> dict:
+def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: int | None = None) -> dict:
     """Evaluate all eligible stocks. Returns summary dict."""
     query = db.query(Stock)
-    if user_id is not None:
+    if portfolio_id is not None:
+        query = query.filter(Stock.portfolio_id == portfolio_id)
+    elif user_id is not None:
         query = query.filter(Stock.user_id == user_id)
     stocks = query.order_by(Stock.ticker).all()
 

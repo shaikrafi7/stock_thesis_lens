@@ -15,6 +15,7 @@ import {
   type Evaluation,
 } from "@/lib/api";
 import { useAssistant } from "@/app/context/AssistantContext";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import StatusBadge from "@/app/components/StatusBadge";
 import {
   Lock,
@@ -104,13 +105,14 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [addingManual, setAddingManual] = useState(false);
 
   const { setTicker, registerThesisAdded, registerEvaluationTriggered } = useAssistant();
+  const { activePortfolioId: pid } = usePortfolio();
 
   useEffect(() => {
     setTicker(ticker);
     registerThesisAdded((t) => setTheses((prev) => [...prev, t]));
     registerEvaluationTriggered(async () => {
       try {
-        const result = await runEvaluation(ticker);
+        const result = await runEvaluation(ticker, pid);
         setEvaluation(result);
         return result;
       } catch {
@@ -145,7 +147,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     setGenerating(true);
     setError("");
     try {
-      const result = await generateAndEvaluate(ticker);
+      const result = await generateAndEvaluate(ticker, pid);
       setTheses(result.theses);
       if (result.evaluation) {
         setEvaluation(result.evaluation);
@@ -159,7 +161,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
   async function handleToggle(thesis: Thesis) {
     if (thesis.frozen) return;
-    const updated = await updateThesisSelection(ticker, thesis.id, !thesis.selected);
+    const updated = await updateThesisSelection(ticker, thesis.id, !thesis.selected, pid);
     setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
@@ -167,7 +169,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     const newSelected = !allSelected;
     const updates = theses
       .filter((t) => !t.frozen && t.selected !== newSelected)
-      .map((t) => updateThesisSelection(ticker, t.id, newSelected));
+      .map((t) => updateThesisSelection(ticker, t.id, newSelected, pid));
     const results = await Promise.all(updates);
     setTheses((prev) =>
       prev.map((t) => {
@@ -186,7 +188,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   }
 
   async function doFreeze(thesis: Thesis) {
-    const updated = await updateThesisFrozen(ticker, thesis.id, !thesis.frozen);
+    const updated = await updateThesisFrozen(ticker, thesis.id, !thesis.frozen, pid);
     setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
@@ -208,7 +210,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
   async function handleSaveEdit(id: number) {
     try {
-      const updated = await updateThesisStatement(ticker, id, editDraft);
+      const updated = await updateThesisStatement(ticker, id, editDraft, pid);
       setTheses((prev) => prev.map((t) => (t.id === id ? updated : t)));
       setEditingId(null);
     } catch (err: unknown) {
@@ -232,7 +234,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
   async function handleDeleteThesis(id: number) {
     try {
-      await deleteThesis(ticker, id);
+      await deleteThesis(ticker, id, pid);
       setTheses((prev) => prev.filter((t) => t.id !== id));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Delete failed");
@@ -247,7 +249,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     setEvaluating(true);
     setError("");
     try {
-      const result = await runEvaluation(ticker);
+      const result = await runEvaluation(ticker, pid);
       setEvaluation(result);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Evaluation failed");
@@ -263,7 +265,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     setAddingManual(true);
     setError("");
     try {
-      const added = await addManualThesis(ticker, addForCategory, stmt);
+      const added = await addManualThesis(ticker, addForCategory, stmt, pid);
       setTheses((prev) => [...prev, added]);
       setAddStatement("");
       setAddForCategory(null);

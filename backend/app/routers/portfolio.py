@@ -23,8 +23,8 @@ from app.schemas.thesis import (
 )
 from app.models.chat import ChatMessage as ChatMessageModel
 from app.core.auth import get_current_user
+from app.routers.portfolios import get_active_portfolio
 
-PORTFOLIO_CONTEXT_KEY = "__portfolio__"
 from app.agents import portfolio_chat_agent, morning_briefing_agent
 from app.utils.news import fetch_news, _fetch_polygon_news
 from app.utils.market_snapshot import get_snapshot
@@ -35,10 +35,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
-def _build_portfolio_data(db: Session, user: User) -> list[dict]:
+def _build_portfolio_data(db: Session, user: User, portfolio_id: int | None = None) -> list[dict]:
+    portfolio = get_active_portfolio(portfolio_id, user, db)
     stocks = (
         db.query(Stock)
-        .filter(Stock.user_id == user.id)
+        .filter(Stock.portfolio_id == portfolio.id)
         .options(subqueryload(Stock.theses), subqueryload(Stock.evaluations))
         .order_by(Stock.ticker)
         .all()
@@ -61,9 +62,14 @@ def _build_portfolio_data(db: Session, user: User) -> list[dict]:
     return result
 
 
+def _portfolio_context_key(portfolio_id: int) -> str:
+    return f"__portfolio__{portfolio_id}"
+
+
 @router.post("/chat", response_model=PortfolioChatResponse)
-def portfolio_chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    portfolio_data = _build_portfolio_data(db, current_user)
+def portfolio_chat(payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    portfolio_data = _build_portfolio_data(db, current_user, portfolio.id)
 
     for entry in portfolio_data:
         try:
@@ -74,7 +80,6 @@ def portfolio_chat(payload: ChatRequest, db: Session = Depends(get_db), current_
             pass
 
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
-
     chat_result = portfolio_chat_agent.chat(portfolio_data, messages)
 
     action = None
@@ -91,8 +96,10 @@ def portfolio_chat(payload: ChatRequest, db: Session = Depends(get_db), current_
 
 
 @router.post("/chat/stream")
-def portfolio_chat_stream(payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    portfolio_data = _build_portfolio_data(db, current_user)
+def portfolio_chat_stream(payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    context_key = _portfolio_context_key(portfolio.id)
+    portfolio_data = _build_portfolio_data(db, current_user, portfolio.id)
 
     for entry in portfolio_data:
         try:
@@ -105,7 +112,6 @@ def portfolio_chat_stream(payload: ChatRequest, db: Session = Depends(get_db), c
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
     user_id = current_user.id
 
-    # Collect all events first, then stream + persist
     all_events = list(portfolio_chat_agent.chat_stream(portfolio_data, messages))
     accumulated = "".join(
         e["data"].get("content", "") or e["data"].get("text", "")
@@ -116,13 +122,12 @@ def portfolio_chat_stream(payload: ChatRequest, db: Session = Depends(get_db), c
         for event in all_events:
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
 
-    # Persist before streaming — guarantees it runs
     try:
         user_content = messages[-1]["content"] if messages else ""
         if user_content:
-            db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="user", content=user_content, user_id=user_id))
+            db.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
         if accumulated:
-            db.add(ChatMessageModel(context_key=PORTFOLIO_CONTEXT_KEY, role="assistant", content=accumulated, user_id=user_id))
+            db.add(ChatMessageModel(context_key=context_key, role="assistant", content=accumulated, user_id=user_id))
         db.commit()
     except Exception as exc:
         logger.warning("Failed to persist portfolio chat: %s", exc)
@@ -131,10 +136,12 @@ def portfolio_chat_stream(payload: ChatRequest, db: Session = Depends(get_db), c
 
 
 @router.get("/chat/history", response_model=list[ChatHistoryMessage])
-def get_portfolio_chat_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_portfolio_chat_history(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    context_key = _portfolio_context_key(portfolio.id)
     messages = (
         db.query(ChatMessageModel)
-        .filter(ChatMessageModel.context_key == PORTFOLIO_CONTEXT_KEY, ChatMessageModel.user_id == current_user.id)
+        .filter(ChatMessageModel.context_key == context_key, ChatMessageModel.user_id == current_user.id)
         .order_by(ChatMessageModel.created_at.asc())
         .limit(40)
         .all()
@@ -143,27 +150,32 @@ def get_portfolio_chat_history(db: Session = Depends(get_db), current_user: User
 
 
 @router.delete("/chat/history", status_code=204)
-def clear_portfolio_chat_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def clear_portfolio_chat_history(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    context_key = _portfolio_context_key(portfolio.id)
     db.query(ChatMessageModel).filter(
-        ChatMessageModel.context_key == PORTFOLIO_CONTEXT_KEY, ChatMessageModel.user_id == current_user.id
+        ChatMessageModel.context_key == context_key, ChatMessageModel.user_id == current_user.id
     ).delete()
     db.commit()
     return None
 
 
 @router.post("/evaluate-all")
-def evaluate_all(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    summary = evaluate_all_stocks(db, user_id=current_user.id)
+def evaluate_all(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    summary = evaluate_all_stocks(db, user_id=current_user.id, portfolio_id=portfolio.id)
     return summary
 
 
 @router.get("/score-histories")
 def portfolio_score_histories(
     limit: int = Query(default=10, ge=1, le=30),
+    portfolio_id: int | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
     result: dict[str, list[dict]] = {}
     for stock in stocks:
         evals = (
@@ -209,10 +221,10 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
     return result
 
 
-async def _generate_and_store_briefing(db: Session, user: User) -> MorningBriefingResponse:
+async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: int) -> MorningBriefingResponse:
     today = date.today()
 
-    portfolio_data = _build_portfolio_data(db, user)
+    portfolio_data = _build_portfolio_data(db, user, portfolio_id)
     tickers = [s["ticker"] for s in portfolio_data]
     ticker_names = {s["ticker"]: s["name"] for s in portfolio_data}
 
@@ -250,7 +262,9 @@ async def _generate_and_store_briefing(db: Session, user: User) -> MorningBriefi
         }
         items_for_db.append(entry)
 
-    existing = db.query(Briefing).filter(Briefing.date == today, Briefing.user_id == user.id).first()
+    existing = db.query(Briefing).filter(
+        Briefing.date == today, Briefing.portfolio_id == portfolio_id
+    ).first()
     if existing:
         existing.summary = briefing.summary
         existing.items = json.dumps(items_for_db)
@@ -260,6 +274,7 @@ async def _generate_and_store_briefing(db: Session, user: User) -> MorningBriefi
             summary=briefing.summary,
             items=json.dumps(items_for_db),
             user_id=user.id,
+            portfolio_id=portfolio_id,
         )
         db.add(db_briefing)
     db.commit()
@@ -272,10 +287,13 @@ async def _generate_and_store_briefing(db: Session, user: User) -> MorningBriefi
 
 
 @router.get("/morning-briefing", response_model=MorningBriefingResponse)
-async def morning_briefing(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def morning_briefing(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
     today = date.today()
 
-    existing = db.query(Briefing).filter(Briefing.date == today, Briefing.user_id == current_user.id).first()
+    existing = db.query(Briefing).filter(
+        Briefing.date == today, Briefing.portfolio_id == portfolio.id
+    ).first()
     if existing:
         items_data = json.loads(existing.items) if existing.items else []
         return MorningBriefingResponse(
@@ -284,23 +302,26 @@ async def morning_briefing(db: Session = Depends(get_db), current_user: User = D
             date=str(existing.date),
         )
 
-    return await _generate_and_store_briefing(db, current_user)
+    return await _generate_and_store_briefing(db, current_user, portfolio.id)
 
 
 @router.post("/morning-briefing/refresh", response_model=MorningBriefingResponse)
-async def refresh_morning_briefing(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return await _generate_and_store_briefing(db, current_user)
+async def refresh_morning_briefing(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    return await _generate_and_store_briefing(db, current_user, portfolio.id)
 
 
 @router.get("/briefing-history", response_model=list[MorningBriefingResponse])
 def briefing_history(
     limit: int = Query(default=7, ge=1, le=30),
+    portfolio_id: int | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
     briefings = (
         db.query(Briefing)
-        .filter(Briefing.user_id == current_user.id)
+        .filter(Briefing.portfolio_id == portfolio.id)
         .order_by(Briefing.date.desc())
         .limit(limit)
         .all()
@@ -321,6 +342,7 @@ def briefing_history(
 @router.get("/returns")
 def portfolio_returns(
     period: str = Query(default="3mo"),
+    portfolio_id: int | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -330,7 +352,8 @@ def portfolio_returns(
     if period not in VALID_PERIODS:
         period = "3mo"
 
-    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
     if not stocks:
         return {
             "portfolio_return": 0,
@@ -379,11 +402,12 @@ def portfolio_returns(
 
 
 @router.get("/sparklines")
-def portfolio_sparklines(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def portfolio_sparklines(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     import yfinance as yf
 
     TARGET_POINTS = 30
-    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
     result: dict[str, list[float]] = {}
     for stock in stocks:
         try:
@@ -403,10 +427,11 @@ def portfolio_sparklines(db: Session = Depends(get_db), current_user: User = Dep
 
 
 @router.get("/sectors")
-def portfolio_sectors(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def portfolio_sectors(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     import yfinance as yf
 
-    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
     result = []
     for stock in stocks:
         try:
@@ -419,8 +444,9 @@ def portfolio_sectors(db: Session = Depends(get_db), current_user: User = Depend
 
 
 @router.get("/trends", response_model=list[StockTrend])
-def portfolio_trends(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).order_by(Stock.ticker).all()
+def portfolio_trends(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
     trends = []
     for stock in stocks:
         evals = (

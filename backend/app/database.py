@@ -43,6 +43,9 @@ def _run_migrations():
         if "user_id" not in stock_columns:
             conn.execute(text("ALTER TABLE stocks ADD COLUMN user_id INTEGER REFERENCES users(id)"))
             conn.commit()
+        if "portfolio_id" not in stock_columns:
+            conn.execute(text("ALTER TABLE stocks ADD COLUMN portfolio_id INTEGER REFERENCES portfolios(id)"))
+            conn.commit()
 
         # --- Thesis columns ---
         result = conn.execute(text("PRAGMA table_info(theses)"))
@@ -58,6 +61,9 @@ def _run_migrations():
         if "user_id" not in briefing_columns:
             conn.execute(text("ALTER TABLE briefings ADD COLUMN user_id INTEGER REFERENCES users(id)"))
             conn.commit()
+        if "portfolio_id" not in briefing_columns:
+            conn.execute(text("ALTER TABLE briefings ADD COLUMN portfolio_id INTEGER REFERENCES portfolios(id)"))
+            conn.commit()
 
         # --- Chat messages columns ---
         result = conn.execute(text("PRAGMA table_info(chat_messages)"))
@@ -66,15 +72,18 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE chat_messages ADD COLUMN user_id INTEGER REFERENCES users(id)"))
             conn.commit()
 
-        # --- Fix stocks table: replace old UNIQUE(ticker) with UNIQUE(user_id, ticker) ---
+        # --- Migrate stocks unique constraint ---
         _migrate_stocks_unique_constraint(conn)
 
         # --- Create default user and assign orphaned data ---
         _ensure_default_user(conn)
 
+        # --- Create default portfolios and assign stocks ---
+        _ensure_default_portfolios(conn)
+
 
 def _migrate_stocks_unique_constraint(conn):
-    """Replace old UNIQUE(ticker) with UNIQUE(user_id, ticker) by recreating the table."""
+    """Replace old UNIQUE(ticker) or UNIQUE(user_id, ticker) with UNIQUE(portfolio_id, ticker)."""
     result = conn.execute(text("PRAGMA index_list(stocks)"))
     indexes = result.fetchall()
     needs_migration = False
@@ -85,8 +94,7 @@ def _migrate_stocks_unique_constraint(conn):
             continue
         idx_cols = conn.execute(text(f"PRAGMA index_info('{idx_name}')")).fetchall()
         col_names = [c[2] for c in idx_cols]
-        # Single-column unique on just ticker (not the composite user_id+ticker)
-        if col_names == ["ticker"]:
+        if col_names == ["ticker"] or col_names == ["user_id", "ticker"]:
             needs_migration = True
             break
 
@@ -99,13 +107,14 @@ def _migrate_stocks_unique_constraint(conn):
         CREATE TABLE stocks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER REFERENCES users(id),
+            portfolio_id INTEGER REFERENCES portfolios(id),
             ticker VARCHAR(10) NOT NULL,
             name VARCHAR(255) NOT NULL,
             logo_url VARCHAR(500),
-            UNIQUE(user_id, ticker)
+            UNIQUE(portfolio_id, ticker)
         )
     """))
-    conn.execute(text("INSERT INTO stocks SELECT id, user_id, ticker, name, logo_url FROM _stocks_old"))
+    conn.execute(text("INSERT INTO stocks (id, user_id, portfolio_id, ticker, name, logo_url) SELECT id, user_id, portfolio_id, ticker, name, logo_url FROM _stocks_old"))
     conn.execute(text("DROP TABLE _stocks_old"))
     conn.execute(text("PRAGMA foreign_keys = ON"))
     conn.commit()
@@ -127,9 +136,43 @@ def _ensure_default_user(conn):
         row = conn.execute(text("SELECT id FROM users WHERE email = 'default@thesisarc.local'")).fetchone()
         default_uid = row[0]
 
-    # Assign orphaned records to the default user
     for table in ("stocks", "briefings", "chat_messages"):
         conn.execute(text(f"UPDATE {table} SET user_id = :uid WHERE user_id IS NULL"), {"uid": default_uid})
+    conn.commit()
+
+
+def _ensure_default_portfolios(conn):
+    """Create a default portfolio for each user that doesn't have one, and assign orphaned stocks."""
+    users = conn.execute(text("SELECT id FROM users")).fetchall()
+    for (user_id,) in users:
+        existing = conn.execute(
+            text("SELECT id FROM portfolios WHERE user_id = :uid AND is_default = 1"),
+            {"uid": user_id},
+        ).fetchone()
+        if existing:
+            portfolio_id = existing[0]
+        else:
+            conn.execute(
+                text("INSERT INTO portfolios (user_id, name, is_default, created_at) VALUES (:uid, 'Default', 1, datetime('now'))"),
+                {"uid": user_id},
+            )
+            conn.commit()
+            row = conn.execute(
+                text("SELECT id FROM portfolios WHERE user_id = :uid AND is_default = 1"),
+                {"uid": user_id},
+            ).fetchone()
+            portfolio_id = row[0]
+
+        # Assign stocks without a portfolio to the default one
+        conn.execute(
+            text("UPDATE stocks SET portfolio_id = :pid WHERE user_id = :uid AND portfolio_id IS NULL"),
+            {"pid": portfolio_id, "uid": user_id},
+        )
+        # Assign briefings without a portfolio to the default one
+        conn.execute(
+            text("UPDATE briefings SET portfolio_id = :pid WHERE user_id = :uid AND portfolio_id IS NULL"),
+            {"pid": portfolio_id, "uid": user_id},
+        )
     conn.commit()
 
 

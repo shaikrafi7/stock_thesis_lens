@@ -12,6 +12,7 @@ import {
   type StockTrend,
   type EvaluationSummary,
 } from "@/lib/api";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import PortfolioGauge from "./components/PortfolioGauge";
 import PortfolioReturns from "./components/PortfolioReturns";
 import MorningBriefing from "./components/MorningBriefing";
@@ -22,6 +23,7 @@ import SectorChart from "./components/SectorChart";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
+  const { activePortfolioId } = usePortfolio();
   const [loading, setLoading] = useState(true);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
@@ -30,8 +32,10 @@ export default function DashboardPage() {
   const [priceSparklines, setPriceSparklines] = useState<Record<string, number[]>>({});
 
   const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const stockList = await fetchStocks();
+      const pid = activePortfolioId;
+      const stockList = await fetchStocks(pid);
       setStocks(stockList);
 
       const [evals, trends, histories, sparklines] = await Promise.all([
@@ -40,9 +44,9 @@ export default function DashboardPage() {
             getLatestEvaluation(s.ticker).catch(() => null)
           )
         ),
-        getPortfolioTrends().catch(() => [] as StockTrend[]),
-        getPortfolioScoreHistories(10).catch(() => ({}) as Record<string, EvaluationSummary[]>),
-        getPortfolioSparklines().catch(() => ({}) as Record<string, number[]>),
+        getPortfolioTrends(pid).catch(() => [] as StockTrend[]),
+        getPortfolioScoreHistories(10, pid).catch(() => ({}) as Record<string, EvaluationSummary[]>),
+        getPortfolioSparklines(pid).catch(() => ({}) as Record<string, number[]>),
       ]);
 
       setEvaluations(evals);
@@ -58,11 +62,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activePortfolioId]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (activePortfolioId) loadData();
+  }, [activePortfolioId, loadData]);
 
   const evaluatedScores = evaluations
     .filter((e): e is Evaluation => e !== null)
@@ -91,11 +95,11 @@ export default function DashboardPage() {
           {/* Two-column: left = news, right = returns + sector */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
             <div className="min-w-0">
-              <MorningBriefing />
+              <MorningBriefing portfolioId={activePortfolioId} />
             </div>
             <div className="flex flex-col gap-4">
-              <SectorChart compact />
-              <PortfolioReturns />
+              <SectorChart compact portfolioId={activePortfolioId} />
+              <PortfolioReturns portfolioId={activePortfolioId} />
             </div>
           </div>
 
@@ -104,8 +108,8 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Portfolio Stocks</h2>
               <div className="flex items-center gap-3">
-                <EvaluateAllButton />
-                <AddStockInline onAdded={loadData} />
+                <EvaluateAllButton portfolioId={activePortfolioId} />
+                <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
               </div>
             </div>
           </div>
@@ -121,7 +125,7 @@ export default function DashboardPage() {
       ) : (
         <div className="text-center py-16">
           <p className="text-zinc-500 text-sm mb-4">No stocks in your portfolio yet.</p>
-          <AddStockInline onAdded={loadData} />
+          <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
         </div>
       )}
     </div>

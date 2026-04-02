@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import create_all_tables, SessionLocal
 from app.core.config import settings
-from app.routers import auth, stocks, thesis, evaluate, market_data, portfolio
+from app.routers import auth, stocks, thesis, evaluate, market_data, portfolio, portfolios
 from app.services.scheduler import start_scheduler, stop_scheduler
 
 
@@ -31,6 +31,7 @@ app.include_router(thesis.router)
 app.include_router(evaluate.router)
 app.include_router(market_data.router)
 app.include_router(portfolio.router)
+app.include_router(portfolios.router)
 
 
 @app.get("/health")

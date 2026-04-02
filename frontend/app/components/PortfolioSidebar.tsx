@@ -10,6 +10,7 @@ import {
   type Stock,
   type EvaluationSummary,
 } from "@/lib/api";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import StatusBadge from "./StatusBadge";
 import DeleteStockButton from "./DeleteStockButton";
 import { Plus, Loader2, Clock } from "lucide-react";
@@ -32,6 +33,7 @@ function evalAge(history: EvaluationSummary[] | undefined): { label: string; col
 export default function PortfolioSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { activePortfolioId } = usePortfolio();
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [scoreHistories, setScoreHistories] = useState<Record<string, EvaluationSummary[]>>({});
   const [loading, setLoading] = useState(true);
@@ -73,8 +75,8 @@ export default function PortfolioSidebar() {
 
   useEffect(() => {
     Promise.all([
-      fetchStocks().catch(() => [] as Stock[]),
-      getPortfolioScoreHistories(10).catch(() => ({} as Record<string, EvaluationSummary[]>)),
+      fetchStocks(activePortfolioId).catch(() => [] as Stock[]),
+      getPortfolioScoreHistories(10, activePortfolioId).catch(() => ({} as Record<string, EvaluationSummary[]>)),
     ]).then(([s, h]) => {
       setStocks(s);
       setScoreHistories(h);
@@ -88,9 +90,9 @@ export default function PortfolioSidebar() {
     if (!t || adding) return;
     setAdding(true);
     try {
-      await addStock(t);
+      await addStock(t, activePortfolioId);
       setTickerInput("");
-      const fresh = await fetchStocks();
+      const fresh = await fetchStocks(activePortfolioId);
       setStocks(fresh);
       router.refresh();
     } catch {

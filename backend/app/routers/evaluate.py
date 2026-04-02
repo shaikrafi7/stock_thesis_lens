@@ -16,8 +16,8 @@ router = APIRouter(prefix="/stocks", tags=["evaluate"])
 
 
 @router.post("/{ticker}/evaluate", response_model=EvaluationRead)
-def run_evaluation(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def run_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     selected_count = (
         db.query(Thesis)
@@ -41,8 +41,8 @@ def run_evaluation(ticker: str, db: Session = Depends(get_db), current_user: Use
 
 
 @router.get("/{ticker}/evaluation", response_model=EvaluationRead)
-def get_latest_evaluation(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    stock = get_user_stock(ticker, current_user, db)
+def get_latest_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     evaluation = (
         db.query(Evaluation)
@@ -60,10 +60,11 @@ def get_latest_evaluation(ticker: str, db: Session = Depends(get_db), current_us
 def get_evaluation_history(
     ticker: str,
     limit: int = Query(default=20, ge=1, le=100),
+    portfolio_id: int | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    stock = get_user_stock(ticker, current_user, db)
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     evaluations = (
         db.query(Evaluation)

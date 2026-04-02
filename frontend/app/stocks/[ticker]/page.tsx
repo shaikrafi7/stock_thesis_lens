@@ -16,6 +16,7 @@ import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
 import StockNews from "@/app/components/StockNews";
 import PortfolioSidebar from "@/app/components/PortfolioSidebar";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
 export default function StockPage({ params }: Props) {
   const { ticker } = use(params);
   const upperTicker = ticker.toUpperCase();
+  const { activePortfolioId } = usePortfolio();
 
   const [loading, setLoading] = useState(true);
   const [stock, setStock] = useState<Stock | null>(null);
@@ -34,14 +36,14 @@ export default function StockPage({ params }: Props) {
   useEffect(() => {
     async function load() {
       try {
-        const stocks = await fetchStocks();
+        const stocks = await fetchStocks(activePortfolioId);
         const found = stocks.find((s) => s.ticker === upperTicker) ?? null;
         setStock(found);
 
         if (found) {
           const [t, e] = await Promise.all([
-            getTheses(upperTicker).catch(() => [] as Thesis[]),
-            getLatestEvaluation(upperTicker).catch(() => null),
+            getTheses(upperTicker, activePortfolioId).catch(() => [] as Thesis[]),
+            getLatestEvaluation(upperTicker, activePortfolioId).catch(() => null),
           ]);
           setTheses(t);
           setEvaluation(e);
@@ -53,7 +55,7 @@ export default function StockPage({ params }: Props) {
       }
     }
     load();
-  }, [upperTicker]);
+  }, [upperTicker, activePortfolioId]);
 
   if (loading) {
     return (

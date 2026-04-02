@@ -128,30 +128,76 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export const fetchStocks = (): Promise<Stock[]> => apiFetch("/stocks");
+// --- Portfolio CRUD ---
 
-export const addStock = (ticker: string): Promise<Stock> =>
-  apiFetch("/stocks", {
+export interface Portfolio {
+  id: number;
+  name: string;
+  description: string | null;
+  is_default: boolean;
+  created_at: string;
+  stock_count: number;
+}
+
+export const fetchPortfolios = (): Promise<Portfolio[]> =>
+  apiFetch("/portfolios");
+
+export const createPortfolio = (name: string, description?: string): Promise<Portfolio> =>
+  apiFetch("/portfolios", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, description: description ?? null }),
+  });
+
+export const updatePortfolio = (id: number, name: string): Promise<Portfolio> =>
+  apiFetch(`/portfolios/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+
+export const deletePortfolio = (id: number): Promise<void> =>
+  apiFetch(`/portfolios/${id}`, { method: "DELETE" });
+
+// --- Query param helper ---
+
+function pq(portfolioId?: number | null): string {
+  return portfolioId ? `portfolio_id=${portfolioId}` : "";
+}
+
+function joinParams(...parts: string[]): string {
+  const filtered = parts.filter(Boolean);
+  return filtered.length ? "?" + filtered.join("&") : "";
+}
+
+// --- Stocks ---
+
+export const fetchStocks = (portfolioId?: number | null): Promise<Stock[]> =>
+  apiFetch(`/stocks${joinParams(pq(portfolioId))}`);
+
+export const addStock = (ticker: string, portfolioId?: number | null): Promise<Stock> =>
+  apiFetch(`/stocks${joinParams(pq(portfolioId))}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ticker, name: "" }),
   });
 
-export const deleteStock = (ticker: string): Promise<void> =>
-  apiFetch(`/stocks/${ticker}`, { method: "DELETE" });
+export const deleteStock = (ticker: string, portfolioId?: number | null): Promise<void> =>
+  apiFetch(`/stocks/${ticker}${joinParams(pq(portfolioId))}`, { method: "DELETE" });
 
-export const getTheses = (ticker: string): Promise<Thesis[]> =>
-  apiFetch(`/stocks/${ticker}/theses`);
+export const getTheses = (ticker: string, portfolioId?: number | null): Promise<Thesis[]> =>
+  apiFetch(`/stocks/${ticker}/theses${joinParams(pq(portfolioId))}`);
 
-export const generateThesis = (ticker: string): Promise<Thesis[]> =>
-  apiFetch(`/stocks/${ticker}/generate-thesis`, { method: "POST" });
+export const generateThesis = (ticker: string, portfolioId?: number | null): Promise<Thesis[]> =>
+  apiFetch(`/stocks/${ticker}/generate-thesis${joinParams(pq(portfolioId))}`, { method: "POST" });
 
 export const addManualThesis = (
   ticker: string,
   category: string,
-  statement: string
+  statement: string,
+  portfolioId?: number | null
 ): Promise<Thesis> =>
-  apiFetch(`/stocks/${ticker}/theses`, {
+  apiFetch(`/stocks/${ticker}/theses${joinParams(pq(portfolioId))}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, statement }),
@@ -160,9 +206,10 @@ export const addManualThesis = (
 export const updateThesisSelection = (
   ticker: string,
   thesisId: number,
-  selected: boolean
+  selected: boolean,
+  portfolioId?: number | null
 ): Promise<Thesis> =>
-  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, {
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}${joinParams(pq(portfolioId))}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ selected }),
@@ -171,9 +218,10 @@ export const updateThesisSelection = (
 export const updateThesisStatement = (
   ticker: string,
   thesisId: number,
-  statement: string
+  statement: string,
+  portfolioId?: number | null
 ): Promise<Thesis> =>
-  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, {
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}${joinParams(pq(portfolioId))}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ statement }),
@@ -182,22 +230,23 @@ export const updateThesisStatement = (
 export const updateThesisFrozen = (
   ticker: string,
   thesisId: number,
-  frozen: boolean
+  frozen: boolean,
+  portfolioId?: number | null
 ): Promise<Thesis> =>
-  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, {
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}${joinParams(pq(portfolioId))}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ frozen }),
   });
 
-export const deleteThesis = (ticker: string, thesisId: number): Promise<void> =>
-  apiFetch(`/stocks/${ticker}/theses/${thesisId}`, { method: "DELETE" });
+export const deleteThesis = (ticker: string, thesisId: number, portfolioId?: number | null): Promise<void> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}${joinParams(pq(portfolioId))}`, { method: "DELETE" });
 
-export const runEvaluation = (ticker: string): Promise<Evaluation> =>
-  apiFetch(`/stocks/${ticker}/evaluate`, { method: "POST" });
+export const runEvaluation = (ticker: string, portfolioId?: number | null): Promise<Evaluation> =>
+  apiFetch(`/stocks/${ticker}/evaluate${joinParams(pq(portfolioId))}`, { method: "POST" });
 
-export const getLatestEvaluation = (ticker: string): Promise<Evaluation> =>
-  apiFetch(`/stocks/${ticker}/evaluation`);
+export const getLatestEvaluation = (ticker: string, portfolioId?: number | null): Promise<Evaluation> =>
+  apiFetch(`/stocks/${ticker}/evaluation${joinParams(pq(portfolioId))}`);
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -237,9 +286,10 @@ export interface PortfolioChatResponse {
 }
 
 export const chatWithPortfolioAssistant = (
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  portfolioId?: number | null
 ): Promise<PortfolioChatResponse> =>
-  apiFetch("/portfolio/chat", {
+  apiFetch(`/portfolio/chat${joinParams(pq(portfolioId))}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages }),
@@ -275,12 +325,13 @@ export interface StockTrend {
 
 export const getEvaluationHistory = (
   ticker: string,
-  limit = 20
+  limit = 20,
+  portfolioId?: number | null
 ): Promise<EvaluationSummary[]> =>
-  apiFetch(`/stocks/${ticker}/evaluation-history?limit=${limit}`);
+  apiFetch(`/stocks/${ticker}/evaluation-history${joinParams(`limit=${limit}`, pq(portfolioId))}`);
 
-export const getPortfolioTrends = (): Promise<StockTrend[]> =>
-  apiFetch("/portfolio/trends");
+export const getPortfolioTrends = (portfolioId?: number | null): Promise<StockTrend[]> =>
+  apiFetch(`/portfolio/trends${joinParams(pq(portfolioId))}`);
 
 export interface EvaluateAllResult {
   evaluated: string[];
@@ -288,30 +339,31 @@ export interface EvaluateAllResult {
   errors: Record<string, string>;
 }
 
-export const evaluateAll = (): Promise<EvaluateAllResult> =>
-  apiFetch("/portfolio/evaluate-all", { method: "POST" });
+export const evaluateAll = (portfolioId?: number | null): Promise<EvaluateAllResult> =>
+  apiFetch(`/portfolio/evaluate-all${joinParams(pq(portfolioId))}`, { method: "POST" });
 
-export const getMorningBriefing = (signal?: AbortSignal): Promise<MorningBriefingResponse> =>
-  apiFetch("/portfolio/morning-briefing", signal ? { signal } : undefined);
+export const getMorningBriefing = (portfolioId?: number | null, signal?: AbortSignal): Promise<MorningBriefingResponse> =>
+  apiFetch(`/portfolio/morning-briefing${joinParams(pq(portfolioId))}`, signal ? { signal } : undefined);
 
-export const refreshMorningBriefing = (): Promise<MorningBriefingResponse> =>
-  apiFetch("/portfolio/morning-briefing/refresh", { method: "POST" });
+export const refreshMorningBriefing = (portfolioId?: number | null): Promise<MorningBriefingResponse> =>
+  apiFetch(`/portfolio/morning-briefing/refresh${joinParams(pq(portfolioId))}`, { method: "POST" });
 
-export const getBriefingHistory = (limit = 7): Promise<MorningBriefingResponse[]> =>
-  apiFetch(`/portfolio/briefing-history?limit=${limit}`);
+export const getBriefingHistory = (limit = 7, portfolioId?: number | null): Promise<MorningBriefingResponse[]> =>
+  apiFetch(`/portfolio/briefing-history${joinParams(`limit=${limit}`, pq(portfolioId))}`);
 
 export const getPortfolioScoreHistories = (
-  limit = 10
+  limit = 10,
+  portfolioId?: number | null
 ): Promise<Record<string, EvaluationSummary[]>> =>
-  apiFetch(`/portfolio/score-histories?limit=${limit}`);
+  apiFetch(`/portfolio/score-histories${joinParams(`limit=${limit}`, pq(portfolioId))}`);
 
 export interface GenerateAndEvaluateResponse {
   theses: Thesis[];
   evaluation: Evaluation | null;
 }
 
-export const generateAndEvaluate = (ticker: string): Promise<GenerateAndEvaluateResponse> =>
-  apiFetch(`/stocks/${ticker}/generate-and-evaluate`, { method: "POST" });
+export const generateAndEvaluate = (ticker: string, portfolioId?: number | null): Promise<GenerateAndEvaluateResponse> =>
+  apiFetch(`/stocks/${ticker}/generate-and-evaluate${joinParams(pq(portfolioId))}`, { method: "POST" });
 
 export interface NewsItem {
   title: string;
@@ -319,8 +371,8 @@ export interface NewsItem {
   published_utc: string;
 }
 
-export const fetchStockNews = (ticker: string): Promise<NewsItem[]> =>
-  apiFetch(`/stocks/${ticker}/news`);
+export const fetchStockNews = (ticker: string, portfolioId?: number | null): Promise<NewsItem[]> =>
+  apiFetch(`/stocks/${ticker}/news${joinParams(pq(portfolioId))}`);
 
 export const getChatHistory = (ticker: string): Promise<ChatMessage[]> =>
   apiFetch(`/stocks/${ticker}/chat/history`);
@@ -328,11 +380,11 @@ export const getChatHistory = (ticker: string): Promise<ChatMessage[]> =>
 export const clearChatHistory = (ticker: string): Promise<void> =>
   apiFetch(`/stocks/${ticker}/chat/history`, { method: "DELETE" });
 
-export const getPortfolioChatHistory = (): Promise<ChatMessage[]> =>
-  apiFetch("/portfolio/chat/history");
+export const getPortfolioChatHistory = (portfolioId?: number | null): Promise<ChatMessage[]> =>
+  apiFetch(`/portfolio/chat/history${joinParams(pq(portfolioId))}`);
 
-export const clearPortfolioChatHistory = (): Promise<void> =>
-  apiFetch("/portfolio/chat/history", { method: "DELETE" });
+export const clearPortfolioChatHistory = (portfolioId?: number | null): Promise<void> =>
+  apiFetch(`/portfolio/chat/history${joinParams(pq(portfolioId))}`, { method: "DELETE" });
 
 export interface StockReturn {
   ticker: string;
@@ -347,16 +399,16 @@ export interface PortfolioReturnsData {
   stocks: StockReturn[];
 }
 
-export const getPortfolioReturns = (period = "3mo"): Promise<PortfolioReturnsData> =>
-  apiFetch(`/portfolio/returns?period=${period}`);
+export const getPortfolioReturns = (period = "3mo", portfolioId?: number | null): Promise<PortfolioReturnsData> =>
+  apiFetch(`/portfolio/returns${joinParams(`period=${period}`, pq(portfolioId))}`);
 
-export const getPortfolioSparklines = (): Promise<Record<string, number[]>> =>
-  apiFetch("/portfolio/sparklines");
+export const getPortfolioSparklines = (portfolioId?: number | null): Promise<Record<string, number[]>> =>
+  apiFetch(`/portfolio/sparklines${joinParams(pq(portfolioId))}`);
 
 export interface SectorEntry {
   ticker: string;
   sector: string;
 }
 
-export const getPortfolioSectors = (): Promise<SectorEntry[]> =>
-  apiFetch("/portfolio/sectors");
+export const getPortfolioSectors = (portfolioId?: number | null): Promise<SectorEntry[]> =>
+  apiFetch(`/portfolio/sectors${joinParams(pq(portfolioId))}`);

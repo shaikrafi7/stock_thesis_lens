@@ -4,7 +4,7 @@ import { useState } from "react";
 import { addStock, generateAndEvaluate } from "@/lib/api";
 import { Plus, Loader2 } from "lucide-react";
 
-export default function AddStockInline({ onAdded }: { onAdded?: () => void | Promise<void> }) {
+export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () => void | Promise<void>; portfolioId?: number | null }) {
   const [ticker, setTicker] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -20,8 +20,8 @@ export default function AddStockInline({ onAdded }: { onAdded?: () => void | Pro
     try {
       for (const t of tickers) {
         try {
-          await addStock(t);
-          await generateAndEvaluate(t);
+          await addStock(t, portfolioId);
+          await generateAndEvaluate(t, portfolioId);
         } catch {
           // continue with remaining tickers
         }

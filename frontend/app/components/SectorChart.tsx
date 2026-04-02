@@ -17,13 +17,13 @@ interface SectorData {
   tickers: string[];
 }
 
-export default function SectorChart({ compact = false }: { compact?: boolean }) {
+export default function SectorChart({ compact = false, portfolioId }: { compact?: boolean; portfolioId?: number | null }) {
   const [data, setData] = useState<SectorData[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    getPortfolioSectors()
+    getPortfolioSectors(portfolioId)
       .then((entries: SectorEntry[]) => {
         const grouped: Record<string, string[]> = {};
         for (const e of entries) {
@@ -38,7 +38,7 @@ export default function SectorChart({ compact = false }: { compact?: boolean }) 
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [portfolioId]);
 
   if (loading) {
     return (
