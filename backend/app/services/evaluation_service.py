@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 MIN_SELECTED = 3
 
 
-def run_evaluation_for_stock(stock: Stock, db: Session) -> Evaluation | None:
+def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict | None = None) -> Evaluation | None:
     """Run the full evaluation pipeline for a stock.
 
     Returns the saved Evaluation, or None if fewer than MIN_SELECTED theses.
@@ -51,7 +51,7 @@ def run_evaluation_for_stock(stock: Stock, db: Session) -> Evaluation | None:
         # Pipeline
         signals = collect_signals(stock.ticker, stock.name)
         mappings = interpret_signals(signals, thesis_dicts)
-        result = evaluate_thesis(mappings, thesis_meta)
+        result = evaluate_thesis(mappings, thesis_meta, investor_profile=investor_profile)
         explanation = generate_explanation(stock.ticker, result)
 
         # Save evaluation
@@ -75,7 +75,7 @@ def run_evaluation_for_stock(stock: Stock, db: Session) -> Evaluation | None:
         return None
 
 
-def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: int | None = None) -> dict:
+def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: int | None = None, investor_profile: dict | None = None) -> dict:
     """Evaluate all eligible stocks. Returns summary dict."""
     query = db.query(Stock)
     if portfolio_id is not None:
@@ -113,7 +113,7 @@ def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: i
                 db.commit()
                 logger.info("evaluate_all: auto-generated %d theses for %s", len(new_theses), stock.ticker)
 
-            result = run_evaluation_for_stock(stock, db)
+            result = run_evaluation_for_stock(stock, db, investor_profile=investor_profile)
             if result is None:
                 skipped.append(stock.ticker)
             else:

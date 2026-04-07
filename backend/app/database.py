@@ -81,6 +81,32 @@ def _run_migrations():
         # --- Create default portfolios and assign stocks ---
         _ensure_default_portfolios(conn)
 
+        # --- InvestorProfile table ---
+        result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='investor_profiles'"))
+        if not result.fetchone():
+            conn.execute(text("""
+                CREATE TABLE investor_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER UNIQUE NOT NULL REFERENCES users(id),
+                    investment_style VARCHAR(20),
+                    time_horizon VARCHAR(20),
+                    loss_aversion VARCHAR(20),
+                    risk_capacity VARCHAR(20),
+                    experience_level VARCHAR(20),
+                    overconfidence_bias VARCHAR(20),
+                    primary_bias VARCHAR(50),
+                    archetype_label VARCHAR(100),
+                    behavioral_summary TEXT,
+                    scenario_predictions TEXT,
+                    bias_fingerprint TEXT,
+                    wizard_completed BOOLEAN DEFAULT 0 NOT NULL,
+                    wizard_skipped BOOLEAN DEFAULT 0 NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+                )
+            """))
+            conn.commit()
+
 
 def _migrate_stocks_unique_constraint(conn):
     """Replace old UNIQUE(ticker) or UNIQUE(user_id, ticker) with UNIQUE(portfolio_id, ticker)."""

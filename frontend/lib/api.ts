@@ -412,3 +412,58 @@ export interface SectorEntry {
 
 export const getPortfolioSectors = (portfolioId?: number | null): Promise<SectorEntry[]> =>
   apiFetch(`/portfolio/sectors${joinParams(pq(portfolioId))}`);
+
+// ── Investor Profile ──────────────────────────────────────────────────────
+
+export interface ScenarioPrediction {
+  situation: string;
+  likely_action: string;
+  watch_out_for: string;
+}
+
+export interface InvestorProfile {
+  id: number;
+  user_id: number;
+  investment_style: string | null;
+  time_horizon: string | null;
+  loss_aversion: string | null;
+  risk_capacity: string | null;
+  experience_level: string | null;
+  overconfidence_bias: string | null;
+  primary_bias: string | null;
+  archetype_label: string | null;
+  behavioral_summary: string | null;
+  scenario_predictions: ScenarioPrediction[] | null;
+  bias_fingerprint: Record<string, number> | null;
+  wizard_completed: boolean;
+  wizard_skipped: boolean;
+}
+
+export interface InvestorProfileCreateRequest {
+  investment_style: string;
+  time_horizon: string;
+  loss_aversion: string;
+  risk_capacity: string;
+  experience_level: string;
+  overconfidence_bias?: string;
+}
+
+export const fetchInvestorProfile = (): Promise<InvestorProfile> =>
+  apiFetch("/profile");
+
+export const createInvestorProfile = (data: InvestorProfileCreateRequest): Promise<InvestorProfile> =>
+  apiFetch("/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+export const updateInvestorProfile = (data: InvestorProfileCreateRequest): Promise<InvestorProfile> =>
+  apiFetch("/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+export const skipProfileWizard = (): Promise<InvestorProfile> =>
+  apiFetch("/profile/skip", { method: "POST" });

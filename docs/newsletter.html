@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThesisArc — Your Personal Investment Thesis Tool</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0c0f18;
+      color: #d1d4dc;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #131722 0%, #1a1f2e 50%, #131722 100%);
+      padding: 80px 0 60px;
+      text-align: center;
+      border-bottom: 1px solid #2a2e39;
+    }
+
+    .hero-logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+      border-radius: 16px;
+    }
+
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+
+    .hero h1 span { color: #2962ff; }
+
+    .hero .tagline {
+      font-size: 16px;
+      color: #7b7f8a;
+      font-weight: 400;
+      font-style: italic;
+      margin-bottom: 24px;
+    }
+
+    .hero .pitch {
+      font-size: 20px;
+      color: #e0e2e8;
+      font-weight: 300;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Section */
+    section {
+      padding: 56px 0;
+      border-bottom: 1px solid #1e222d;
+    }
+
+    section:last-of-type { border-bottom: none; }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2962ff;
+      margin-bottom: 8px;
+    }
+
+    p { margin-bottom: 16px; color: #b0b3bc; }
+
+    .lead {
+      font-size: 18px;
+      color: #d1d4dc;
+      font-weight: 300;
+      margin-bottom: 24px;
+    }
+
+    .emphasis {
+      color: #e0e2e8;
+      font-weight: 500;
+    }
+
+    /* Problem section */
+    .problem {
+      background: linear-gradient(135deg, #1a1020 0%, #131722 100%);
+    }
+
+    .problem-list {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0;
+    }
+
+    .problem-list li {
+      padding: 12px 0 12px 32px;
+      position: relative;
+      color: #9ca0ab;
+      font-size: 15px;
+    }
+
+    .problem-list li::before {
+      content: "\2715";
+      position: absolute;
+      left: 0;
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .solution-line {
+      font-size: 18px;
+      font-weight: 500;
+      color: #e0e2e8;
+      margin-top: 24px;
+      padding: 16px 20px;
+      background: #1e222d;
+      border-radius: 10px;
+      border-left: 3px solid #2962ff;
+    }
+
+    /* Feature cards */
+    .feature-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: #1e222d;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #2a2e39;
+    }
+
+    .feature-card .card-content {
+      padding: 28px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .feature-card .screenshot-placeholder {
+      width: 100%;
+      height: 200px;
+      background: #161922;
+      border-top: 1px solid #2a2e39;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4a4e5a;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* Frozen callout */
+    .frozen-callout {
+      background: linear-gradient(135deg, #1a1525 0%, #1e222d 100%);
+      border: 1px solid #4c1d95;
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 32px;
+    }
+
+    .frozen-callout h3 {
+      color: #a78bfa;
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .frozen-callout ul {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+    }
+
+    .frozen-callout li {
+      padding: 8px 0 8px 24px;
+      position: relative;
+      font-size: 14px;
+      color: #b0b3bc;
+    }
+
+    .frozen-callout li::before {
+      content: "\1F512";
+      position: absolute;
+      left: 0;
+      font-size: 12px;
+    }
+
+    /* Scoring section */
+    .scoring-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    .scoring-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #1e222d;
+      color: #2962ff;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #2a2e39;
+    }
+
+    .scoring-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e222d;
+      color: #b0b3bc;
+    }
+
+    .scoring-example {
+      background: #1e222d;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      border: 1px solid #2a2e39;
+    }
+
+    .scoring-example h4 {
+      color: #e0e2e8;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .scoring-example .calc {
+      font-family: 'Consolas', 'Monaco', monospace;
+      color: #2196f3;
+      font-size: 14px;
+      padding: 12px;
+      background: #161922;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    /* At a glance */
+    .glance-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .glance-item {
+      background: #1e222d;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #2a2e39;
+    }
+
+    .glance-item .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #2962ff;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .glance-item .desc {
+      font-size: 14px;
+      color: #9ca0ab;
+      margin-bottom: 0;
+    }
+
+    /* Philosophy */
+    .philosophy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .principle {
+      background: #1e222d;
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 3px solid #2962ff;
+    }
+
+    .principle .prefer {
+      font-size: 15px;
+      font-weight: 600;
+      color: #e0e2e8;
+      margin-bottom: 4px;
+    }
+
+    .principle .over {
+      font-size: 13px;
+      color: #6b6f7a;
+      margin-bottom: 0;
+    }
+
+    /* Tech stack */
+    .stack-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stack-badge {
+      background: #2a2e39;
+      color: #d1d4dc;
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* CTA */
+    .cta {
+      text-align: center;
+      padding: 64px 0;
+      background: linear-gradient(135deg, #131722 0%, #1a2040 50%, #131722 100%);
+    }
+
+    .cta h2 {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    .cta .steps {
+      list-style: none;
+      padding: 0;
+      margin: 32px 0;
+      text-align: left;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta .steps li {
+      padding: 8px 0;
+      font-size: 15px;
+      color: #b0b3bc;
+    }
+
+    .cta .steps li strong {
+      color: #2962ff;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .cta .tagline-final {
+      font-size: 16px;
+      color: #7b7f8a;
+      font-style: italic;
+      margin-top: 32px;
+    }
+
+    .cta .brand-final {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .cta .brand-final span { color: #2962ff; }
+
+    /* Screenshot full width */
+    .screenshot-full {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #2a2e39;
+    }
+
+    .screenshot-full .placeholder {
+      width: 100%;
+      height: 300px;
+      background: #161922;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4a4e5a;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: #131722; }
+      .container { max-width: 100%; }
+      section { page-break-inside: avoid; }
+      .feature-card { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="container">
+      <img src="../frontend/public/thesisarc-logo.png" alt="ThesisArc" class="hero-logo">
+      <h1>Thesis<span>Arc</span></h1>
+      <p class="tagline">The arc of conviction, stress-tested daily.</p>
+      <p class="pitch">A personal investment thesis tool that keeps you honest about why you own every stock in your portfolio.</p>
+    </div>
+  </header>
+
+  <!-- The Problem -->
+  <section class="problem">
+    <div class="container">
+      <h2>The Problem</h2>
+      <p class="lead">You bought a stock for good reasons. But over time, those reasons get buried.</p>
+      <ul class="problem-list">
+        <li>You forget why you bought it</li>
+        <li>You react emotionally to price drops</li>
+        <li>You get overwhelmed by conflicting news</li>
+        <li>You hold losers too long and sell winners too early</li>
+      </ul>
+      <div class="solution-line">
+        ThesisArc gives you a framework to write, organize, and stress-test your investment thesis &mdash; for every stock you own. <span class="emphasis">You define the thesis. You choose what matters. You decide what to act on.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section>
+    <div class="container">
+      <h2>What Makes ThesisArc Different</h2>
+      <div class="feature-grid">
+
+        <div class="feature-card">
+          <div class="card-content">
+            <h3>Your Thesis, Your Rules</h3>
+            <p>For every stock, you build a thesis across six categories: Competitive Moat, Growth, Valuation, Financial Health, Ownership, and Risks. Start from an AI-drafted outline or write every point yourself. Edit anything. Add your own insights. Remove what doesn't fit.</p>
+            <p><span class="emphasis">The thesis is yours &mdash; AI just gets you started faster.</span></p>
+          </div>
+          <div class="screenshot-placeholder">[ Screenshot: Thesis points with categories, checkboxes, importance icons ]</div>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-content">
+            <h3>Transparent, Rules-Based Scoring</h3>
+            <p>No mysterious "AI scores." ThesisArc's scoring is fully transparent: base score of 50, confirmed points add credit, flagged points apply deductions. Each category has a known weight. You can trace every point in your score back to a specific market signal.</p>
+            <p><span class="emphasis">No black boxes. You always know <em>why</em> your score is what it is.</span></p>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-content">
+            <h3>Daily Briefing, Filtered For You</h3>
+            <p>Every day, ThesisArc surfaces only news relevant to <em>your specific holdings</em>. Each item is tagged with impact &mdash; bullish, bearish, or neutral &mdash; and linked to the thesis points it affects. 30 seconds to stay informed.</p>
+          </div>
+          <div class="screenshot-placeholder">[ Screenshot: Morning briefing with impact-tagged news items ]</div>
+        </div>
+
+        <div class="feature-card">
+          <div class="card-content">
+            <h3>Multiple Portfolios</h3>
+            <p>Organize investments into separate portfolios &mdash; "Core Holdings", "Tech Growth", "Speculative" &mdash; each with independent thesis tracking, scoring, and briefings. Switch instantly.</p>
+          </div>
+          <div class="screenshot-placeholder">[ Screenshot: Portfolio switcher dropdown ]</div>
+        </div>
+
+      </div>
+
+      <!-- Frozen convictions callout -->
+      <div class="frozen-callout">
+        <h3>Lock Your Core Convictions</h3>
+        <p>This is the feature that changes how you invest. <strong>Freeze</strong> any thesis point to mark it as a core conviction &mdash; the fundamental reason you own the stock.</p>
+        <ul>
+          <li>Preserved when you regenerate the thesis</li>
+          <li>Cannot be accidentally deselected</li>
+          <li>Carry a <strong>2x penalty</strong> if broken by market evidence</li>
+          <li>Trigger a red alert: <strong>"Core Conviction Under Pressure"</strong></li>
+        </ul>
+        <p style="margin-top: 16px; color: #a78bfa; font-size: 14px;">If the core reason you bought the stock no longer holds, ThesisArc makes sure you know &mdash; clearly and immediately.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- How Scoring Works -->
+  <section>
+    <div class="container">
+      <h2>How Scoring Works</h2>
+      <p class="lead">Fully transparent. Fully deterministic. No hidden judgments.</p>
+
+      <table class="scoring-table">
+        <thead>
+          <tr><th>Category</th><th>Credit</th><th>Deduction</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Competitive Moat</td><td style="color: #22c55e;">+8.0</td><td style="color: #ef4444;">-8.0</td><td>Core thesis &mdash; highest impact</td></tr>
+          <tr><td>Risks &amp; Bear Case</td><td style="color: #22c55e;">+4.0</td><td style="color: #ef4444;">-7.0</td><td>Risks materializing hurts more</td></tr>
+          <tr><td>Growth Trajectory</td><td style="color: #22c55e;">+6.0</td><td style="color: #ef4444;">-6.0</td><td>Growth signals carry real weight</td></tr>
+          <tr><td>Valuation</td><td style="color: #22c55e;">+5.0</td><td style="color: #ef4444;">-5.0</td><td>Fair value affects score moderately</td></tr>
+          <tr><td>Financial Health</td><td style="color: #22c55e;">+5.0</td><td style="color: #ef4444;">-5.0</td><td>Balance sheet is a steady factor</td></tr>
+          <tr><td>Ownership</td><td style="color: #22c55e;">+4.0</td><td style="color: #ef4444;">-4.0</td><td>Supporting evidence</td></tr>
+        </tbody>
+      </table>
+
+      <p>Importance multipliers: <strong>Standard 1x</strong> &middot; <strong>Important 1.5x</strong> &middot; <strong>Critical 2x</strong> &middot; <strong>Frozen 2x</strong></p>
+
+      <div class="scoring-example">
+        <h4>Example: AAPL with 12 selected points</h4>
+        <p style="font-size: 14px; color: #9ca0ab;">After evaluation, 4 points are confirmed (market supports them), 1 frozen point is flagged, 7 have no strong signal.</p>
+        <div class="calc">
+          Credits: +6.6 + 6.4 + 3.0 = +16.0<br>
+          Deductions: -13.6 (frozen moat break: 8.0 &times; 0.85 &times; 2.0)<br>
+          <br>
+          Score = 50 + 16.0 - 13.6 = <strong>52.4</strong> (Under Pressure)
+        </div>
+        <p style="font-size: 13px; color: #7b7f8a; margin-top: 12px; margin-bottom: 0;">One frozen break nearly wiped out all credit from three confirmed points. That's the power of core convictions.</p>
+      </div>
+
+      <p><strong>Portfolio score</strong> = simple average of all stock scores. Three stocks at 52, 81, 68 = <strong>67.0</strong> (Holding).</p>
+    </div>
+  </section>
+
+  <!-- Dashboard at a Glance -->
+  <section>
+    <div class="container">
+      <h2>Your Dashboard at a Glance</h2>
+      <p class="lead">In 10 seconds, see everything that matters.</p>
+
+      <div class="screenshot-full">
+        <div class="placeholder">[ Screenshot: Full dashboard with gauge, stocks table, returns, sectors ]</div>
+      </div>
+
+      <div class="glance-grid">
+        <div class="glance-item">
+          <div class="label">Portfolio Health</div>
+          <p class="desc">Thesis gauge shows your overall conviction score at a glance</p>
+        </div>
+        <div class="glance-item">
+          <div class="label">Stocks Table</div>
+          <p class="desc">Sortable list with scores, trends, sparklines, and status badges</p>
+        </div>
+        <div class="glance-item">
+          <div class="label">Returns vs Benchmark</div>
+          <p class="desc">Portfolio performance vs S&amp;P 500 with alpha calculation</p>
+        </div>
+        <div class="glance-item">
+          <div class="label">Sector Exposure</div>
+          <p class="desc">Visual breakdown of your holdings by sector</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Philosophy -->
+  <section>
+    <div class="container">
+      <h2>Built on Clarity</h2>
+      <p>ThesisArc exists to help investors think clearly. It does not overwhelm with data. It does not chase noise. It does not pretend certainty.</p>
+
+      <div class="philosophy-grid">
+        <div class="principle">
+          <p class="prefer">Clarity</p>
+          <p class="over">over complexity</p>
+        </div>
+        <div class="principle">
+          <p class="prefer">Signal</p>
+          <p class="over">over noise</p>
+        </div>
+        <div class="principle">
+          <p class="prefer">Consistency</p>
+          <p class="over">over excitement</p>
+        </div>
+        <div class="principle">
+          <p class="prefer">Truth</p>
+          <p class="over">over comfort</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section>
+    <div class="container">
+      <h2>Under the Hood</h2>
+      <p>Built with a modern, production-ready stack.</p>
+      <div class="stack-row">
+        <span class="stack-badge">Next.js</span>
+        <span class="stack-badge">FastAPI</span>
+        <span class="stack-badge">Rules-Based Scoring</span>
+        <span class="stack-badge">Live Market Data</span>
+        <span class="stack-badge">AI-Assisted Research</span>
+        <span class="stack-badge">Tailwind CSS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>Get Started</h2>
+      <ol class="steps">
+        <li><strong>1.</strong> Create an account</li>
+        <li><strong>2.</strong> Add your first stock</li>
+        <li><strong>3.</strong> Review the generated thesis &mdash; edit, add, remove points to match your reasoning</li>
+        <li><strong>4.</strong> Evaluate and see your score with full transparency</li>
+        <li><strong>5.</strong> Lock your core convictions and let ThesisArc watch them for you</li>
+      </ol>
+      <p class="brand-final">Thesis<span>Arc</span></p>
+      <p class="tagline-final">The arc of conviction, stress-tested daily.</p>
+    </div>
+  </section>
+
+</body>
+</html>

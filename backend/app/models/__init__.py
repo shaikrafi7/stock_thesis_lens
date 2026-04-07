@@ -5,5 +5,6 @@ from .thesis import Thesis
 from .evaluation import Evaluation
 from .briefing import Briefing
 from .chat import ChatMessage
+from .investor_profile import InvestorProfile
 
-__all__ = ["User", "Portfolio", "Stock", "Thesis", "Evaluation", "Briefing", "ChatMessage"]
+__all__ = ["User", "Portfolio", "Stock", "Thesis", "Evaluation", "Briefing", "ChatMessage", "InvestorProfile"]

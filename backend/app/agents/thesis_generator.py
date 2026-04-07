@@ -22,13 +22,14 @@ FALLBACK_THESIS: dict[str, list[dict]] = {
 
 SYSTEM_PROMPT = """You are a buy-side investment research analyst helping a long-term investor evaluate whether to invest in a stock for 1+ years.
 
+{investor_profile_block}
 Your job: build a structured investment thesis from the BUYER'S PERSPECTIVE — what does the investor need to see to be confident in this investment?
 
 Return a JSON object with exactly these six keys:
   competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks
 
 Each key maps to a list of exactly 3 objects with this format:
-  {"statement": "...", "importance": "standard|important|critical"}
+  {{"statement": "...", "importance": "standard|important|critical"}}
 
 CATEGORY GUIDELINES (each category has 3 required sub-topics — write exactly one point per sub-topic):
 
@@ -145,18 +146,55 @@ def _get_financial_context(ticker: str) -> dict | None:
         return None
 
 
-def _call_openai(ticker: str, company_name: str, profile: dict | None = None, financials: dict | None = None) -> dict:
+def _build_investor_profile_block(investor_profile: dict | None) -> str:
+    if not investor_profile:
+        return ""
+    style = investor_profile.get("investment_style", "")
+    horizon = investor_profile.get("time_horizon", "")
+    risk_cap = investor_profile.get("risk_capacity", "")
+    loss_av = investor_profile.get("loss_aversion", "")
+    archetype = investor_profile.get("archetype_label", "")
+
+    hints = {
+        "growth": "Emphasize runway, TAM expansion, and revenue growth trajectory.",
+        "value": "Emphasize valuation margin of safety, ROIC, and free cash flow quality.",
+        "dividend": "Emphasize dividend sustainability, payout ratio, and balance sheet stability.",
+        "blend": "Balance growth potential with valuation discipline.",
+    }
+    horizon_hints = {
+        "short": "Focus on near-term catalysts and current momentum.",
+        "medium": "Balance near-term catalysts with 2-3 year business trajectory.",
+        "long": "Emphasize durable competitive advantages and multi-year compounding potential.",
+    }
+    lines = ["Investor Profile Context:"]
+    if archetype:
+        lines.append(f"- Archetype: {archetype}")
+    if style:
+        lines.append(f"- Investment style: {style}. {hints.get(style, '')}")
+    if horizon:
+        lines.append(f"- Time horizon: {horizon}. {horizon_hints.get(horizon, '')}")
+    if risk_cap == "low":
+        lines.append("- Low risk capacity: be especially rigorous about financial health and downside risks.")
+    if loss_av == "high":
+        lines.append("- High loss aversion: clearly articulate the bear case so this investor can make an informed decision.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _call_openai(ticker: str, company_name: str, profile: dict | None = None, financials: dict | None = None, investor_profile: dict | None = None) -> dict:
     from openai import OpenAI
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     user_prompt = _build_user_prompt(ticker, company_name, profile or {}, financials)
+    profile_block = _build_investor_profile_block(investor_profile)
+    system = SYSTEM_PROMPT.format(investor_profile_block=profile_block)
     response = client.chat.completions.create(
         model="gpt-4o",
         response_format={"type": "json_object"},
         temperature=0.3,
         max_tokens=2000,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system},
             {"role": "user", "content": user_prompt},
         ],
     )
@@ -221,7 +259,7 @@ def _parse_bullets(data: dict) -> list[GeneratedThesis]:
     return results
 
 
-def generate_thesis(ticker: str, company_name: str) -> list[GeneratedThesis]:
+def generate_thesis(ticker: str, company_name: str, investor_profile: dict | None = None) -> list[GeneratedThesis]:
     """Generate structured thesis bullets for a stock.
 
     Returns placeholder bullets if the OpenAI call fails.
@@ -239,11 +277,11 @@ def generate_thesis(ticker: str, company_name: str) -> list[GeneratedThesis]:
             try:
                 from langsmith import traceable
                 traced_call = traceable(name="thesis_generator", run_type="llm")(_call_openai)
-                data = traced_call(ticker, company_name, profile, financials)
+                data = traced_call(ticker, company_name, profile, financials, investor_profile)
             except Exception:
-                data = _call_openai(ticker, company_name, profile, financials)
+                data = _call_openai(ticker, company_name, profile, financials, investor_profile)
         else:
-            data = _call_openai(ticker, company_name, profile, financials)
+            data = _call_openai(ticker, company_name, profile, financials, investor_profile)
 
         results = _parse_bullets(data)
         if results:

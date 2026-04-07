@@ -31,38 +31,67 @@ Rules:
 
 You MUST always respond with valid JSON in this exact format:
 
-{
+{{
   "message": "your response text here",
   "action": null
-}
+}}
 
 Or, if the user is asking to add a stock:
 
-{
+{{
   "message": "your response text here",
-  "action": { "type": "add_stock", "ticker": "MSFT" }
-}
+  "action": {{ "type": "add_stock", "ticker": "MSFT" }}
+}}
 
 Or, if the user is asking to remove a stock:
 
-{
+{{
   "message": "your response text here",
-  "action": { "type": "delete_stock", "ticker": "TSLA" }
-}
+  "action": {{ "type": "delete_stock", "ticker": "TSLA" }}
+}}
 
 Or, if you want to propose a thesis point for a specific stock:
 
-{
+{{
   "message": "your response text here",
-  "action": {
+  "action": {{
     "type": "add_thesis",
     "ticker": "NVDA",
     "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
     "statement": "A complete sentence under 25 words, written from a buyer's investment perspective"
-  }
-}
+  }}
+}}
 
 Always use uppercase tickers. Include an action whenever the user clearly requests one or when you identify a specific, well-formed thesis point worth adding."""
+
+
+def _build_investor_profile_block(investor_profile: dict | None) -> str:
+    if not investor_profile:
+        return ""
+    parts = []
+    archetype = investor_profile.get("archetype_label", "")
+    style = investor_profile.get("investment_style", "")
+    horizon = investor_profile.get("time_horizon", "")
+    loss_av = investor_profile.get("loss_aversion", "")
+    primary_bias = investor_profile.get("primary_bias", "")
+    if archetype:
+        parts.append(f"Archetype: {archetype}")
+    if style:
+        parts.append(f"Style: {style}")
+    if horizon:
+        parts.append(f"Time horizon: {horizon}")
+    if loss_av:
+        parts.append(f"Loss aversion: {loss_av}")
+    if primary_bias and primary_bias != "none":
+        parts.append(f"Primary bias: {primary_bias.replace('_', ' ')}")
+    if not parts:
+        return ""
+    profile_str = " | ".join(parts)
+    return (
+        f"Investor Profile: {profile_str}\n"
+        "Tailor suggestions to this investor's style. When relevant, reference their behavioral tendencies "
+        "(e.g., 'Given your growth focus...' or 'Your high loss aversion may be influencing this view...').\n\n"
+    )
 
 
 @dataclass
@@ -116,7 +145,7 @@ def _build_context(portfolio_data: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def chat(portfolio_data: list[dict], messages: list[dict]) -> PortfolioChatResult:
+def chat(portfolio_data: list[dict], messages: list[dict], investor_profile: dict | None = None) -> PortfolioChatResult:
     if not settings.OPENAI_API_KEY:
         return PortfolioChatResult(message="OpenAI API key not configured.")
 
@@ -124,7 +153,8 @@ def chat(portfolio_data: list[dict], messages: list[dict]) -> PortfolioChatResul
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     context = _build_context(portfolio_data)
-    system_content = f"{SYSTEM_PROMPT}\n\nContext:\n{context}"
+    profile_block = _build_investor_profile_block(investor_profile)
+    system_content = f"{SYSTEM_PROMPT.format(investor_profile_block=profile_block)}\n\nContext:\n{context}"
 
     openai_messages = [{"role": "system", "content": system_content}]
     openai_messages.extend(messages)
@@ -167,6 +197,7 @@ def chat(portfolio_data: list[dict], messages: list[dict]) -> PortfolioChatResul
 
 STREAM_SYSTEM_PROMPT = """You are a portfolio research assistant helping a long-term retail investor manage and analyse their stock portfolio from the BUYER'S PERSPECTIVE.
 
+{investor_profile_block}
 Your role:
 - Answer questions about the overall portfolio (coverage, risk concentration, sector balance, weakest/strongest holdings)
 - Help the investor add or remove stocks from their portfolio
@@ -241,6 +272,7 @@ PORTFOLIO_TOOLS = [
 def chat_stream(
     portfolio_data: list[dict],
     messages: list[dict],
+    investor_profile: dict | None = None,
 ) -> Generator[dict, None, None]:
     """Yield SSE event dicts: {"event": "token"|"action"|"done"|"error", "data": ...}"""
     if not settings.OPENAI_API_KEY:
@@ -251,7 +283,8 @@ def chat_stream(
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     context = _build_context(portfolio_data)
-    system_content = f"{STREAM_SYSTEM_PROMPT}\n\nContext:\n{context}"
+    profile_block = _build_investor_profile_block(investor_profile)
+    system_content = f"{STREAM_SYSTEM_PROMPT.format(investor_profile_block=profile_block)}\n\nContext:\n{context}"
 
     openai_messages = [{"role": "system", "content": system_content}]
     openai_messages.extend(messages)

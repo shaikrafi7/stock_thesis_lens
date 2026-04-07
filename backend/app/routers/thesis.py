@@ -24,13 +24,30 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/stocks", tags=["thesis"])
 
 
+def _get_investor_profile(user: User) -> dict | None:
+    """Extract investor profile dict from user for passing to agents."""
+    p = getattr(user, "investor_profile", None)
+    if p is None or not p.wizard_completed:
+        return None
+    return {
+        "investment_style": p.investment_style,
+        "time_horizon": p.time_horizon,
+        "loss_aversion": p.loss_aversion,
+        "risk_capacity": p.risk_capacity,
+        "experience_level": p.experience_level,
+        "overconfidence_bias": p.overconfidence_bias,
+        "primary_bias": p.primary_bias,
+        "archetype_label": p.archetype_label,
+    }
+
+
 @router.post("/{ticker}/generate-thesis", response_model=list[ThesisRead])
 def generate_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     db.query(Thesis).filter(Thesis.stock_id == stock.id).delete()
 
-    generated = generate_thesis(stock.ticker, stock.name)
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
 
     theses = [
         Thesis(
@@ -63,7 +80,7 @@ def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), d
             db.delete(t)
     db.flush()
 
-    generated = generate_thesis(stock.ticker, stock.name)
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
 
     preserved_statements = {t.statement for t in preserved_points}
 
@@ -84,7 +101,7 @@ def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), d
 
     all_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
 
-    evaluation_obj = run_evaluation_for_stock(stock, db)
+    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
     evaluation = EvaluationRead.model_validate(evaluation_obj) if evaluation_obj else None
 
     return GenerateAndEvaluateResponse(
@@ -136,6 +153,7 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, portfolio_id: int | N
         stock.ticker, stock.name, thesis_dicts, messages,
         market_data=market_data,
         recent_news=recent_news,
+        investor_profile=_get_investor_profile(current_user),
     )
 
     return ChatResponse(
@@ -171,6 +189,7 @@ def chat_with_assistant_stream(ticker: str, payload: ChatRequest, portfolio_id: 
         stock.ticker, stock.name, thesis_dicts, messages,
         market_data=market_data,
         recent_news=recent_news,
+        investor_profile=_get_investor_profile(current_user),
     ))
     accumulated = "".join(
         e["data"].get("content", "") or e["data"].get("text", "")

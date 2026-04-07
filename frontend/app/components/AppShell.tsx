@@ -4,9 +4,11 @@ import { useState, useRef, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import EvaluateAllButton from "./EvaluateAllButton";
+import ProfileWizard from "./ProfileWizard";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
-import { Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2, Briefcase } from "lucide-react";
+import { fetchInvestorProfile, type InvestorProfile } from "@/lib/api";
+import { Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2, Briefcase, User } from "lucide-react";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -15,6 +17,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [showWizard, setShowWizard] = useState(false);
+  const [investorProfile, setInvestorProfile] = useState<InvestorProfile | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -29,6 +33,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Load investor profile and show wizard if not completed
+  useEffect(() => {
+    if (!user) return;
+    fetchInvestorProfile()
+      .then((p) => {
+        setInvestorProfile(p);
+        if (!p.wizard_completed && !p.wizard_skipped) {
+          setShowWizard(true);
+        }
+      })
+      .catch(() => {
+        // 404 = no profile yet
+        setShowWizard(true);
+      });
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -136,7 +156,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
+          {/* Investor profile badge */}
+          {investorProfile?.wizard_completed && (
+            <Link
+              href="/profile"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50 hover:border-accent/50 hover:text-accent transition-colors text-xs text-zinc-300"
+              title="View investor profile"
+            >
+              <User className="w-3 h-3" />
+              <span className="font-medium capitalize">{investorProfile.investment_style}</span>
+              <span className="text-zinc-600">·</span>
+              <span className="capitalize">{investorProfile.risk_capacity} risk</span>
+            </Link>
+          )}
           {user && (
             <span className="text-zinc-500 text-xs hidden sm:block">
               {user.username}
@@ -177,6 +210,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   <Home className="w-3.5 h-3.5" />
                   Dashboard
                 </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setLeftOpen(false)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                    pathname === "/profile"
+                      ? "bg-accent/10 text-accent"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Investor Profile
+                </Link>
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-600 cursor-not-allowed">
                   <Settings className="w-3.5 h-3.5" />
                   Settings
@@ -198,6 +243,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Profile wizard — shown on first login */}
+      {showWizard && (
+        <ProfileWizard
+          onComplete={(profile) => {
+            setInvestorProfile(profile);
+            setShowWizard(false);
+          }}
+          onSkip={() => setShowWizard(false)}
+        />
+      )}
     </div>
   );
 }

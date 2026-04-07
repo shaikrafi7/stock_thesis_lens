@@ -31,20 +31,20 @@ Rules:
 
 You MUST always respond with valid JSON in this exact format:
 
-{
+{{
   "message": "your response text here",
   "suggestion": null
-}
+}}
 
 Or, if you want to propose a specific thesis point for the user to add:
 
-{
+{{
   "message": "your response text here (explain why this point matters)",
-  "suggestion": {
+  "suggestion": {{
     "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
     "statement": "A complete sentence under 25 words, written from a buyer's investment perspective"
-  }
-}
+  }}
+}}
 
 Category guide:
 - competitive_moat: Network effects, switching costs, brand power, scale, IP, flywheel dynamics
@@ -109,6 +109,32 @@ def _build_context(
     return "\n".join(lines)
 
 
+def _build_investor_profile_block(investor_profile: dict | None) -> str:
+    if not investor_profile:
+        return ""
+    parts = []
+    archetype = investor_profile.get("archetype_label", "")
+    style = investor_profile.get("investment_style", "")
+    experience = investor_profile.get("experience_level", "")
+    loss_av = investor_profile.get("loss_aversion", "")
+    if archetype:
+        parts.append(f"Archetype: {archetype}")
+    if style:
+        parts.append(f"Style: {style}")
+    if experience:
+        parts.append(f"Experience: {experience}")
+    if loss_av:
+        parts.append(f"Loss aversion: {loss_av}")
+    if not parts:
+        return ""
+    depth_hint = {
+        "beginner": "Use plain language. Avoid jargon. Explain concepts clearly.",
+        "intermediate": "Use standard financial terminology. Brief explanations where needed.",
+        "advanced": "Use precise financial language. Skip basic explanations.",
+    }.get(experience, "")
+    return f"Investor Profile: {' | '.join(parts)}\n{depth_hint}\n\n"
+
+
 def chat(
     ticker: str,
     company_name: str,
@@ -116,6 +142,7 @@ def chat(
     messages: list[dict],
     market_data: str = "",
     recent_news: list[dict] | None = None,
+    investor_profile: dict | None = None,
 ) -> ChatResult:
     if not settings.OPENAI_API_KEY:
         return ChatResult(message="OpenAI API key not configured.")
@@ -124,7 +151,8 @@ def chat(
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     context = _build_context(company_name, ticker, existing_theses, market_data, recent_news)
-    system_content = f"{SYSTEM_PROMPT}\n\nContext:\n{context}"
+    profile_block = _build_investor_profile_block(investor_profile)
+    system_content = f"{SYSTEM_PROMPT.format(investor_profile_block=profile_block)}\n\nContext:\n{context}"
 
     openai_messages = [{"role": "system", "content": system_content}]
     openai_messages.extend(messages)
@@ -162,6 +190,7 @@ def chat(
 
 STREAM_SYSTEM_PROMPT = """You are a research assistant helping a long-term retail investor analyze a stock and refine their investment thesis from the BUYER'S PERSPECTIVE.
 
+{investor_profile_block}
 Your role:
 - Answer research questions about the company (moat, growth, valuation, financial health, ownership signals, risks)
 - Help the investor think through and articulate thesis points
@@ -222,6 +251,7 @@ def chat_stream(
     messages: list[dict],
     market_data: str = "",
     recent_news: list[dict] | None = None,
+    investor_profile: dict | None = None,
 ) -> Generator[dict, None, None]:
     """Yield SSE event dicts: {"event": "token"|"suggestion"|"done"|"error", "data": ...}"""
     if not settings.OPENAI_API_KEY:
@@ -232,7 +262,8 @@ def chat_stream(
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     context = _build_context(company_name, ticker, existing_theses, market_data, recent_news)
-    system_content = f"{STREAM_SYSTEM_PROMPT}\n\nContext:\n{context}"
+    profile_block = _build_investor_profile_block(investor_profile)
+    system_content = f"{STREAM_SYSTEM_PROMPT.format(investor_profile_block=profile_block)}\n\nContext:\n{context}"
 
     openai_messages = [{"role": "system", "content": system_content}]
     openai_messages.extend(messages)

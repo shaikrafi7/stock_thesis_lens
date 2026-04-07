@@ -16,3 +16,4 @@ class User(Base):
     portfolios = relationship("Portfolio", back_populates="owner", cascade="all, delete-orphan")
     stocks = relationship("Stock", back_populates="owner", cascade="all, delete-orphan")
     briefings = relationship("Briefing", back_populates="owner", cascade="all, delete-orphan")
+    investor_profile = relationship("InvestorProfile", uselist=False, back_populates="user", cascade="all, delete-orphan")

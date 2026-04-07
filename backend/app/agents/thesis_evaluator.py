@@ -53,9 +53,26 @@ class EvaluationResult:
     frozen_breaks: list[dict] = field(default_factory=list)     # frozen points that broke
 
 
+def _adjust_weights(investor_profile: dict | None) -> tuple[dict, dict]:
+    """Return per-profile adjusted copies of CATEGORY_DEDUCTIONS and CATEGORY_CREDITS."""
+    deductions = CATEGORY_DEDUCTIONS.copy()
+    credits = CATEGORY_CREDITS.copy()
+    if not investor_profile:
+        return deductions, credits
+    if investor_profile.get("risk_capacity") == "low":
+        deductions["risks"] *= 1.2
+        deductions["financial_health"] *= 1.2
+    if investor_profile.get("loss_aversion") == "high":
+        deductions = {k: v * 1.15 for k, v in deductions.items()}
+    if investor_profile.get("investment_style") == "growth":
+        credits["growth_trajectory"] *= 1.2
+    return deductions, credits
+
+
 def evaluate_thesis(
     mappings: list[ThesisSignalMapping],
     thesis_meta: dict[int, dict] | None = None,
+    investor_profile: dict | None = None,
 ) -> EvaluationResult:
     """Score the thesis based on signal mappings. Deterministic.
 
@@ -68,6 +85,7 @@ def evaluate_thesis(
     base = 50.0
     total_credit = 0.0
     total_deduction = 0.0
+    cat_deductions, cat_credits = _adjust_weights(investor_profile)
     broken_points = []
     confirmed_points = []
     frozen_breaks = []
@@ -88,7 +106,7 @@ def evaluate_thesis(
             multiplier = IMPORTANCE_MULTIPLIER.get(importance, 1.0)
 
         if m.sentiment == "negative":
-            deduction = CATEGORY_DEDUCTIONS.get(m.category, 3.0) * m.confidence * multiplier
+            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier
             total_deduction += deduction
             point_data = {
                 "thesis_id": m.thesis_id,
@@ -105,7 +123,7 @@ def evaluate_thesis(
                 frozen_breaks.append(point_data)
 
         elif m.sentiment == "positive":
-            credit = CATEGORY_CREDITS.get(m.category, 3.0) * m.confidence * multiplier
+            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier
             total_credit += credit
             confirmed_points.append({
                 "thesis_id": m.thesis_id,

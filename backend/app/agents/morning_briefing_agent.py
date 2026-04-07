@@ -14,6 +14,7 @@ CATEGORIES = [
 
 SYSTEM_PROMPT = """You are a financial research assistant generating a morning portfolio briefing for a long-term retail investor.
 
+{investor_profile_block}
 You receive:
 1. The investor's current portfolio with thesis points, evaluation scores, and each company's sector/industry classification
 2. Recent news headlines for each stock
@@ -39,28 +40,28 @@ Rules:
 
 You MUST respond with valid JSON in this exact format:
 
-{
+{{
   "summary": "1-2 sentence portfolio overview for today",
   "items": [
-    {
+    {{
       "ticker": "AAPL",
       "headline": "short version of the headline",
       "impact": "bullish",
       "source_url": "https://example.com/article",
       "suggestion": null
-    },
-    {
+    }},
+    {{
       "ticker": "NVDA",
       "headline": "short version of the headline",
       "impact": "bearish",
       "source_url": "https://example.com/article2",
-      "suggestion": {
+      "suggestion": {{
         "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
         "statement": "A complete sentence under 25 words written from a buyer's investment perspective"
-      }
-    }
+      }}
+    }}
   ]
-}
+}}
 
 impact must be one of: bullish, bearish, neutral
 source_url: pass through the URL from the news item you are summarizing
@@ -141,7 +142,36 @@ def _build_context(portfolio_data: list[dict], news_items: list[dict], macro_new
     return "\n".join(lines)
 
 
-def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_news: list[dict] | None = None) -> MorningBriefingResult:
+def _build_investor_profile_block(investor_profile: dict | None) -> str:
+    if not investor_profile:
+        return ""
+    style = investor_profile.get("investment_style", "")
+    horizon = investor_profile.get("time_horizon", "")
+    loss_av = investor_profile.get("loss_aversion", "")
+    archetype = investor_profile.get("archetype_label", "")
+    primary_bias = investor_profile.get("primary_bias", "")
+
+    lines = ["Investor Profile:"]
+    if archetype:
+        lines.append(f"- Archetype: {archetype}")
+    if style:
+        lines.append(f"- Style: {style}")
+    if horizon:
+        lines.append(f"- Time horizon: {horizon}")
+    if loss_av:
+        lines.append(f"- Loss aversion: {loss_av}")
+    if primary_bias and primary_bias != "none":
+        lines.append(f"- Primary bias to watch: {primary_bias.replace('_', ' ')}")
+    lines.append(
+        "When relevant, explicitly reference the investor's behavioral tendencies in briefing items. "
+        "For example: 'Given your tendency to hold through drawdowns, note that...' or "
+        "'Your growth bias may be influencing how you view this news...'"
+    )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_news: list[dict] | None = None, investor_profile: dict | None = None) -> MorningBriefingResult:
     if not settings.OPENAI_API_KEY:
         return MorningBriefingResult(summary="API key not configured — briefing unavailable.")
 
@@ -155,13 +185,15 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_
 
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     context = _build_context(portfolio_data, news_items, macro_news=macro_news)
+    profile_block = _build_investor_profile_block(investor_profile)
+    system = SYSTEM_PROMPT.format(investor_profile_block=profile_block)
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system},
                 {"role": "user", "content": f"Generate today's briefing based on this data:\n\n{context}"},
             ],
             temperature=0.3,

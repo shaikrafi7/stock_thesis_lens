@@ -15,6 +15,13 @@ from app.routers.stocks import get_user_stock
 router = APIRouter(prefix="/stocks", tags=["evaluate"])
 
 
+def _get_investor_profile(user: User) -> dict | None:
+    p = getattr(user, "investor_profile", None)
+    if p and p.wizard_completed:
+        return {"investment_style": p.investment_style, "time_horizon": p.time_horizon, "loss_aversion": p.loss_aversion, "risk_capacity": p.risk_capacity, "experience_level": p.experience_level}
+    return None
+
+
 @router.post("/{ticker}/evaluate", response_model=EvaluationRead)
 def run_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
@@ -33,7 +40,7 @@ def run_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Sess
             ),
         )
 
-    evaluation = run_evaluation_for_stock(stock, db)
+    evaluation = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
     if evaluation is None:
         raise HTTPException(status_code=500, detail=f"Evaluation failed for {stock.ticker}")
 
