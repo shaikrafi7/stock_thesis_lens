@@ -1,11 +1,11 @@
-FROM python:3.14-slim AS base
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install uv for fast dependency management
+# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy dependency files first for caching
+# Copy dependency files first for layer caching
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies (no dev deps)
@@ -13,6 +13,9 @@ RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY . .
+
+# Data dir for SQLite volume mount
+RUN mkdir -p /data
 
 EXPOSE 8000
 

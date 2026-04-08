@@ -2,7 +2,7 @@
 name = "stock-thesis-lens-backend"
 version = "0.1.0"
 description = "AI investment thesis evaluation backend"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
