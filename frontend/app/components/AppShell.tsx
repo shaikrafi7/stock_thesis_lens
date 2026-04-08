@@ -7,16 +7,47 @@ import EvaluateAllButton from "./EvaluateAllButton";
 import ProfileWizard from "./ProfileWizard";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
-import { fetchInvestorProfile, type InvestorProfile } from "@/lib/api";
-import { Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2, Briefcase, User } from "lucide-react";
-import BrandLogo from "./BrandLogo";
 import { useAssistant } from "@/app/context/AssistantContext";
+import { fetchInvestorProfile, type InvestorProfile } from "@/lib/api";
+import {
+  Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2,
+  Briefcase, User, MessageSquare, Newspaper,
+} from "lucide-react";
+import BrandLogo from "./BrandLogo";
+
+const NAV_LINKS = [
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/briefing", label: "Briefing", icon: Newspaper },
+  { href: "/profile", label: "Investor Profile", icon: User },
+];
+
+function NavLink({ href, label, Icon, pathname, onClick }: {
+  href: string; label: string; Icon: typeof Home; pathname: string; onClick?: () => void;
+}) {
+  const active = pathname === href;
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-150 relative ${
+        active
+          ? "bg-accent/10 text-accent font-medium"
+          : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+      }`}
+    >
+      {active && <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-full" />}
+      <Icon className="w-4 h-4 shrink-0" />
+      {label}
+    </Link>
+  );
+}
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { portfolios, activePortfolio, switchPortfolio, create, remove } = usePortfolio();
   const { isOpen: panelOpen } = useAssistant();
-  const [leftOpen, setLeftOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -37,39 +68,62 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Load investor profile and show wizard if not completed
   useEffect(() => {
     if (!user) return;
     fetchInvestorProfile()
       .then((p) => {
         setInvestorProfile(p);
-        if (!p.wizard_completed && !p.wizard_skipped) {
-          setShowWizard(true);
-        }
+        if (!p.wizard_completed && !p.wizard_skipped) setShowWizard(true);
       })
-      .catch(() => {
-        // 404 = no profile yet
-        setShowWizard(true);
-      });
+      .catch(() => setShowWizard(true));
   }, [user]);
+
+  const sidebar = (
+    <aside className="w-52 shrink-0 bg-surface border-r border-white/5 flex flex-col h-full">
+      {/* Nav links */}
+      <nav className="flex-1 px-2 py-4 space-y-0.5">
+        {NAV_LINKS.map(({ href, label, icon: Icon }) => (
+          <NavLink
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            pathname={pathname}
+            onClick={() => setMobileOpen(false)}
+          />
+        ))}
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-600 cursor-not-allowed mt-0.5">
+          <Settings className="w-4 h-4 shrink-0" />
+          Settings
+          <span className="text-[9px] text-zinc-700 ml-auto">soon</span>
+        </div>
+      </nav>
+
+      {/* Evaluate All */}
+      <div className="px-3 py-3 border-t border-white/5">
+        <EvaluateAllButton />
+      </div>
+    </aside>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Top header bar */}
+      {/* Top header */}
       <header className="h-12 shrink-0 border-b border-white/5 bg-surface flex items-center px-4 gap-3 z-10">
+        {/* Mobile menu toggle */}
         <button
-          onClick={() => setLeftOpen((o) => !o)}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-          title="Menu"
+          onClick={() => setMobileOpen((o) => !o)}
+          className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
         >
-          {leftOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
+
         <Link href="/" className="flex items-center">
           <BrandLogo size="sm" />
         </Link>
 
-        {/* Portfolio Switcher */}
-        <div className="relative ml-4" ref={dropdownRef}>
+        {/* Portfolio switcher */}
+        <div className="relative ml-2" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((o) => !o)}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800/80 border border-white/6 transition-all duration-150 text-xs"
@@ -84,15 +138,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
               {portfolios.map((p) => (
                 <div key={p.id} className="flex items-center group">
                   <button
-                    onClick={() => {
-                      switchPortfolio(p.id);
-                      setDropdownOpen(false);
-                      router.push("/");
-                    }}
+                    onClick={() => { switchPortfolio(p.id); setDropdownOpen(false); router.push("/"); }}
                     className={`flex-1 text-left px-3 py-1.5 text-xs transition-colors ${
-                      p.id === activePortfolio?.id
-                        ? "text-accent bg-accent/8 font-medium"
-                        : "text-zinc-300 hover:bg-zinc-800/60"
+                      p.id === activePortfolio?.id ? "text-accent bg-accent/8 font-medium" : "text-zinc-300 hover:bg-zinc-800/60"
                     }`}
                   >
                     <span className="truncate block">{p.name}</span>
@@ -100,49 +148,33 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   </button>
                   {!p.is_default && (
                     <button
-                      onClick={async () => {
-                        await remove(p.id);
-                      }}
+                      onClick={() => remove(p.id)}
                       className="px-2 py-1.5 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete portfolio"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
                   )}
                 </div>
               ))}
-
               <div className="border-t border-white/6 mt-1 pt-1 px-2">
                 {creating ? (
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      if (!newName.trim()) return;
-                      const p = await create(newName.trim());
-                      switchPortfolio(p.id);
-                      setNewName("");
-                      setCreating(false);
-                      setDropdownOpen(false);
-                      router.push("/");
-                    }}
-                    className="flex gap-1"
-                  >
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newName.trim()) return;
+                    const p = await create(newName.trim());
+                    switchPortfolio(p.id);
+                    setNewName(""); setCreating(false); setDropdownOpen(false);
+                    router.push("/");
+                  }} className="flex gap-1">
                     <input
-                      autoFocus
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
+                      autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
                       placeholder="Portfolio name"
                       className="flex-1 min-w-0 px-2 py-1 bg-zinc-800 border border-zinc-600 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent"
                     />
-                    <button type="submit" className="px-2 py-1 bg-accent text-black font-semibold rounded-lg text-xs hover:bg-accent-hover transition-colors">
-                      Add
-                    </button>
+                    <button type="submit" className="px-2 py-1 bg-accent text-black font-semibold rounded-lg text-xs hover:bg-accent-hover transition-colors">Add</button>
                   </form>
                 ) : (
-                  <button
-                    onClick={() => setCreating(true)}
-                    className="flex items-center gap-1.5 w-full px-1 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
+                  <button onClick={() => setCreating(true)} className="flex items-center gap-1.5 w-full px-1 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
                     <Plus className="w-3 h-3" />
                     New Portfolio
                   </button>
@@ -153,106 +185,39 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Investor profile badge */}
-          {investorProfile?.wizard_completed && (
-            <Link
-              href="/profile"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/6 hover:border-accent/40 hover:text-accent transition-all duration-150 text-xs text-zinc-300"
-              title="View investor profile"
-            >
-              <User className="w-3 h-3" />
-              <span className="font-medium capitalize">{investorProfile.investment_style}</span>
-              <span className="text-zinc-600">·</span>
-              <span className="capitalize">{investorProfile.risk_capacity} risk</span>
-            </Link>
-          )}
-          {user && (
-            <span className="text-zinc-500 text-xs hidden sm:block">
-              {user.username}
-            </span>
-          )}
-          <button
-            onClick={logout}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-            title="Sign out"
-          >
+          {user && <span className="text-zinc-500 text-xs hidden sm:block">{user.username}</span>}
+          <button onClick={logout} className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors" title="Sign out">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* Body: left sidebar + center + right sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar — overlay */}
-        {leftOpen && (
+      {/* Body */}
+      <div className="flex flex-1 min-h-0">
+        {/* Persistent sidebar — desktop */}
+        <div className="hidden lg:flex">
+          {sidebar}
+        </div>
+
+        {/* Mobile sidebar — overlay */}
+        {mobileOpen && (
           <>
-            <div
-              className="fixed inset-0 z-20 bg-black/30 lg:hidden"
-              onClick={() => setLeftOpen(false)}
-            />
-            <aside className="fixed left-0 top-12 bottom-0 w-56 z-30 bg-surface border-r border-white/5 flex flex-col overflow-y-auto lg:relative lg:top-0">
-              {/* Navigation */}
-              <nav className="px-3 py-3 border-b border-white/5">
-                <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Navigation</p>
-                <Link
-                  href="/"
-                  onClick={() => setLeftOpen(false)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 relative ${
-                    pathname === "/"
-                      ? "bg-accent/8 text-accent font-medium"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
-                  }`}
-                >
-                  {pathname === "/" && (
-                    <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full" />
-                  )}
-                  <Home className="w-3.5 h-3.5" />
-                  Dashboard
-                </Link>
-                <Link
-                  href="/profile"
-                  onClick={() => setLeftOpen(false)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 relative ${
-                    pathname === "/profile"
-                      ? "bg-accent/8 text-accent font-medium"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
-                  }`}
-                >
-                  {pathname === "/profile" && (
-                    <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full" />
-                  )}
-                  <User className="w-3.5 h-3.5" />
-                  Investor Profile
-                </Link>
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-600 cursor-not-allowed">
-                  <Settings className="w-3.5 h-3.5" />
-                  Settings
-                  <span className="text-[9px] text-zinc-700 ml-auto">soon</span>
-                </div>
-              </nav>
-
-              {/* Evaluate All */}
-              <div className="px-3 py-3 border-b border-white/5">
-                <EvaluateAllButton />
-              </div>
-
-            </aside>
+            <div className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
+            <div className="fixed left-0 top-12 bottom-0 z-30 lg:hidden">
+              {sidebar}
+            </div>
           </>
         )}
 
-        {/* Center content — scrollable, shrinks when AI panel opens */}
-        <main className={`flex-1 overflow-y-auto transition-all duration-200 ${panelOpen ? "mr-96" : ""}`}>
+        {/* Main content */}
+        <main className={`flex-1 min-w-0 overflow-y-auto transition-all duration-200 ${panelOpen ? "mr-96" : ""}`}>
           {children}
         </main>
       </div>
 
-      {/* Profile wizard — shown on first login */}
       {showWizard && (
         <ProfileWizard
-          onComplete={(profile) => {
-            setInvestorProfile(profile);
-            setShowWizard(false);
-          }}
+          onComplete={(profile) => { setInvestorProfile(profile); setShowWizard(false); }}
           onSkip={() => setShowWizard(false)}
         />
       )}
