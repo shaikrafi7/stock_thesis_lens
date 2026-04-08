@@ -115,7 +115,7 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
           return (
             <div
               key={stock.ticker}
-              className="flex items-center justify-between px-4 py-3 bg-surface border border-zinc-800 rounded-xl hover:border-zinc-600 hover:bg-surface-raised/50 transition-all group"
+              className="flex items-center justify-between px-4 py-3 bg-surface rounded-xl hover:bg-surface-raised/60 transition-all duration-150 group" style={{border:"1px solid rgba(255,255,255,0.06)", borderTopColor:"rgba(255,255,255,0.09)"}}
             >
               <Link
                 href={`/stocks/${stock.ticker}`}

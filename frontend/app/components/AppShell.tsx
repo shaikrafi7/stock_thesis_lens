@@ -9,10 +9,13 @@ import { useAuth } from "@/app/context/AuthContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import { fetchInvestorProfile, type InvestorProfile } from "@/lib/api";
 import { Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2, Briefcase, User } from "lucide-react";
+import BrandLogo from "./BrandLogo";
+import { useAssistant } from "@/app/context/AssistantContext";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { portfolios, activePortfolio, switchPortfolio, create, remove } = usePortfolio();
+  const { isOpen: panelOpen } = useAssistant();
   const [leftOpen, setLeftOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -53,7 +56,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top header bar */}
-      <header className="h-12 shrink-0 border-b border-zinc-800 bg-surface flex items-center px-4 gap-3 z-10">
+      <header className="h-12 shrink-0 border-b border-white/5 bg-surface flex items-center px-4 gap-3 z-10">
         <button
           onClick={() => setLeftOpen((o) => !o)}
           className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
@@ -61,22 +64,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           {leftOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/thesisarc-logo.png" alt="ThesisArc" className="h-6 w-auto" />
-          <span className="text-sm font-semibold tracking-tight">
-            <span className="text-white">Thesis</span>
-            <span className="text-accent">Arc</span>
-          </span>
+        <Link href="/" className="flex items-center">
+          <BrandLogo size="sm" />
         </Link>
-        <span className="text-zinc-600 text-xs hidden sm:block">
-          The arc of conviction, stress-tested daily
-        </span>
 
         {/* Portfolio Switcher */}
         <div className="relative ml-4" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((o) => !o)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/50 transition-colors text-xs"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800/80 border border-white/6 transition-all duration-150 text-xs"
           >
             <Briefcase className="w-3 h-3 text-zinc-400" />
             <span className="text-zinc-200 max-w-[120px] truncate">{activePortfolio?.name ?? "Portfolio"}</span>
@@ -84,7 +80,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full mt-1 left-0 w-56 bg-surface border border-zinc-700 rounded-lg shadow-xl z-50 py-1">
+            <div className="absolute top-full mt-1 left-0 w-56 bg-surface border border-white/8 rounded-xl shadow-2xl z-50 py-1" style={{boxShadow:"0 20px 40px rgba(0,0,0,0.5)"}}>
               {portfolios.map((p) => (
                 <div key={p.id} className="flex items-center group">
                   <button
@@ -95,8 +91,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     }}
                     className={`flex-1 text-left px-3 py-1.5 text-xs transition-colors ${
                       p.id === activePortfolio?.id
-                        ? "text-accent bg-accent/10"
-                        : "text-zinc-300 hover:bg-zinc-800"
+                        ? "text-accent bg-accent/8 font-medium"
+                        : "text-zinc-300 hover:bg-zinc-800/60"
                     }`}
                   >
                     <span className="truncate block">{p.name}</span>
@@ -116,7 +112,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </div>
               ))}
 
-              <div className="border-t border-zinc-700 mt-1 pt-1 px-2">
+              <div className="border-t border-white/6 mt-1 pt-1 px-2">
                 {creating ? (
                   <form
                     onSubmit={async (e) => {
@@ -138,7 +134,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       placeholder="Portfolio name"
                       className="flex-1 min-w-0 px-2 py-1 bg-zinc-800 border border-zinc-600 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent"
                     />
-                    <button type="submit" className="px-2 py-1 bg-accent text-white rounded text-xs hover:bg-accent-hover">
+                    <button type="submit" className="px-2 py-1 bg-accent text-black font-semibold rounded-lg text-xs hover:bg-accent-hover transition-colors">
                       Add
                     </button>
                   </form>
@@ -161,7 +157,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {investorProfile?.wizard_completed && (
             <Link
               href="/profile"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50 hover:border-accent/50 hover:text-accent transition-colors text-xs text-zinc-300"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/6 hover:border-accent/40 hover:text-accent transition-all duration-150 text-xs text-zinc-300"
               title="View investor profile"
             >
               <User className="w-3 h-3" />
@@ -194,31 +190,37 @@ export default function AppShell({ children }: { children: ReactNode }) {
               className="fixed inset-0 z-20 bg-black/30 lg:hidden"
               onClick={() => setLeftOpen(false)}
             />
-            <aside className="fixed left-0 top-12 bottom-0 w-56 z-30 bg-surface border-r border-zinc-800 flex flex-col overflow-y-auto lg:relative lg:top-0">
+            <aside className="fixed left-0 top-12 bottom-0 w-56 z-30 bg-surface border-r border-white/5 flex flex-col overflow-y-auto lg:relative lg:top-0">
               {/* Navigation */}
-              <nav className="px-3 py-3 border-b border-zinc-800">
+              <nav className="px-3 py-3 border-b border-white/5">
                 <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Navigation</p>
                 <Link
                   href="/"
                   onClick={() => setLeftOpen(false)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 relative ${
                     pathname === "/"
-                      ? "bg-accent/10 text-accent"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                      ? "bg-accent/8 text-accent font-medium"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
                   }`}
                 >
+                  {pathname === "/" && (
+                    <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full" />
+                  )}
                   <Home className="w-3.5 h-3.5" />
                   Dashboard
                 </Link>
                 <Link
                   href="/profile"
                   onClick={() => setLeftOpen(false)}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 relative ${
                     pathname === "/profile"
-                      ? "bg-accent/10 text-accent"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                      ? "bg-accent/8 text-accent font-medium"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
                   }`}
                 >
+                  {pathname === "/profile" && (
+                    <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full" />
+                  )}
                   <User className="w-3.5 h-3.5" />
                   Investor Profile
                 </Link>
@@ -230,7 +232,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </nav>
 
               {/* Evaluate All */}
-              <div className="px-3 py-3 border-b border-zinc-800">
+              <div className="px-3 py-3 border-b border-white/5">
                 <EvaluateAllButton />
               </div>
 
@@ -238,8 +240,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </>
         )}
 
-        {/* Center content — scrollable */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Center content — scrollable, shrinks when AI panel opens */}
+        <main className={`flex-1 overflow-y-auto transition-all duration-200 ${panelOpen ? "mr-96" : ""}`}>
           {children}
         </main>
       </div>

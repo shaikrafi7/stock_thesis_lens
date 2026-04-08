@@ -61,7 +61,7 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
 
   if (loading) {
     return (
-      <div className="relative flex flex-col items-center justify-center py-6 rounded-2xl overflow-hidden border border-zinc-700/50 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-md shadow-lg min-h-[120px]">
+      <div className="relative flex flex-col items-center justify-center py-6 rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg card-border min-h-[120px]">
         <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
       </div>
     );
@@ -91,7 +91,7 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
   const q3 = Math.round(rangeMax * 0.5);
 
   return (
-    <div className="relative flex flex-col items-center rounded-2xl overflow-hidden border border-zinc-700/50 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-md shadow-lg">
+    <div className="relative flex flex-col items-center rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg card-border">
       {/* Glassy overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
       <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none" />
@@ -117,7 +117,7 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
                 onClick={() => setPeriod(p)}
                 className={`px-2 py-0.5 text-[10px] rounded-md font-medium transition-colors ${
                   period === p
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-black"
                     : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
                 }`}
               >
@@ -180,7 +180,7 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
           {/* Per-stock bars — collapsible */}
           {data.stocks.length > 0 && (
             <div className="w-full px-4 pb-3 relative z-10">
-              <div className="border-t border-zinc-700/50 pt-2">
+              <div className="border-t border-white/5 pt-2">
                 <button
                   onClick={() => setBarsOpen((o) => !o)}
                   className="w-full flex items-center justify-between py-1 text-zinc-500 hover:text-zinc-300 transition-colors"

@@ -104,7 +104,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stocks header + table */}
-          <div className="border-t border-zinc-800 pt-4 mb-4">
+          <div className="border-t border-white/5 pt-4 mb-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Portfolio Stocks</h2>
               <div className="flex items-center gap-3">

@@ -7,9 +7,9 @@ const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: fal
 
 const TOOLTIP_STYLE = {
   fontSize: "12px",
-  backgroundColor: "#1e222d",
-  color: "#d1d4dc",
-  border: "1px solid #363a45",
+  backgroundColor: "#18181b",
+  color: "#fafafa",
+  border: "1px solid rgba(255,255,255,0.08)",
   borderRadius: "8px",
   padding: "4px 8px",
 };
@@ -32,7 +32,7 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
   const color = scoreColor(avgScore);
 
   return (
-    <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden border border-zinc-700/50 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 backdrop-blur-md shadow-lg">
+    <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg" style={{border:"1px solid rgba(255,255,255,0.07)", borderTopColor:"rgba(255,255,255,0.11)"}}>
       {/* Glassy overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
       <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none" />

@@ -31,7 +31,7 @@ function BiasBar({ name, score }: { name: string; score: number }) {
           style={{ width: `${score}%` }}
         />
       </div>
-      <span className="text-xs text-zinc-500 w-6 text-right">{score}</span>
+      <span className="text-xs text-zinc-500 w-6 text-right tabular">{score}</span>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export default function ProfilePage() {
         </p>
         <button
           onClick={() => setShowEditWizard(true)}
-          className="px-5 py-2 bg-accent text-black text-sm font-semibold rounded-lg hover:bg-accent/90 transition-colors"
+          className="px-5 py-2 bg-accent text-black text-sm font-semibold rounded-xl hover:bg-accent-hover transition-all duration-150"
         >
           Set up profile
         </button>
@@ -103,9 +103,9 @@ export default function ProfilePage() {
       </div>
 
       {/* Archetype card */}
-      <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl p-6">
+      <div className="bg-surface rounded-2xl p-6 card-border">
         <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">Your archetype</p>
-        <h2 className="text-xl font-bold text-white mb-3">{profile.archetype_label}</h2>
+        <h2 className="text-2xl text-white mb-3 font-serif italic" style={{fontFamily:'"Instrument Serif", Georgia, serif'}}>{profile.archetype_label}</h2>
         {profile.behavioral_summary && (
           <p className="text-sm text-zinc-400 leading-relaxed">{profile.behavioral_summary}</p>
         )}
@@ -133,7 +133,7 @@ export default function ProfilePage() {
           <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-3">How you&apos;ll likely behave</p>
           <div className="space-y-3">
             {scenarios.map((s, i) => (
-              <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div key={i} className="bg-surface rounded-xl p-4 card-border">
                 <p className="text-xs font-semibold text-zinc-300 mb-2">{s.situation}</p>
                 <div className="space-y-1.5">
                   <div className="flex gap-2">
@@ -155,7 +155,7 @@ export default function ProfilePage() {
       {Object.keys(fingerprint).length > 0 && (
         <div>
           <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-3">Bias fingerprint</p>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+          <div className="bg-surface rounded-xl p-5 space-y-3 card-border">
             {biasOrder.filter((k) => k in fingerprint).map((key) => (
               <BiasBar key={key} name={key} score={fingerprint[key]} />
             ))}

@@ -81,7 +81,7 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               <button
                 onClick={handleAdd}
                 disabled={adding || added}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent-hover disabled:opacity-50 text-white transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-semibold transition-colors"
               >
                 {added ? <Check className="w-3 h-3" /> : adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                 {added ? "Added" : adding ? "Adding\u2026" : `Add to ${item.ticker}`}
@@ -99,7 +99,7 @@ function BriefingSection({ data, dateLabel }: { data: MorningBriefingResponse; d
     <div className="px-4 py-3">
       <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-2">{dateLabel}</p>
       {data.summary && (
-        <p className="text-zinc-400 text-sm leading-relaxed mb-4 border-l-2 border-zinc-700 pl-3">
+        <p className="text-zinc-400 text-sm leading-relaxed mb-4 border-l-2 border-accent/30 pl-3">
           {data.summary}
         </p>
       )}
@@ -167,7 +167,7 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
 
   if (loading) {
     return (
-      <div className="animate-pulse border border-zinc-800 rounded-2xl p-4 mb-8">
+      <div className="animate-pulse border border-white/6 rounded-2xl p-4 mb-8">
         <div className="h-3 bg-zinc-800 rounded w-32 mb-3" />
         <div className="h-4 bg-zinc-800 rounded w-2/3 mb-2" />
         <div className="h-4 bg-zinc-800 rounded w-1/2" />
@@ -180,7 +180,7 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
   const today = new Date().toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="border border-zinc-800 rounded-2xl mb-4 overflow-hidden bg-surface/50 backdrop-blur-sm">
+    <div className="border border-white/6 rounded-2xl mb-4 overflow-hidden bg-surface/50 backdrop-blur-sm">
       <div
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none"
@@ -208,7 +208,7 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
           <BriefingSection data={data} dateLabel="Today" />
 
           {/* Past briefings toggle */}
-          <div className="border-t border-zinc-800">
+          <div className="border-t border-white/5">
             <button
               onClick={handleToggleHistory}
               className="w-full flex items-center justify-between px-4 py-2 bg-surface hover:bg-surface-raised/50 transition-colors"
@@ -220,7 +220,7 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
             </button>
 
             {historyOpen && (
-              <div className="border-t border-zinc-800">
+              <div className="border-t border-white/5">
                 {historyLoading && (
                   <div className="px-4 py-4">
                     <div className="animate-pulse h-3 bg-zinc-800 rounded w-48" />

@@ -50,12 +50,12 @@ export default function AddStockForm() {
           onChange={(e) => setInput(e.target.value.toUpperCase())}
           placeholder="AAPL, NVDA, MSFT"
           disabled={busy}
-          className="px-3 py-2 bg-surface border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 uppercase flex-1 min-w-0 max-w-xs transition-colors"
+          className="px-3 py-2 bg-surface border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15 uppercase flex-1 min-w-0 max-w-xs transition-colors"
         />
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover disabled:bg-zinc-900 disabled:text-zinc-500 text-black font-semibold rounded-lg transition-colors font-medium shrink-0"
         >
           {busy ? (
             <>

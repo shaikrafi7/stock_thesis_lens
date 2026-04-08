@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createInvestorProfile, skipProfileWizard, type InvestorProfile, type InvestorProfileCreateRequest } from "@/lib/api";
+import { createInvestorProfile, updateInvestorProfile, skipProfileWizard, type InvestorProfile, type InvestorProfileCreateRequest } from "@/lib/api";
 
 interface Props {
   onComplete: (profile: InvestorProfile) => void;
@@ -92,7 +92,13 @@ export default function ProfileWizard({ onComplete, onSkip }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const profile = await createInvestorProfile(answers as InvestorProfileCreateRequest);
+      let profile: InvestorProfile;
+      try {
+        profile = await createInvestorProfile(answers as InvestorProfileCreateRequest);
+      } catch {
+        // Profile already exists — update instead
+        profile = await updateInvestorProfile(answers as InvestorProfileCreateRequest);
+      }
       onComplete(profile);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
@@ -111,10 +117,10 @@ export default function ProfileWizard({ onComplete, onSkip }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-      <div className="bg-surface border border-zinc-700 rounded-2xl w-full max-w-lg shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-surface rounded-2xl w-full max-w-lg shadow-2xl animate-fade-up" style={{border:"1px solid rgba(255,255,255,0.08)", borderTopColor:"rgba(255,255,255,0.13)"}}>
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-zinc-800">
+        <div className="px-6 pt-6 pb-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-zinc-500">
               Step {step + 1} of {STEPS.length}
@@ -147,8 +153,8 @@ export default function ProfileWizard({ onComplete, onSkip }: Props) {
                 onClick={() => select(opt.value)}
                 className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                   selected === opt.value
-                    ? "border-accent bg-accent/10 text-white"
-                    : "border-zinc-700 bg-zinc-800/40 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800"
+                    ? "border-accent/60 bg-accent/8 text-white"
+                    : "border-white/6 bg-zinc-900/60 text-zinc-300 hover:border-white/12 hover:bg-zinc-800/60"
                 }`}
               >
                 <div className="flex items-center gap-3">

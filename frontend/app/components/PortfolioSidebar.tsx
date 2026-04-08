@@ -216,7 +216,7 @@ export default function PortfolioSidebar() {
           <button
             type="submit"
             disabled={adding || !tickerInput.trim()}
-            className="p-1 bg-accent hover:bg-accent-hover disabled:bg-zinc-800 text-white rounded transition-colors shrink-0"
+            className="p-1 bg-accent hover:bg-accent-hover disabled:bg-zinc-900 text-black rounded transition-colors shrink-0"
           >
             {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
           </button>

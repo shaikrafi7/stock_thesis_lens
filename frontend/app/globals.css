@@ -1,29 +1,33 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 
 @theme inline {
-  /* TradingView-inspired palette */
-  --color-background: #131722;
-  --color-foreground: #d1d4dc;
-  --color-accent: #2962ff;
-  --color-accent-hover: #1e53e5;
-  --color-accent-muted: #2196f3;
-  --color-surface: #1e222d;
-  --color-surface-raised: #2a2e39;
+  /* ThesisArc palette — warm dark, amber accent */
+  --color-background: #0c0c0e;
+  --color-foreground: #fafafa;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-muted: #fbbf24;
+  --color-indigo: #6366f1;
+  --color-surface: #18181b;
+  --color-surface-raised: #27272a;
+
+  /* True neutral zinc */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-
-  /* Remap zinc scale to TradingView navy tones */
-  --color-zinc-50: #e0e3eb;
-  --color-zinc-100: #d1d4dc;
-  --color-zinc-200: #b2b5be;
-  --color-zinc-300: #9598a1;
-  --color-zinc-400: #787b86;
-  --color-zinc-500: #636770;
-  --color-zinc-600: #4c525e;
-  --color-zinc-700: #363a45;
-  --color-zinc-800: #2a2e39;
-  --color-zinc-900: #1e222d;
-  --color-zinc-950: #131722;
+  --font-serif: "Instrument Serif", Georgia, serif;
 }
 
 body {
@@ -32,10 +36,67 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Smooth scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #363a45; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4c525e; }
+/* Instrument Serif utility */
+.font-serif {
+  font-family: var(--font-serif);
+}
 
+/* Tabular numbers for data values */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page entry animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.2s ease-out forwards;
+}
+
+/* Staggered children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeUp 0.2s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 200ms; }
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #f59e0b40; }
+
+/* Accent-colored form controls */
 input[type="checkbox"] { accent-color: var(--color-accent); }
+
+/* Focus ring — amber */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* Card highlight border utility */
+.card-border {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-top-color: rgba(255,255,255,0.10);
+}
+
+/* Button press feel */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}

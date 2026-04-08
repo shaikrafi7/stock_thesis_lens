@@ -220,24 +220,16 @@ export default function AssistantPanel() {
       {!isOpen && (
         <button
           onClick={togglePanel}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-full shadow-lg shadow-accent/20 transition-all hover:shadow-accent/30"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-black font-semibold text-sm rounded-full shadow-lg shadow-accent/20 transition-all hover:shadow-accent/30"
         >
           <MessageSquare className="w-4 h-4" />
           {isPortfolioMode ? "Portfolio AI" : "Research AI"}
         </button>
       )}
 
-      {/* Backdrop — click to dismiss */}
-      {isOpen && (
-        <div
-          onClick={togglePanel}
-          className="fixed inset-0 z-20 bg-black/10"
-        />
-      )}
-
       {/* Slide-in panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-96 bg-surface border-l border-zinc-800 shadow-2xl z-30 flex flex-col transition-transform duration-200 ease-in-out ${
+        className={`fixed top-12 right-0 h-[calc(100vh-3rem)] w-96 bg-surface border-l border-white/6 shadow-2xl z-30 flex flex-col transition-transform duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -284,8 +276,8 @@ export default function AssistantPanel() {
               <div
                 className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-accent text-white"
-                    : "bg-zinc-800 text-zinc-200"
+                    ? "bg-accent text-black font-medium"
+                    : "bg-zinc-800/80 text-zinc-200"
                 }`}
               >
                 {msg.role === "assistant" ? renderMessageContent(msg.content) : msg.content}
@@ -317,7 +309,7 @@ export default function AssistantPanel() {
                 <button
                   onClick={handleAddSuggestion}
                   disabled={actionLoading}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-md transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-semibold rounded-md transition-colors"
                 >
                   {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                   {actionLoading ? "Adding\u2026" : "Add"}
@@ -347,7 +339,7 @@ export default function AssistantPanel() {
                 <button
                   onClick={handleConfirmAction}
                   disabled={actionLoading}
-                  className="px-2 py-1 text-xs bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-md transition-colors"
+                  className="px-2 py-1 text-xs bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-semibold rounded-md transition-colors"
                 >
                   {actionLoading ? "\u2026" : actionButtonLabel(pendingAction)}
                 </button>
@@ -369,7 +361,7 @@ export default function AssistantPanel() {
         {/* Input */}
         <form
           onSubmit={handleSend}
-          className="flex gap-2 px-4 py-3 border-t border-zinc-800 shrink-0"
+          className="flex gap-2 px-4 py-3 border-t border-white/5 shrink-0"
         >
           <input
             type="text"
@@ -377,12 +369,12 @@ export default function AssistantPanel() {
             onChange={(e) => setChatInput(e.target.value)}
             placeholder={isPortfolioMode ? "Ask about your portfolio\u2026" : "Ask about the company\u2026"}
             disabled={chatLoading}
-            className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors"
+            className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition-colors"
           />
           <button
             type="submit"
             disabled={chatLoading || chatInput.trim().length === 0}
-            className="px-3 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-lg shrink-0 transition-colors"
+            className="px-3 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-zinc-900 disabled:text-zinc-600 text-black font-semibold rounded-lg shrink-0 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>

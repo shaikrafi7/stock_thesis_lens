@@ -55,7 +55,7 @@ export default function SectorChart({ compact = false, portfolioId }: { compact?
   const outerR = compact ? 45 : 65;
 
   return (
-    <div className={compact ? "" : "border border-zinc-800 rounded-2xl overflow-hidden bg-surface/50"}>
+    <div className={compact ? "" : "rounded-2xl overflow-hidden bg-surface card-border"}>
       <div
         onClick={() => setCollapsed((c) => !c)}
         className={`flex items-center justify-between ${compact ? "px-3 py-2" : "px-4 py-3"} bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none`}

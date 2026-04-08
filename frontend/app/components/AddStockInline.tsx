@@ -45,7 +45,7 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
       <button
         type="submit"
         disabled={adding || !ticker.trim()}
-        className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium"
+        className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-900 disabled:text-zinc-500 text-black rounded-lg transition-colors font-medium"
       >
         {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
         Add
