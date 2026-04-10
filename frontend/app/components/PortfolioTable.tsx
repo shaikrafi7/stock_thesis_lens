@@ -83,13 +83,13 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
     <div>
       {/* Sort controls */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-[11px] text-zinc-600 uppercase tracking-widest">Sort by</span>
+        <span className="text-[11px] text-gray-400 dark:text-zinc-600 uppercase tracking-widest">Sort by</span>
         <button
           onClick={() => toggleSort("ticker")}
           className={`text-[11px] uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${
             sortField === "ticker"
-              ? "text-zinc-200 bg-zinc-800"
-              : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+              ? "text-gray-800 dark:text-zinc-200 bg-gray-100 dark:bg-zinc-800"
+              : "text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800/50"
           }`}
         >
           Ticker{arrow("ticker")}
@@ -98,8 +98,8 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
           onClick={() => toggleSort("score")}
           className={`text-[11px] uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${
             sortField === "score"
-              ? "text-zinc-200 bg-zinc-800"
-              : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+              ? "text-gray-800 dark:text-zinc-200 bg-gray-100 dark:bg-zinc-800"
+              : "text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800/50"
           }`}
         >
           Score{arrow("score")}
@@ -115,23 +115,23 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
           return (
             <div
               key={stock.ticker}
-              className="flex items-center justify-between px-4 py-3 bg-surface rounded-xl hover:bg-surface-raised/60 transition-all duration-150 group" style={{border:"1px solid rgba(255,255,255,0.06)", borderTopColor:"rgba(255,255,255,0.09)"}}
+              className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-all duration-150 group shadow-sm"
             >
               <Link
                 href={`/stocks/${stock.ticker}`}
                 className="flex items-center gap-4 flex-1 min-w-0"
               >
-                <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden bg-zinc-800 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
                   {stock.logo_url ? (
                     <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
                   ) : (
-                    <span className="text-xs font-bold text-zinc-400">{stock.ticker[0]}</span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">{stock.ticker[0]}</span>
                   )}
                 </div>
-                <span className="font-mono font-semibold text-white w-16 shrink-0">
+                <span className="font-mono font-semibold text-gray-900 dark:text-white w-16 shrink-0">
                   {stock.ticker}
                 </span>
-                <span className="text-zinc-400 text-sm truncate">
+                <span className="text-gray-500 dark:text-zinc-400 text-sm truncate">
                   {stock.name}
                 </span>
               </Link>
@@ -143,7 +143,7 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
                 {evaluation ? (
                   <>
                     <div className="flex flex-col items-end">
-                      <span className="text-zinc-500 text-xs font-mono">
+                      <span className="text-gray-500 dark:text-zinc-500 text-xs font-mono">
                         {evaluation.score}/100
                       </span>
                       {(() => {
@@ -167,7 +167,7 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
                     <StatusBadge status={evaluation.status} />
                   </>
                 ) : (
-                  <span className="text-zinc-600 text-xs">
+                  <span className="text-gray-400 dark:text-zinc-600 text-xs">
                     Not evaluated
                   </span>
                 )}

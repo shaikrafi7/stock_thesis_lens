@@ -17,13 +17,13 @@ function ArcMark({ size }: { size: number }) {
       {/* Arc path: rises from bottom-left, peaks at top-center, descends to bottom-right */}
       <path
         d="M4 34 Q20 6 36 34"
-        stroke="#f59e0b"
+        stroke="#6366f1"
         strokeWidth="2.8"
         strokeLinecap="round"
         fill="none"
       />
       {/* Dot at the peak */}
-      <circle cx="20" cy="8" r="2.8" fill="#f59e0b" />
+      <circle cx="20" cy="8" r="2.8" fill="#6366f1" />
     </svg>
   );
 }
@@ -35,7 +35,7 @@ export default function BrandLogo({ size = "md", showTagline = false }: Props) {
       <div className="flex items-center gap-2.5">
         <ArcMark size={s.icon} />
         <span className={`font-semibold tracking-tight leading-none ${s.thesis}`}>
-          <span className="text-white">Thesis</span>
+          <span className="text-gray-900 dark:text-white">Thesis</span>
           <span className="font-serif italic text-accent"
             style={{ fontFamily: '"Instrument Serif", Georgia, serif' }}>Arc</span>
         </span>

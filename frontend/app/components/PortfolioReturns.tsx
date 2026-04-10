@@ -61,8 +61,8 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
 
   if (loading) {
     return (
-      <div className="relative flex flex-col items-center justify-center py-6 rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg card-border min-h-[120px]">
-        <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
+      <div className="relative flex flex-col items-center justify-center py-6 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-sm min-h-[120px]">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-400 dark:text-zinc-500" />
       </div>
     );
   }
@@ -91,20 +91,16 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
   const q3 = Math.round(rangeMax * 0.5);
 
   return (
-    <div className="relative flex flex-col items-center rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg card-border">
-      {/* Glassy overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
-      <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none" />
-
+    <div className="relative flex flex-col items-center rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-sm card-hover">
       {/* Header with collapse toggle */}
       <div
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 pt-3 pb-1 cursor-pointer relative z-10"
       >
-        <p className="text-xs uppercase tracking-widest text-zinc-500">
+        <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500">
           Portfolio Returns
         </p>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-zinc-500" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />}
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />}
       </div>
 
       {open ? (
@@ -117,8 +113,8 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
                 onClick={() => setPeriod(p)}
                 className={`px-2 py-0.5 text-[10px] rounded-md font-medium transition-colors ${
                   period === p
-                    ? "bg-accent text-black"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                    ? "bg-accent text-white"
+                    : "text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
                 }`}
               >
                 {PERIOD_LABELS[p]}
@@ -153,12 +149,12 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
           {/* Score + label */}
           <div className="text-center mt-3 relative z-10">
             <span
-              className="text-3xl font-mono font-bold text-white"
+              className="text-3xl font-mono font-bold text-gray-900 dark:text-white"
               style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}
             >
               {r >= 0 ? "+" : ""}{r.toFixed(1)}
             </span>
-            <span className="text-zinc-500 text-sm ml-1">%</span>
+            <span className="text-gray-400 dark:text-zinc-500 text-sm ml-1">%</span>
             <p className="text-xs mt-0.5 font-semibold tracking-wide" style={{ color }}>
               {returnLabel(r)}
             </p>
@@ -166,13 +162,13 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
 
           {/* Benchmark comparison */}
           <div className="mt-2 pb-3 flex flex-col items-center gap-0.5 text-xs relative z-10">
-            <span className="text-zinc-500">
-              vs S&P 500: <span className="text-zinc-300 font-mono">{data.benchmark_return >= 0 ? "+" : ""}{data.benchmark_return.toFixed(1)}%</span>
+            <span className="text-gray-400 dark:text-zinc-500">
+              vs S&P 500: <span className="text-gray-700 dark:text-zinc-300 font-mono">{data.benchmark_return >= 0 ? "+" : ""}{data.benchmark_return.toFixed(1)}%</span>
             </span>
-            <span className={`font-mono font-bold ${data.alpha >= 0 ? "text-green-400" : "text-red-400"}`}>
+            <span className={`font-mono font-bold ${data.alpha >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
               Alpha: {data.alpha >= 0 ? "+" : ""}{data.alpha.toFixed(1)}%
             </span>
-            <span className="text-zinc-600 text-[11px]">
+            <span className="text-gray-400 dark:text-zinc-600 text-[11px]">
               $10K &rarr; {dollarEquivalent(r)}
             </span>
           </div>
@@ -180,10 +176,10 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
           {/* Per-stock bars — collapsible */}
           {data.stocks.length > 0 && (
             <div className="w-full px-4 pb-3 relative z-10">
-              <div className="border-t border-white/5 pt-2">
+              <div className="border-t border-gray-100 dark:border-zinc-800 pt-2">
                 <button
                   onClick={() => setBarsOpen((o) => !o)}
-                  className="w-full flex items-center justify-between py-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="w-full flex items-center justify-between py-1 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
                 >
                   <span className="text-[11px]">
                     {barsOpen ? "Hide returns by stock" : "Show returns by stock"}
@@ -199,11 +195,11 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
                         <div key={s.ticker} className="flex items-center gap-2">
                           <Link
                             href={`/stocks/${s.ticker}`}
-                            className="text-[11px] font-mono font-semibold text-zinc-300 hover:text-accent transition-colors w-12 shrink-0"
+                            className="text-[11px] font-mono font-semibold text-gray-700 dark:text-zinc-300 hover:text-accent transition-colors w-12 shrink-0"
                           >
                             {s.ticker}
                           </Link>
-                          <div className="flex-1 h-3.5 bg-zinc-800/50 rounded-sm overflow-hidden">
+                          <div className="flex-1 h-3.5 bg-gray-100 dark:bg-zinc-800/50 rounded-sm overflow-hidden">
                             <div
                               className={`h-full rounded-sm transition-all ${
                                 isPositive ? "bg-green-500/60" : "bg-red-500/60"
@@ -233,7 +229,7 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
           <span className="text-lg font-mono font-bold" style={{ color }}>
             {r >= 0 ? "+" : ""}{r.toFixed(1)}%
           </span>
-          <span className="text-zinc-500 text-xs ml-2">
+          <span className="text-gray-400 dark:text-zinc-500 text-xs ml-2">
             vs SPY {data.benchmark_return >= 0 ? "+" : ""}{data.benchmark_return.toFixed(1)}%
           </span>
         </div>

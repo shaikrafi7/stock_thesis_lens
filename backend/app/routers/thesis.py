@@ -230,6 +230,10 @@ def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, portfolio_
         thesis.frozen = payload.frozen
     if payload.importance is not None:
         thesis.importance = payload.importance
+    if payload.clear_conviction:
+        thesis.conviction = None
+    elif payload.conviction is not None:
+        thesis.conviction = payload.conviction
 
     db.commit()
     db.refresh(thesis)

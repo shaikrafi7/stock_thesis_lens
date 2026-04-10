@@ -23,7 +23,7 @@ import SectorChart from "./components/SectorChart";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { activePortfolioId } = usePortfolio();
+  const { activePortfolioId, portfolioLoaded } = usePortfolio();
   const [loading, setLoading] = useState(true);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
@@ -65,8 +65,8 @@ export default function DashboardPage() {
   }, [activePortfolioId]);
 
   useEffect(() => {
-    if (activePortfolioId) loadData();
-  }, [activePortfolioId, loadData]);
+    if (portfolioLoaded) loadData();
+  }, [portfolioLoaded, activePortfolioId, loadData]);
 
   const evaluatedScores = evaluations
     .filter((e): e is Evaluation => e !== null)
@@ -86,46 +86,55 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 pt-2 pb-4">
+    <div className="pb-6 min-h-full">
       {stocks.length > 0 ? (
         <>
-          {/* Health gauge — full width at top */}
-          <PortfolioGauge avgScore={avgScore ?? 0} hasEvaluations={avgScore !== null} />
-
-          {/* Two-column: left = news, right = returns + sector */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
-            <div className="min-w-0">
-              <MorningBriefing portfolioId={activePortfolioId} />
-            </div>
-            <div className="flex flex-col gap-4">
-              <SectorChart compact portfolioId={activePortfolioId} />
-              <PortfolioReturns portfolioId={activePortfolioId} />
+          {/* Health gauge hero — dot-grid background */}
+          <div className="dot-grid relative mb-6">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-transparent pointer-events-none" />
+            <div className="relative max-w-5xl mx-auto px-6 pt-4">
+              <PortfolioGauge avgScore={avgScore ?? 0} hasEvaluations={avgScore !== null} />
             </div>
           </div>
 
-          {/* Stocks header + table */}
-          <div className="border-t border-white/5 pt-4 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Portfolio Stocks</h2>
-              <div className="flex items-center gap-3">
-                <EvaluateAllButton portfolioId={activePortfolioId} />
-                <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
+          <div className="max-w-5xl mx-auto px-6">
+            {/* Two-column: left = news, right = returns + sector */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
+              <div className="min-w-0">
+                <MorningBriefing portfolioId={activePortfolioId} />
+              </div>
+              <div className="flex flex-col gap-4">
+                <PortfolioReturns portfolioId={activePortfolioId} />
+                <SectorChart compact portfolioId={activePortfolioId} />
               </div>
             </div>
-          </div>
 
-          <PortfolioTable
-            stocks={stocks}
-            evaluations={evaluations}
-            trendMap={trendMap}
-            scoreHistories={scoreHistories}
-            priceSparklines={priceSparklines}
-          />
+            {/* Stocks header + table */}
+            <div className="border-t border-gray-100 dark:border-zinc-800 pt-4 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Portfolio Stocks</h2>
+                <div className="flex items-center gap-3">
+                  <EvaluateAllButton portfolioId={activePortfolioId} />
+                  <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
+                </div>
+              </div>
+            </div>
+
+            <PortfolioTable
+              stocks={stocks}
+              evaluations={evaluations}
+              trendMap={trendMap}
+              scoreHistories={scoreHistories}
+              priceSparklines={priceSparklines}
+            />
+          </div>
         </>
       ) : (
-        <div className="text-center py-16">
-          <p className="text-zinc-500 text-sm mb-4">No stocks in your portfolio yet.</p>
-          <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center py-16">
+            <p className="text-gray-400 text-sm mb-4">No stocks in your portfolio yet.</p>
+            <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
+          </div>
         </div>
       )}
     </div>

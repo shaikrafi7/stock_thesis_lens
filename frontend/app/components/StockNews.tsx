@@ -79,32 +79,32 @@ export default function StockNews({ ticker }: { ticker: string }) {
   const hasContent = useFallback ? fallbackNews.length > 0 : groups.length > 0;
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-surface overflow-hidden">
+    <div className="rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden card-hover">
       <div
         onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-surface-raised/50 transition-colors"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-zinc-500" />
-          <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
+          <Newspaper className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+          <span className="text-xs font-semibold tracking-wider text-gray-500 dark:text-zinc-400 uppercase">
             News & Impact
           </span>
         </div>
         {collapsed ? (
-          <ChevronDown className="w-4 h-4 text-zinc-500" />
+          <ChevronDown className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
         ) : (
-          <ChevronUp className="w-4 h-4 text-zinc-500" />
+          <ChevronUp className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
         )}
       </div>
 
       {!collapsed && (
         <div className="px-4 pb-3">
           {loading ? (
-            <div className="flex items-center justify-center py-4 text-zinc-500">
+            <div className="flex items-center justify-center py-4 text-gray-400 dark:text-zinc-500">
               <Loader2 className="w-4 h-4 animate-spin" />
             </div>
           ) : !hasContent ? (
-            <p className="text-xs text-zinc-500 py-2">No recent news found</p>
+            <p className="text-xs text-gray-400 dark:text-zinc-500 py-2">No recent news found</p>
           ) : useFallback ? (
             /* Plain news fallback */
             <div className="space-y-1">
@@ -114,16 +114,16 @@ export default function StockNews({ ticker }: { ticker: string }) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 group py-1.5 border-b border-zinc-800/50 last:border-0"
+                  className="flex items-start gap-2 group py-1.5 border-b border-gray-100 dark:border-zinc-800/50 last:border-0"
                 >
-                  <span className="text-xs text-zinc-300 leading-relaxed group-hover:text-white transition-colors flex-1">
+                  <span className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
                     {item.title}
                   </span>
                   <span className="flex items-center gap-1.5 shrink-0 mt-0.5">
                     {item.published_utc && (
-                      <span className="text-[10px] text-zinc-600">{timeAgo(item.published_utc)}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-zinc-600">{timeAgo(item.published_utc)}</span>
                     )}
-                    <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                    <ExternalLink className="w-3 h-3 text-gray-400 dark:text-zinc-600 group-hover:text-gray-600 dark:group-hover:text-zinc-400 transition-colors" />
                   </span>
                 </a>
               ))}
@@ -133,7 +133,7 @@ export default function StockNews({ ticker }: { ticker: string }) {
             <div className="space-y-3">
               {groups.map((group) => (
                 <div key={group.label}>
-                  <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1.5">
+                  <p className="text-gray-400 dark:text-zinc-500 text-[10px] uppercase tracking-widest mb-1.5">
                     {group.label}
                   </p>
                   <div className="flex flex-col gap-2">

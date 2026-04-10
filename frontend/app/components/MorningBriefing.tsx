@@ -13,9 +13,9 @@ import {
 import { ChevronUp, ChevronDown, Plus, Check, Loader2, Newspaper, RefreshCw, ExternalLink, Globe } from "lucide-react";
 
 export const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
-  bullish: { badge: "bg-green-950/60 border-green-800 text-green-400", dot: "bg-green-500" },
-  bearish: { badge: "bg-red-950/60 border-red-800 text-red-400", dot: "bg-red-500" },
-  neutral: { badge: "bg-zinc-800/60 border-zinc-700 text-zinc-400", dot: "bg-zinc-500" },
+  bullish: { badge: "bg-green-50 dark:bg-green-950/60 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400", dot: "bg-green-500" },
+  bearish: { badge: "bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400", dot: "bg-red-500" },
+  neutral: { badge: "bg-gray-50 dark:bg-zinc-800/60 border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400", dot: "bg-gray-400 dark:bg-zinc-500" },
 };
 
 export function BriefingCard({ item }: { item: BriefingItem }) {
@@ -51,14 +51,14 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               <Link
                 href={`/stocks/${item.ticker}`}
                 onClick={(e) => e.stopPropagation()}
-                className="text-xs font-mono font-bold text-zinc-300 hover:text-accent transition-colors"
+                className="text-xs font-mono font-bold text-gray-700 dark:text-zinc-300 hover:text-accent transition-colors"
               >
                 {item.ticker}
               </Link>
             )}
             <span className="text-[10px] uppercase tracking-wide opacity-70">{item.impact}</span>
           </div>
-          <p className="text-zinc-300 text-xs leading-relaxed">
+          <p className="text-gray-600 dark:text-zinc-300 text-xs leading-relaxed">
             {item.headline}
             {item.source_url && (
               <a
@@ -66,7 +66,7 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center ml-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="inline-flex items-center ml-1.5 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
                 title="Open source article"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -81,7 +81,7 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               <button
                 onClick={handleAdd}
                 disabled={adding || added}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-semibold transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold transition-colors"
               >
                 {added ? <Check className="w-3 h-3" /> : adding ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                 {added ? "Added" : adding ? "Adding\u2026" : `Add to ${item.ticker}`}
@@ -94,12 +94,46 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
   );
 }
 
-function BriefingSection({ data, dateLabel }: { data: MorningBriefingResponse; dateLabel: string }) {
+function BriefingSection({ data, dateLabel, collapsible = false }: { data: MorningBriefingResponse; dateLabel: string; collapsible?: boolean }) {
+  const [open, setOpen] = useState(!collapsible);
+  const itemCount = data.items.length;
+
+  if (collapsible) {
+    return (
+      <div className="border-t border-gray-100 dark:border-zinc-800">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+        >
+          <span className="text-xs font-medium text-gray-500 dark:text-zinc-400">{dateLabel}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-400 dark:text-zinc-600">{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
+            {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-600" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-600" />}
+          </div>
+        </button>
+        {open && (
+          <div className="px-4 pb-3">
+            {data.summary && (
+              <p className="text-gray-500 dark:text-zinc-400 text-xs leading-relaxed mb-3 border-l-2 border-accent/30 pl-3">
+                {data.summary}
+              </p>
+            )}
+            {itemCount > 0 && (
+              <div className="flex flex-col gap-2">
+                {data.items.map((item, i) => <BriefingCard key={i} item={item} />)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-3">
-      <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-2">{dateLabel}</p>
+      <p className="text-gray-400 dark:text-zinc-500 text-[10px] uppercase tracking-widest mb-2">{dateLabel}</p>
       {data.summary && (
-        <p className="text-zinc-400 text-sm leading-relaxed mb-4 border-l-2 border-accent/30 pl-3">
+        <p className="text-gray-500 dark:text-zinc-400 text-sm leading-relaxed mb-4 border-l-2 border-accent/30 pl-3">
           {data.summary}
         </p>
       )}
@@ -167,10 +201,10 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
 
   if (loading) {
     return (
-      <div className="animate-pulse border border-white/6 rounded-2xl p-4 mb-8">
-        <div className="h-3 bg-zinc-800 rounded w-32 mb-3" />
-        <div className="h-4 bg-zinc-800 rounded w-2/3 mb-2" />
-        <div className="h-4 bg-zinc-800 rounded w-1/2" />
+      <div className="animate-pulse border border-gray-200 dark:border-zinc-800 rounded-2xl p-4 mb-8">
+        <div className="h-3 bg-gray-100 dark:bg-zinc-800 rounded w-32 mb-3" />
+        <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-2/3 mb-2" />
+        <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-1/2" />
       </div>
     );
   }
@@ -180,26 +214,26 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
   const today = new Date().toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="border border-white/6 rounded-2xl mb-4 overflow-hidden bg-surface/50 backdrop-blur-sm">
+    <div className="border border-gray-200 dark:border-zinc-800 rounded-2xl mb-4 overflow-hidden bg-white dark:bg-zinc-900 card-hover">
       <div
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer select-none"
       >
         <div className="flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-zinc-500" />
-          <span className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Today&apos;s Briefing</span>
-          <span className="text-zinc-600 text-xs">{today}</span>
+          <Newspaper className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+          <span className="text-xs uppercase tracking-widest text-gray-500 dark:text-zinc-500 font-semibold">Today&apos;s Briefing</span>
+          <span className="text-gray-400 dark:text-zinc-600 text-xs">{today}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
             disabled={refreshing}
-            className="p-1 rounded hover:bg-zinc-700 text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors disabled:opacity-50"
             title="Refresh briefing with latest news"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           </button>
-          {open ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+          {open ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-zinc-500" />}
         </div>
       </div>
 
@@ -208,29 +242,29 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
           <BriefingSection data={data} dateLabel="Today" />
 
           {/* Past briefings toggle */}
-          <div className="border-t border-white/5">
+          <div className="border-t border-gray-100 dark:border-zinc-800">
             <button
               onClick={handleToggleHistory}
-              className="w-full flex items-center justify-between px-4 py-2 bg-surface hover:bg-surface-raised/50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
             >
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-gray-400 dark:text-zinc-500">
                 {historyOpen ? "Hide past briefings" : "Show past briefings"}
               </span>
-              {historyOpen ? <ChevronUp className="w-3.5 h-3.5 text-zinc-600" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-600" />}
+              {historyOpen ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-600" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-600" />}
             </button>
 
             {historyOpen && (
-              <div className="border-t border-white/5">
+              <div className="border-t border-gray-100 dark:border-zinc-800">
                 {historyLoading && (
                   <div className="px-4 py-4">
-                    <div className="animate-pulse h-3 bg-zinc-800 rounded w-48" />
+                    <div className="animate-pulse h-3 bg-gray-100 dark:bg-zinc-800 rounded w-48" />
                   </div>
                 )}
                 {history && history.length === 0 && (
-                  <p className="text-zinc-600 text-xs px-4 py-3">No past briefings yet.</p>
+                  <p className="text-gray-400 dark:text-zinc-600 text-xs px-4 py-3">No past briefings yet.</p>
                 )}
                 {history && history.length > 0 && (
-                  <div className="flex flex-col divide-y divide-zinc-800">
+                  <div className="flex flex-col">
                     {history.map((b, i) => {
                       const label = b.date
                         ? new Date(b.date + "T00:00:00").toLocaleDateString("default", {
@@ -239,7 +273,7 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
                             day: "numeric",
                           })
                         : `Past ${i + 1}`;
-                      return <BriefingSection key={b.date ?? i} data={b} dateLabel={label} />;
+                      return <BriefingSection key={b.date ?? i} data={b} dateLabel={label} collapsible />;
                     })}
                   </div>
                 )}

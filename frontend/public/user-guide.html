@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThesisArc User Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #dbeafe 0%, #c4b5fd 50%, #d8b4fe 100%);
+      background-attachment: fixed;
+      color: #1f2937;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .doc-header {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(99,102,241,0.15);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 12px rgba(99,102,241,0.08);
+    }
+
+    .doc-header .inner {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .doc-header .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .doc-header .brand-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.3px;
+    }
+
+    .doc-header .brand-text em {
+      font-family: 'Merriweather', serif;
+      font-style: italic;
+      color: #6366f1;
+      font-weight: 400;
+    }
+
+    .doc-header .subtitle {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: auto;
+      font-weight: 500;
+    }
+
+    /* Layout */
+    .content {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 32px 80px;
+    }
+
+    /* TOC */
+    .toc {
+      background: white;
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin: 0 0 40px;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.08);
+    }
+
+    .toc h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #6366f1;
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+
+    .toc ol {
+      list-style: none;
+      padding: 0;
+      columns: 2;
+      column-gap: 32px;
+    }
+
+    .toc li { padding: 3px 0; }
+
+    .toc a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.15s;
+    }
+
+    .toc a:hover { color: #6366f1; }
+
+    /* Section cards */
+    .section {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.07);
+      border: 1px solid rgba(99,102,241,0.1);
+      scroll-margin-top: 80px;
+    }
+
+    .section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #6366f1;
+      letter-spacing: -0.3px;
+    }
+
+    .section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin-top: 24px;
+      margin-bottom: 10px;
+    }
+
+    .section h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6366f1;
+      margin-top: 18px;
+      margin-bottom: 6px;
+    }
+
+    p { margin-bottom: 12px; color: #4b5563; }
+
+    /* Lists */
+    ul, ol { margin: 10px 0 14px 22px; }
+    li { margin-bottom: 5px; font-size: 14px; color: #4b5563; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 13px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f5f3ff;
+      color: #6366f1;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e0e7ff;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      color: #4b5563;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* Inline code */
+    code {
+      background: #ede9fe;
+      color: #5b21b6;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    /* Callout boxes */
+    .callout {
+      background: #f5f3ff;
+      border-left: 3px solid #6366f1;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .callout.warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .callout.danger {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .callout.success {
+      border-left-color: #22c55e;
+      background: #f0fdf4;
+    }
+
+    .callout strong { color: #111827; }
+
+    /* Steps */
+    .steps {
+      list-style: none;
+      margin: 14px 0;
+      padding: 0;
+      counter-reset: step-counter;
+    }
+
+    .steps li {
+      counter-increment: step-counter;
+      padding: 7px 0 7px 38px;
+      position: relative;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 7px;
+      width: 24px;
+      height: 24px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Bold / emphasis */
+    strong { color: #111827; }
+    em { color: #6b7280; font-style: italic; }
+
+    /* Links */
+    a { color: #6366f1; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Status colors */
+    .status-green { color: #16a34a; font-weight: 600; }
+    .status-yellow { color: #d97706; font-weight: 600; }
+    .status-red { color: #dc2626; font-weight: 600; }
+    .status-indigo { color: #6366f1; font-weight: 600; }
+
+    /* Feature badge */
+    .badge {
+      display: inline-block;
+      background: #ede9fe;
+      border: 1px solid #c4b5fd;
+      color: #6366f1;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 4px 0 0;
+    }
+
+    @media print {
+      body { background: white; }
+      .doc-header { position: static; }
+      .section { box-shadow: none; border: 1px solid #e5e7eb; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="doc-header">
+    <div class="inner">
+      <a href="/why-thesisarc.html" class="brand">
+        <svg width="22" height="22" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 34 Q20 6 36 34" stroke="#6366f1" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          <circle cx="20" cy="8" r="2.8" fill="#6366f1"/>
+        </svg>
+        <span class="brand-text">Thesis<em>Arc</em></span>
+      </a>
+      <span style="color:#d1d5db;font-size:18px;margin:0 4px;">·</span>
+      <span style="font-size:15px;font-weight:600;color:#374151;">User Guide</span>
+      <span class="subtitle">Complete Feature Reference</span>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- TOC -->
+    <nav class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#investor-profile">Investor Profile</a></li>
+        <li><a href="#portfolios">Managing Portfolios</a></li>
+        <li><a href="#adding-stocks">Adding Stocks</a></li>
+        <li><a href="#stock-detail">Stock Detail Page</a></li>
+        <li><a href="#thesis-manager">Thesis Manager</a></li>
+        <li><a href="#dashboard">Portfolio Dashboard</a></li>
+        <li><a href="#briefing">Morning Briefing</a></li>
+        <li><a href="#scoring">Scoring System</a></li>
+        <li><a href="#dark-mode">Dark & Light Mode</a></li>
+        <li><a href="#tips">Tips & Best Practices</a></li>
+      </ol>
+    </nav>
+
+    <!-- 1. Getting Started -->
+    <div class="section" id="getting-started">
+      <h2>1. Getting Started</h2>
+
+      <h3>Creating an Account</h3>
+      <p>Visit ThesisArc and click <strong>Sign Up</strong>. You'll be guided to enter your email address, create a username, and set a secure password (minimum 6 characters recommended). After registration, you'll be automatically logged in and taken to the onboarding flow.</p>
+
+      <h3>Logging In</h3>
+      <p>Use the <strong>Sign In</strong> tab to enter your email and password. Your session persists across browser refreshes and will remain active until you explicitly log out or your authentication token expires (typically after 30 days of inactivity).</p>
+
+      <h3>Onboarding & Profile Setup</h3>
+      <p>On your first login, you'll see the Investor Profile Wizard — a guided questionnaire that captures your investing style, risk tolerance, and behavioral preferences. This is crucial: your profile determines which behavioral biases ThesisArc will help you recognize and manage.</p>
+      <div class="callout success">
+        <strong>Why this matters:</strong> Understanding your archetype helps you make better decisions. The wizard takes 2-3 minutes and shapes your entire experience.
+      </div>
+
+      <h3>Your First Look at the Dashboard</h3>
+      <p>After profile setup, you'll land on your <strong>Dashboard</strong> — the command center showing portfolio health, holdings, and key metrics. On first use it will be empty. The next step is adding your first stock.</p>
+    </div>
+
+    <!-- 2. Investor Profile -->
+    <div class="section" id="investor-profile">
+      <h2>2. Investor Profile</h2>
+      <p>Your investor profile is ThesisArc's understanding of how you think and behave with money. It shapes alerts, recommendations, and feedback throughout the app.</p>
+
+      <h3>The Profile Wizard</h3>
+      <p>The wizard asks five key questions during onboarding:</p>
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Captures</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Investment Style</td><td>Preference: Growth vs. Value vs. Income vs. Balanced</td></tr>
+          <tr><td>Time Horizon</td><td>Investment timeline: Short-term (&lt;1yr) to Long-term (10+ yrs)</td></tr>
+          <tr><td>Risk Capacity</td><td>How much you can afford to lose: Conservative to Aggressive</td></tr>
+          <tr><td>Loss Aversion</td><td>Emotional response to losses: Low to High</td></tr>
+          <tr><td>Experience Level</td><td>Investment experience: Novice to Expert</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Your Behavioral Archetype</h3>
+      <p>Based on your answers, ThesisArc assigns you a named archetype — for example:</p>
+      <ul>
+        <li><em>Dynamic Growth Strategist</em> — aggressive growth focus, high risk tolerance, experienced</li>
+        <li><em>Patient Value Hunter</em> — long-term value orientation, moderate risk, disciplined</li>
+        <li><em>Cautious Income Builder</em> — conservative, loss-averse, prefers steady income</li>
+        <li><em>Balanced Pragmatist</em> — moderate across all dimensions, flexible approach</li>
+      </ul>
+      <p>Your archetype appears prominently at the top of your Investor Profile page and informs how ThesisArc communicates with you.</p>
+
+      <h3>Behavioral Summary</h3>
+      <p>Beneath your archetype name is a 2-3 sentence description of your investing personality — how you likely think, what motivates you, and where you might struggle.</p>
+
+      <h3>Attribute Chips</h3>
+      <p>Five color-coded chips display your profile attributes: <strong>Investment Style</strong>, <strong>Time Horizon</strong>, <strong>Risk Capacity</strong>, <strong>Loss Aversion</strong>, and <strong>Experience</strong>. Each shows your selected value (e.g., "5-10 years" for time horizon).</p>
+
+      <h3>Behavioral Scenarios</h3>
+      <p>Three realistic scenarios show how you'll likely behave under different conditions:</p>
+      <ol class="steps">
+        <li><strong>Scenario:</strong> A stock in your portfolio drops 20% on earnings</li>
+        <li><strong>Your Likely Action:</strong> Based on your profile, how you're likely to respond</li>
+        <li><strong>Watch Out For:</strong> The cognitive bias that might trip you up in this situation</li>
+      </ol>
+      <p>These help you pre-commit to rational behavior and recognize dangerous patterns before you act.</p>
+
+      <h3>Bias Fingerprint</h3>
+      <p>A radar chart showing your susceptibility to five common investing biases:</p>
+      <table>
+        <thead>
+          <tr><th>Bias</th><th>What It Means</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Anchoring</td><td>Over-weighting the first price you see or hear</td></tr>
+          <tr><td>Recency</td><td>Over-emphasizing recent events in your decision-making</td></tr>
+          <tr><td>Overconfidence</td><td>Believing you can predict markets better than you can</td></tr>
+          <tr><td>Loss Aversion</td><td>Feeling losses much more sharply than gains</td></tr>
+          <tr><td>Herd Mentality</td><td>Following the crowd even when your thesis suggests otherwise</td></tr>
+        </tbody>
+      </table>
+      <p>Your fingerprint doesn't judge — it just shows where you're naturally biased so you can compensate.</p>
+
+      <h3>Updating Your Profile</h3>
+      <p>Click <strong>Edit Profile</strong> to re-run the wizard at any time. Your new profile takes effect immediately.</p>
+    </div>
+
+    <!-- 3. Portfolios -->
+    <div class="section" id="portfolios">
+      <h2>3. Managing Portfolios</h2>
+      <p>ThesisArc supports unlimited portfolios so you can organize your investments by strategy, risk level, or any other dimension that matters to you.</p>
+
+      <h3>Portfolio Isolation</h3>
+      <p>Each portfolio is completely isolated. A stock in one portfolio doesn't appear in another. Same with thesis data, evaluations, and morning briefings. You can have:</p>
+      <ul>
+        <li>One portfolio for your retirement core</li>
+        <li>Another for speculative swing trades</li>
+        <li>A third for dividend income</li>
+        <li>Etc.</li>
+      </ul>
+      <p>Each gets its own thesis health score and briefing.</p>
+
+      <h3>Default Portfolio</h3>
+      <p>Every account comes with a <strong>Default</strong> portfolio. You can rename it or add stocks to it, but you cannot delete it. It always exists as a fallback.</p>
+
+      <h3>Creating a New Portfolio</h3>
+      <ol class="steps">
+        <li>Look at the top-left header where it shows your current portfolio name (e.g., "Default")</li>
+        <li>Click on the portfolio name to open the portfolio dropdown menu</li>
+        <li>At the bottom of the dropdown, click <strong>+ New Portfolio</strong></li>
+        <li>Type a descriptive name (e.g., "Tech Plays", "Dividend Income", "Long-term Core")</li>
+        <li>Click <strong>Add</strong></li>
+        <li>You'll automatically switch to the new portfolio; its dashboard will load immediately</li>
+      </ol>
+
+      <h3>Switching Portfolios</h3>
+      <p>Click the portfolio name in the header and select any portfolio from the dropdown. The entire dashboard, briefing, and stock list update instantly to reflect your selection.</p>
+
+      <h3>Renaming a Portfolio</h3>
+      <p>In the portfolio dropdown, hover over any portfolio name. A pencil icon appears. Click it to rename the portfolio inline. Press Enter to save.</p>
+
+      <h3>Deleting a Portfolio</h3>
+      <p>In the portfolio dropdown, hover over any non-default portfolio and a trash icon appears. Click the trash to permanently delete the portfolio, all its stocks, all theses, and all evaluations.</p>
+      <div class="callout danger">
+        <strong>Warning:</strong> Deletion is permanent and cannot be undone. The Default portfolio cannot be deleted.
+      </div>
+
+      <h3>Portfolio Permissions</h3>
+      <p>Currently, all portfolios are private to your account. Portfolio sharing is planned for future releases.</p>
+    </div>
+
+    <!-- 4. Adding Stocks -->
+    <div class="section" id="adding-stocks">
+      <h2>4. Adding Stocks</h2>
+
+      <h3>Add a Single Stock</h3>
+      <p>In the <strong>Portfolio Stocks</strong> section on the dashboard, type a stock ticker symbol (e.g., <code>AAPL</code>, <code>MSFT</code>, <code>NVDA</code>) in the input field. Then either:</p>
+      <ul>
+        <li>Press <strong>Enter</strong> to add immediately, or</li>
+        <li>Click the <strong>+ Add</strong> button</li>
+      </ul>
+      <p>ThesisArc will:</p>
+      <ol class="steps">
+        <li>Look up the company information (name, sector, industry, market cap, logo)</li>
+        <li>AI-generate an initial thesis with approximately 18 thesis points spread across 6 categories</li>
+        <li>Automatically run an evaluation and score your initial thesis (0-100)</li>
+        <li>Redirect you to the stock detail page</li>
+      </ol>
+
+      <h3>Add Multiple Stocks at Once</h3>
+      <p>Type comma-separated tickers: <code>AAPL, NVDA, MSFT, GOOG</code>. Each stock is added sequentially, and you'll be taken to the first stock's detail page.</p>
+
+      <h3>Invalid or Delisted Tickers</h3>
+      <p>If you enter a ticker that doesn't exist or has been delisted, ThesisArc shows an error message with suggestions for similar ticker symbols. Verify and re-enter.</p>
+
+      <h3>Removing a Stock</h3>
+      <p>In the stocks table on the dashboard, hover over a stock's row and a trash icon appears on the far right. Click to remove the stock from your portfolio. This also deletes all its thesis data and evaluations.</p>
+      <div class="callout warning">
+        <strong>Note:</strong> You can re-add a stock later, but all thesis history will be lost.
+      </div>
+    </div>
+
+    <!-- 5. Stock Detail Page -->
+    <div class="section" id="stock-detail">
+      <h2>5. Stock Detail Page</h2>
+      <p>Click any stock ticker from the dashboard to open its detail page. This is where you review company data, manage your thesis, and track evaluations over time.</p>
+
+      <h3>Stock Info Panel (Left Column)</h3>
+
+      <h4>Company Header</h4>
+      <p>Shows the company logo, ticker, full name, sector, and industry classification.</p>
+
+      <h4>Price & Performance</h4>
+      <ul>
+        <li><strong>Current price</strong> — real-time or last-close price depending on data freshness</li>
+        <li><strong>Period return</strong> — percentage change over selected period</li>
+        <li><strong>Color-coded</strong> — green for positive, red for negative</li>
+      </ul>
+
+      <h4>Period Selector</h4>
+      <p>Buttons to switch between time periods: <code>1W</code>, <code>1M</code>, <code>3M</code>, <code>6M</code>, <code>1Y</code>, <code>5Y</code>. Price chart and metrics update when you change periods.</p>
+
+      <h4>Price Chart</h4>
+      <p>An interactive candlestick or line chart showing the stock's price movement over your selected period. Hover to see specific dates and prices. The chart background is colored to match performance: green for positive, red for negative.</p>
+
+      <h4>Analyst Summary</h4>
+      <p>A badge showing consensus analyst recommendation:</p>
+      <ul>
+        <li><span class="status-green">Buy</span> — majority of analysts recommend purchase</li>
+        <li><strong>Hold</strong> — mixed sentiment, generally balanced</li>
+        <li><span class="status-red">Sell</span> — negative consensus</li>
+      </ul>
+      <p>Also shows the target upside percentage (distance from current price to average price target).</p>
+
+      <h3>Key Metrics Panel (Expandable)</h3>
+      <p>Click <strong>Key Metrics</strong> to expand a detailed table of company fundamentals grouped by category:</p>
+
+      <table>
+        <thead>
+          <tr><th>Group</th><th>Metrics</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Market Overview</strong></td><td>Market Cap, Beta, 52-Week Range, 52-Week Position (% of range), Institutional Ownership %, Short Interest %</td></tr>
+          <tr><td><strong>Analyst Consensus</strong></td><td>Rating, Analyst Count, Average Price Target, Target Upside %, Target Range (low-high)</td></tr>
+          <tr><td><strong>Valuation & Earnings</strong></td><td>P/E Ratio (TTM), P/E Forward, PEG Ratio, P/B Ratio, EPS TTM, EPS Forward, Profit Margin, Revenue Growth YoY</td></tr>
+          <tr><td><strong>Dividends</strong></td><td>Dividend Yield %, Ex-Dividend Date, Payout Ratio</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Customize Visible Metrics</h4>
+      <p>Click the settings/gear icon on the Key Metrics header. A checklist appears letting you toggle which metrics are shown. Your preferences are saved.</p>
+
+      <h3>Score History Chart</h3>
+      <p>An area chart showing your thesis score trend over time. Each data point represents an evaluation. The chart uses color zones:</p>
+      <ul>
+        <li><span class="status-green">Green zone (75-100):</span> Thesis Strong</li>
+        <li><span class="status-yellow">Yellow zone (50-75):</span> Under Pressure</li>
+        <li><span class="status-red">Red zone (0-50):</span> At Risk</li>
+      </ul>
+      <p>Hover to see the exact score and date of each evaluation.</p>
+
+      <h3>Stock News Section</h3>
+      <p>Recent headlines grouped by recency (Today, Yesterday, This Week, etc.) with:</p>
+      <ul>
+        <li><strong>News headline</strong> — click to open the full article</li>
+        <li><strong>Source</strong> — publication name and link</li>
+        <li><strong>Impact tag</strong> — shows if the headline is Bullish (green), Bearish (red), or Neutral (gray)</li>
+        <li><strong>Timestamp</strong> — when the article was published</li>
+      </ul>
+      <p>Click the section header to collapse/expand the news area.</p>
+    </div>
+
+    <!-- 6. Thesis Manager -->
+    <div class="section" id="thesis-manager">
+      <h2>6. Thesis Manager</h2>
+      <p>The thesis is the core of ThesisArc. It's a structured set of falsifiable statements explaining exactly why you own a stock.</p>
+
+      <h3>Six Thesis Categories</h3>
+      <p>Every thesis point belongs to one of these categories:</p>
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Examples</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Competitive Moat</strong></td><td>Brand strength, network effects, switching costs, patents, proprietary technology</td></tr>
+          <tr><td><strong>Growth Trajectory</strong></td><td>Revenue growth %, market expansion, new product launches, geographic rollout</td></tr>
+          <tr><td><strong>Valuation</strong></td><td>P/E vs. peers, price-to-sales, discount to intrinsic value, analyst targets</td></tr>
+          <tr><td><strong>Financial Health</strong></td><td>Cash flow, debt levels, profitability trends, balance sheet strength</td></tr>
+          <tr><td><strong>Ownership & Conviction</strong></td><td>Insider buying, institutional ownership, analyst consensus upgrades</td></tr>
+          <tr><td><strong>Risks & Bear Case</strong></td><td>Competition threats, regulatory risks, execution risks, macroeconomic sensitivity</td></tr>
+        </tbody>
+      </table>
+
+      <h3>AI-Generated Theses</h3>
+      <p>When you add a stock, ThesisArc automatically generates ~18 thesis points using AI analysis of news, earnings reports, and market data. Click <strong>Regenerate Thesis</strong> anytime to get fresh AI-generated points.</p>
+      <div class="callout success">
+        <strong>Smart regeneration:</strong> When you regenerate, your manually-added points are preserved. Only AI-generated unfrozen points are replaced. Frozen core convictions are always kept.
+      </div>
+
+      <h3>Thesis Point Structure</h3>
+      <p>Each point displays:</p>
+      <ul>
+        <li><strong>Checkbox</strong> — toggle whether this point is included in evaluation (minimum 3 required)</li>
+        <li><strong>Category tag</strong> — color-coded label (e.g., "Competitive Moat")</li>
+        <li><strong>Point text</strong> — the actual statement (should be falsifiable)</li>
+        <li><strong>Importance indicator</strong> — star (standard) or lightning bolt (high importance)</li>
+        <li><strong>Conviction indicators</strong> — thumbs up (like), thumbs down (dislike), lock icon (frozen)</li>
+        <li><strong>Actions</strong> — pencil (edit), X (delete)</li>
+      </ul>
+
+      <h3>Selecting Points for Evaluation</h3>
+      <p>Only <strong>selected</strong> (checked) thesis points are evaluated. You must select at least 3 points. Use the <strong>Select All / Deselect All</strong> buttons at the top to toggle all at once.</p>
+      <div class="callout">
+        <strong>Strategy:</strong> Deselect points you're uncertain about before evaluation. You're not deleting them — just saying "don't score this one yet."
+      </div>
+
+      <h3>Adding Manual Thesis Points</h3>
+      <p>Click the <strong>+</strong> button on any category header. A text input appears. Type your point (minimum 10 characters) and press Enter or click <strong>Add</strong>.</p>
+      <p>Manual points are never auto-deleted on thesis regeneration. They're your personal insights.</p>
+
+      <h3>Editing a Thesis Point</h3>
+      <p>Hover over any point and click the pencil icon. Edit the text inline and press Enter to save. If the point is frozen, you'll see a lock indicator.</p>
+
+      <h3>Deleting a Thesis Point</h3>
+      <p>Hover and click the X icon. If the point is frozen (a core conviction), you'll need to unfreeze it first. A confirmation dialog appears before deletion.</p>
+
+      <h3>Importance Levels</h3>
+      <p>Click the star icon on any point to toggle importance:</p>
+      <table>
+        <thead>
+          <tr><th>State</th><th>Visual</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Standard</td><td>No icon / dimmed star</td><td>Normal weight in scoring</td></tr>
+          <tr><td>Important</td><td>Filled star icon</td><td>Boosts weight by 1.5x in evaluation</td></tr>
+          <tr><td>Critical</td><td>Lightning bolt icon</td><td>Highest weight — treated as core</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Conviction Signals</h3>
+      <p>Show ThesisArc your real conviction by using the conviction buttons:</p>
+
+      <h4>Like (Thumbs Up)</h4>
+      <p>You believe this point is particularly strong. Click the thumbs-up icon. The point's signal is boosted by 1.2x in evaluation. Click again to toggle back to neutral.</p>
+
+      <h4>Dislike (Thumbs Down)</h4>
+      <p>You're skeptical about this point — you included it but you doubt it. Click the thumbs-down icon. The opposing signal (bear case) is boosted 1.2x. This flags your doubt without deleting the point. Click again to toggle back to neutral.</p>
+
+      <h4>Lock / Freeze (Lock Icon)</h4>
+      <p>Mark this as a core conviction — a reason you'd never sell, no matter what. Click the lock icon to freeze a point.</p>
+      <ul>
+        <li>Frozen points <strong>cannot be deselected</strong> before evaluation</li>
+        <li>Frozen points are <strong>preserved on thesis regeneration</strong></li>
+        <li>If a frozen point is broken during evaluation, it counts as <strong>2x penalty</strong> instead of normal</li>
+        <li>A broken frozen point triggers a red banner alert: "Core Conviction Under Pressure"</li>
+      </ul>
+      <div class="callout danger">
+        <strong>Use freezing strategically.</strong> Only freeze 2-3 truly core convictions. Over-freezing dilutes the signal.
+      </div>
+
+      <h3>Generating & Running an Evaluation</h3>
+      <p>Click the <strong>Evaluate (X selected)</strong> button at the bottom. ThesisArc:</p>
+      <ol class="steps">
+        <li>Analyzes each selected point against current market data, news, and fundamentals</li>
+        <li>Assigns each point a status: Confirmed, Flagged, or Neutral</li>
+        <li>Calculates a weighted score (0-100)</li>
+        <li>Displays results with explanations</li>
+      </ol>
+    </div>
+
+    <!-- 7. Dashboard -->
+    <div class="section" id="dashboard">
+      <h2>7. Portfolio Dashboard</h2>
+      <p>The dashboard is your command center — a real-time view of your portfolio's health, performance, and holdings.</p>
+
+      <h3>Portfolio Thesis Health Gauge</h3>
+      <p>The large semicircle gauge at the top displays your portfolio's weighted average thesis score (0-100). The needle position and color indicate your overall thesis health:</p>
+      <table>
+        <thead>
+          <tr><th>Zone</th><th>Score Range</th><th>Color</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="status-red">At Risk</span></td><td>0 - 40</td><td>Red</td><td>Multiple thesis points broken or failing; serious concerns</td></tr>
+          <tr><td><span class="status-yellow">Under Pressure</span></td><td>40 - 60</td><td>Yellow</td><td>Some thesis points weakening; needs attention</td></tr>
+          <tr><td>Holding</td><td>60 - 75</td><td>Lime</td><td>Thesis mostly intact with minor concerns</td></tr>
+          <tr><td><span class="status-green">Thesis Strong</span></td><td>75 - 100</td><td>Green</td><td>Thesis well-supported by market data; confidence high</td></tr>
+        </tbody>
+      </table>
+      <p>Hover over the gauge to see the exact score and a breakdown by top/bottom holdings.</p>
+
+      <h3>Portfolio Stocks Table</h3>
+      <p>A comprehensive list of all stocks in your active portfolio:</p>
+      <ul>
+        <li><strong>Logo & Ticker</strong> — company logo and symbol; click to open stock detail page</li>
+        <li><strong>Name</strong> — company full name</li>
+        <li><strong>Sector</strong> — industry sector classification</li>
+        <li><strong>Sparkline</strong> — 1-year price trend as a tiny chart; visual at-a-glance momentum</li>
+        <li><strong>Current Price</strong> — last price and period return %</li>
+        <li><strong>Score</strong> — your latest thesis evaluation score (X/100); click to see evaluation details</li>
+        <li><strong>Freshness indicator</strong> — how recently evaluated:
+          <ul>
+            <li><span class="status-green">Green:</span> Fresh (evaluated within 24 hours)</li>
+            <li><span class="status-yellow">Yellow:</span> Aging (2-7 days old)</li>
+            <li><span class="status-red">Red:</span> Stale (over 7 days old)</li>
+          </ul>
+        </li>
+        <li><strong>Trend arrow</strong> — up/down/flat indicating score direction since last evaluation</li>
+        <li><strong>Status badge</strong> — summary color (green/yellow/red)</li>
+        <li><strong>Actions</strong> — trash icon to remove stock</li>
+      </ul>
+      <p>Click column headers to sort (Ticker, Score, Freshness, Trend).</p>
+
+      <h3>Sector Breakdown</h3>
+      <p>A donut/pie chart showing portfolio allocation by sector. Hover over each segment to see sector name and holdings count. Click a sector to filter the stocks table to that sector.</p>
+
+      <h3>Portfolio Returns</h3>
+      <p>A performance comparison section showing how your portfolio performed vs. the S&P 500 benchmark. Features:</p>
+      <ul>
+        <li><strong>Period selector:</strong> 1M, 3M, 6M, 1Y buttons to change timeframe</li>
+        <li><strong>Return gauge:</strong> Visual arc showing your return % vs. benchmark %</li>
+        <li><strong>Dollar equivalent:</strong> Shows what $10,000 invested at the start of the period would be worth now</li>
+        <li><strong>Alpha:</strong> Your return minus the S&P 500 return (your "excess return" or "underperformance")</li>
+        <li><strong>Per-stock breakdown:</strong> Expand to see individual stock returns within the portfolio</li>
+      </ul>
+      <p>Click the section header to collapse/expand this area.</p>
+
+      <h3>Evaluate All Button</h3>
+      <p>Click <strong>Evaluate All</strong> to re-score every stock in your portfolio in one operation. Useful for a weekly refresh. Results show:</p>
+      <ul>
+        <li>Number of stocks evaluated successfully</li>
+        <li>Number skipped (not enough selected points)</li>
+        <li>Number that errored (data issues)</li>
+      </ul>
+    </div>
+
+    <!-- 8. Morning Briefing -->
+    <div class="section" id="briefing">
+      <h2>8. Morning Briefing</h2>
+      <p>An AI-generated daily digest of news, earnings, macro events, and market moves relevant to your specific portfolio holdings.</p>
+
+      <h3>What the Briefing Shows</h3>
+      <ul>
+        <li><strong>Market summary</strong> — 2-3 sentence overview of the day's macro narrative (Fed news, tech rallies, sector rotations, etc.)</li>
+        <li><strong>News items tagged by stock</strong> — each news story shows:
+          <ul>
+            <li>Ticker symbol(s) affected</li>
+            <li><strong>Headline</strong> — the core news</li>
+            <li><strong>Impact tag:</strong>
+              <ul>
+                <li><span class="status-green">Bullish</span> — supports your thesis, reason to hold or add</li>
+                <li><span class="status-red">Bearish</span> — threatens your thesis, reason to scrutinize</li>
+                <li>Neutral — informational, no clear directional impact</li>
+              </ul>
+            </li>
+            <li><strong>Source link</strong> — click to read the full article</li>
+            <li><strong>Add to Thesis button</strong> — some items offer a suggested thesis point; one-click to add it to that stock</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Refreshing the Briefing</h3>
+      <p>Click the refresh icon to generate a new briefing immediately. By default, one briefing is generated per day and cached. Refreshing forces a new generation from current data.</p>
+
+      <h3>Past Briefings</h3>
+      <p>Click <strong>Show past briefings</strong> to expand a history section. An accordion lists briefings from the past 7 days. Click any date to view that briefing's contents.</p>
+
+      <h3>Briefing Timing</h3>
+      <p>Briefings are generated once daily. The time depends on your timezone and account settings. You can manually refresh anytime.</p>
+    </div>
+
+    <!-- 9. Scoring System -->
+    <div class="section" id="scoring">
+      <h2>9. Scoring System</h2>
+      <p>ThesisArc's scoring system is transparent, repeatable, and rooted in fundamental logic. Understanding the score mechanics helps you write stronger theses.</p>
+
+      <h3>Base Score Calculation</h3>
+      <p>Each evaluation run produces a final score (0-100) through a multi-step process:</p>
+
+      <h4>Step 1: Point-Level Evaluation</h4>
+      <p>For each selected thesis point, AI assigns one of three verdicts:</p>
+      <table>
+        <thead>
+          <tr><th>Verdict</th><th>Signal</th><th>Points</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="status-green">Confirmed</span></td><td>Market data supports this point</td><td>+10 base</td></tr>
+          <tr><td><span class="status-red">Flagged</span></td><td>Market data contradicts this point</td><td>-10 base</td></tr>
+          <tr><td>Neutral</td><td>No strong signal either way</td><td>0 pts</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Step 2: Apply Importance Multiplier</h4>
+      <p>The importance level (standard, important, critical) scales the base points:</p>
+      <table>
+        <thead>
+          <tr><th>Importance</th><th>Multiplier</th><th>Effect</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Standard</td><td>1.0x</td><td>No change to base points</td></tr>
+          <tr><td>Important</td><td>1.5x</td><td>Boost by 50%</td></tr>
+          <tr><td>Critical</td><td>2.0x</td><td>Double the points</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Step 3: Apply Conviction Multiplier</h4>
+      <p>Your conviction signals (like/dislike) further scale the outcome:</p>
+      <table>
+        <thead>
+          <tr><th>Signal</th><th>Multiplier</th><th>Effect</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Neutral (no button)</td><td>1.0x</td><td>No change</td></tr>
+          <tr><td>Like (thumbs up)</td><td>1.2x</td><td>Boost bullish signal by 20%</td></tr>
+          <tr><td>Dislike (thumbs down)</td><td>1.2x</td><td>Boost bearish signal by 20%</td></tr>
+          <tr><td>Frozen (lock)</td><td>2.0x</td><td>Double all points (confirmed or flagged)</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Step 4: Sum and Normalize</h4>
+      <p>Total all weighted points (confirmed minus flagged) and map to 0-100 scale. The final score lands in one of four zones:</p>
+      <ul>
+        <li><strong>0-40 (Red):</strong> At Risk — thesis is breaking down</li>
+        <li><strong>40-60 (Yellow):</strong> Under Pressure — deteriorating confidence</li>
+        <li><strong>60-75 (Lime):</strong> Holding — thesis mostly intact</li>
+        <li><strong>75-100 (Green):</strong> Thesis Strong — thesis is well-supported</li>
+      </ul>
+
+      <h3>Example Walkthrough</h3>
+      <p>Say you have 5 selected thesis points:</p>
+      <ol>
+        <li><strong>Point A (Growth):</strong> Confirmed, Standard, Neutral → +10</li>
+        <li><strong>Point B (Valuation):</strong> Flagged, Important, Dislike → -10 × 1.5 × 1.2 = -18</li>
+        <li><strong>Point C (Moat):</strong> Confirmed, Critical, Like → +10 × 2.0 × 1.2 = +24</li>
+        <li><strong>Point D (Risk):</strong> Neutral, Standard, Neutral → 0</li>
+        <li><strong>Point E (Cash Flow):</strong> Confirmed, Important, Neutral → +10 × 1.5 = +15</li>
+      </ol>
+      <p>Total: +10 - 18 + 24 + 0 + 15 = <strong>+31 raw points</strong>. Normalized to 0-100 scale, this might yield a final score of <strong>62/100 (Under Pressure)</strong>.</p>
+
+      <h3>Frozen Point Alerts</h3>
+      <p>If any frozen point (core conviction) is flagged, a red banner appears: "Core Conviction Under Pressure: [Point name] is broken." This is the strongest sell signal ThesisArc produces.</p>
+
+      <h3>Score History</h3>
+      <p>Each evaluation is timestamped and stored. The Score History chart on the stock detail page shows the trend over time. You can see whether your thesis is strengthening, weakening, or stable across multiple evaluations.</p>
+    </div>
+
+    <!-- 10. Dark & Light Mode -->
+    <div class="section" id="dark-mode">
+      <h2>10. Dark & Light Mode</h2>
+
+      <h3>Toggling the Theme</h3>
+      <p>Click the moon/sun icon in the top-right corner of the header to toggle between dark mode (default) and light mode. Your preference is saved in your account settings.</p>
+
+      <h3>Dark Mode (Default)</h3>
+      <p>Optimized for extended use and reduced eye strain. Uses a dark blue background (#0f1219) with indigo accents (#6366f1).</p>
+
+      <h3>Light Mode</h3>
+      <p>A bright, high-contrast theme for daytime use and printing. Uses light backgrounds with the same indigo accent color.</p>
+
+      <h3>Accessibility</h3>
+      <p>Both modes meet WCAG AA contrast standards. Choose whichever feels more comfortable for your environment.</p>
+    </div>
+
+    <!-- 11. Tips & Best Practices -->
+    <div class="section" id="tips">
+      <h2>11. Tips & Best Practices</h2>
+
+      <h3>Build a Strong Thesis</h3>
+      <ul>
+        <li><strong>Be specific and falsifiable.</strong> Instead of "Company is growing," write "Revenue will grow &gt;20% YoY based on new product adoption." A thesis point should be something you could prove or disprove with data.</li>
+        <li><strong>Cover all six categories.</strong> A thesis with only growth points and no risk assessment is blind. Include Competitive Moat, Growth, Valuation, Financial Health, Ownership, and Risks.</li>
+        <li><strong>Use AI as a starting point, not the final word.</strong> The auto-generated thesis gets you to 18 points fast. Add manual points based on your research and conviction. Your insights should dominate.</li>
+        <li><strong>Be honest about your uncertainty.</strong> Use the "Dislike" signal on points you included but doubt. This flags your ambivalence without deleting the point.</li>
+      </ul>
+
+      <h3>Use Freezing Strategically</h3>
+      <ul>
+        <li><strong>Freeze only 2-3 true core convictions.</strong> These are reasons you'd never sell the stock, no matter what short-term volatility happens. If you freeze everything, the signal becomes noise.</li>
+        <li><strong>A frozen break is the ultimate sell signal.</strong> When a core conviction fails evaluation, pay attention. This is ThesisArc telling you your fundamental thesis is broken.</li>
+        <li><strong>Review frozen points quarterly.</strong> As your thesis evolves, some frozen points may no longer be core. Unfreeze them if your conviction changes.</li>
+      </ul>
+
+      <h3>Maintain Discipline</h3>
+      <ul>
+        <li><strong>Check the Morning Briefing daily.</strong> Takes 30 seconds. Keeps you informed of relevant news before market open.</li>
+        <li><strong>Re-evaluate at least weekly.</strong> Thesis scores drift as market conditions change. Weekly evaluations keep your scores current.</li>
+        <li><strong>Act on red flags.</strong> If a stock stays "At Risk" (red) across two consecutive evaluations, take it seriously. Either strengthen your thesis with new points, or question whether you should still own it.</li>
+        <li><strong>Separate conviction from comfort.</strong> A thesis can be strong even if the stock is down. Don't conflate price movement with thesis validity.</li>
+      </ul>
+
+      <h3>Organize with Portfolios</h3>
+      <ul>
+        <li><strong>Separate core holdings from speculation.</strong> Create a "Core Long-term" portfolio for your retirement stocks and a "Trading Ideas" portfolio for speculation. Each portfolio gets its own score and briefing.</li>
+        <li><strong>Use descriptive portfolio names.</strong> "Retirement Core", "Tech Growth", "Dividend Income", "Earnings Plays" — make it clear what each portfolio is for.</li>
+        <li><strong>Each portfolio is isolated.</strong> A stock can't be in two portfolios simultaneously. This keeps your thinking clean.</li>
+      </ul>
+
+      <h3>Write for Yourself, Not the AI</h3>
+      <ul>
+        <li>Thesis points are your notes. Make them clear to future-you, not optimized for the algorithm.</li>
+        <li>Use domain-specific language if that's how you think. "Cash burn rate below $X" is fine if you're a venture investor.</li>
+        <li>Avoid vague statements. "Strong fundamentals" teaches you nothing; "FCF conversion ratio &gt;30%" is actionable.</li>
+      </ul>
+
+      <h3>Use Your Profile to Recognize Bias</h3>
+      <ul>
+        <li><strong>Your Bias Fingerprint is a mirror.</strong> If you scored high on Anchoring, be especially careful not to fixate on an old price target.</li>
+        <li><strong>Pre-commit to the scenarios.</strong> Review your behavioral scenarios monthly. When you encounter one in real life (e.g., a 20% drop), you've already committed to how you'll respond rationally.</li>
+        <li><strong>Use your archetype as a reality check.</strong> If you're a "Cautious Income Builder" but you're building a portfolio of small-cap growth stocks, notice the mismatch. There's nothing wrong with it, but be intentional.</li>
+      </ul>
+
+      <h3>Common Mistakes to Avoid</h3>
+      <ul>
+        <li><strong>Over-personalizing.</strong> Don't add a thesis point just because you like the CEO. Build your thesis on repeatable, verifiable facts.</li>
+        <li><strong>Ignoring the bear case.</strong> If you can't articulate strong risks for a stock you own, your thesis is incomplete. Add risk points to the "Risks & Bear Case" category.</li>
+        <li><strong>Never re-evaluating.</strong> A thesis score from 6 months ago is stale. Re-evaluate regularly so your scores stay current.</li>
+        <li><strong>Freezing on emotion.</strong> Freeze core convictions when you're calm and analytical, not after a down day. Emotional freezing often leads to regret.</li>
+        <li><strong>Ignoring importance levels.</strong> Mark truly critical points with the Critical flag. If everything is important, nothing is.</li>
+      </ul>
+    </div>
+
+  </main>
+
+</body>
+</html>

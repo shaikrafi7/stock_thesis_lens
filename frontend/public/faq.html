@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThesisArc · FAQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #dbeafe 0%, #c4b5fd 50%, #d8b4fe 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            color: #1f2937;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-svg {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+        }
+
+        .logo-svg svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .header-title strong {
+            color: #6366f1;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .faq-section {
+            margin-bottom: 64px;
+        }
+
+        .faq-section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #6366f1;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .faq-items {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+            overflow: hidden;
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 20px 24px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            transition: background-color 0.2s ease;
+        }
+
+        .faq-question:hover {
+            background-color: rgba(99, 102, 241, 0.03);
+        }
+
+        .faq-question.open {
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .chevron {
+            width: 24px;
+            height: 24px;
+            color: #6366f1;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .faq-question.open .chevron {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(99, 102, 241, 0.02);
+        }
+
+        .faq-answer.open {
+            max-height: 1000px;
+        }
+
+        .faq-answer-content {
+            padding: 24px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        footer {
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+            background: rgba(255, 255, 255, 0.5);
+            padding: 48px 24px;
+            margin-top: 64px;
+        }
+
+        footer .container {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        footer a {
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: #4f46e5;
+        }
+
+        @media (max-width: 640px) {
+            header .container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .header-right {
+                text-align: left;
+            }
+
+            .container {
+                padding: 32px 16px;
+            }
+
+            .faq-section {
+                margin-bottom: 48px;
+            }
+
+            .faq-question {
+                padding: 16px 20px;
+                font-size: 15px;
+            }
+
+            .faq-answer-content {
+                padding: 16px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <div class="logo-svg">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 34 Q20 6 36 34" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <circle cx="20" cy="8" r="2.8" fill="#6366f1"/>
+                    </svg>
+                </div>
+                <h1 class="header-title">Thesis<strong>Arc</strong> · FAQ</h1>
+            </div>
+            <div class="header-right">
+                <p class="header-subtitle">Answers to common questions</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- THE PRODUCT -->
+        <section class="faq-section">
+            <h2 class="faq-section-title">The Product</h2>
+            <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What exactly is a "thesis" and why does it matter?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            A thesis is the set of reasons why you own a stock. Instead of "I like Apple," a thesis is "I own Apple because (1) services revenue is growing 15% annually, (2) installed base is 2B+ and sticky, (3) gross margins are expanding despite manufacturing headwinds." A clear thesis lets you know what specific events or data would make you sell—when your assumptions break, you exit. Without a thesis, you're making emotional guesses. With one, you're making systematic decisions.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How is ThesisArc different from a spreadsheet or Notion?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            A spreadsheet is static. Notion is flexible but unstructured. ThesisArc is built specifically for thesis investing: it scores your theses against internal consistency, ties market events to your specific assumptions, tracks how your thesis evolves over time, and benchmarks your holdings against your stated reasoning. You get structure + AI assist + portfolio-linked evaluation in one tool. No more jumping between doc, portfolio, and news tabs.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Why does AI generate my thesis? Isn't that cheating?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            AI generates a draft thesis to accelerate framework-building, not to replace your thinking. You then edit, delete, lock, and customize every point until it matches your actual reasoning. Most users delete or heavily rewrite 30–40% of AI-generated points. The AI is a starting scaffold; you build the actual thesis. It's like having a research assistant who writes a first draft—you still have to think hard about the final version.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What does the 0-100 score actually mean?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            The score measures thesis coherence: how well your thesis points support each other, how clearly you've articulated assumptions, how thoroughly you've addressed counterarguments. A 92-score thesis is internally consistent and well-reasoned. It's not a prediction of stock price. It doesn't tell you whether the stock will go up. It tells you whether your reasoning is solid and whether you've thought through the risks. We're working on backtesting to show how past theses would have performed, but that's separate from the coherence score.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How often should I run an evaluation?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Review your theses quarterly or when major events hit. Quarterly aligns with earnings season and macro shifts. More frequent reviews can lead to overtrading; less frequent means you miss major assumption breaks. If you read news that directly challenges one of your thesis points—earnings miss, regulatory change, competitive threat—that's time to evaluate. The goal is systematic discipline, not daily anxiety.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I use ThesisArc for short-term trading?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Technically yes, but it's not optimized for it. ThesisArc is designed for investors holding 6+ months, reviewing quarterly. If you're trading weekly or daily, your thesis framework changes too fast—thesis investing assumes your reasons are stable across time. You can use ThesisArc for position sizing and conviction (how much of your portfolio to allocate), but for entry/exit timing, you'll need other tools.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURES -->
+        <section class="faq-section">
+            <h2 class="faq-section-title">Features</h2>
+            <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What's the difference between Liked, Disliked, and Locked thesis points?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            <strong>Liked:</strong> You're confident in this point; it's holding up well against new information. <strong>Disliked:</strong> You have doubts—maybe evidence is weaker than expected or assumptions aren't panning out—but you're not ready to delete it. It flags technical debt. <strong>Locked:</strong> You believe this point, but you know it's controversial or hard to defend—so you're locking it to prevent accidental edits and to remind yourself that it's a conviction call, not consensus.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Why would I dislike a point instead of just deleting it?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Because you might be wrong about your doubt. If you dislike "revenue growth is 15%+" but hold the stock anyway, you're explicitly flagging that you're taking on uncertainty. You're marking it for future re-evaluation. Deleting assumes you've decided the point is false; disliking says "I'm uncertain, but I'm holding for now." It's epistemic honesty. In the next quarter, if new data confirms the point, you'll be glad you didn't delete it.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How does the Morning Briefing work? Is it just a news feed?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            It starts as a curated news feed filtered to your holdings. But it goes deeper: we're linking each news item to the specific thesis points it impacts. Example: if Apple reports earnings, our briefing shows "Earnings: $2.18 EPS beats expectations" and flags which of your Apple thesis points this validates or contradicts. You're not just reading news; you're evaluating your thesis in real time. That's the linkage that turns briefing into decision support.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What is my investor archetype and how is it calculated?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Your archetype is calculated from your portfolio composition, thesis points, and conviction patterns. You might be "Concentrated Value," "Diversified Growth," "Thesis Skeptic," or "Macro Thematic." It's a mirror to show you whether your holdings match your stated philosophy. If you say you're diversified but hold 70% in tech, that mismatch is visible. It doesn't change your decisions, but it surfaces blind spots for self-reflection.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I have multiple portfolios?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Yes. You can have a personal portfolio, a family account, a side experiment portfolio, or separate accounts for different strategies. Each portfolio has its own theses, evaluations, and briefing. Switch between them with one click. This is useful if you have distinct investment philosophies—for example, a long-term buy-and-hold personal account and a shorter-term swing-trading account.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRUST & ACCURACY -->
+        <section class="faq-section">
+            <h2 class="faq-section-title">Trust & Accuracy</h2>
+            <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How accurate is the AI evaluation?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            The evaluation is accurate at measuring thesis coherence—does the thesis hold together logically? But accuracy at predicting stock price is a different question we're still answering with backtesting. We're honest about the limitations: the AI can miss context, may score weak reasoning as confident if it's well-articulated, and reflects biases in training data. Always use the score as a starting point for your own critical review, not as gospel truth.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I trust the score to make buy/sell decisions?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Don't use the score as a trading signal. Use it as a diagnostic: "Are my reasons clear and well-tested?" If your score drops significantly after evaluation, that's a signal to re-examine your thesis and market changes—it's not a sell signal. Buy/sell decisions should come from your actual thesis breaking (your assumptions changing), not from the score alone. The score is one input, not the decision.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What happens when the AI gets it wrong?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            You catch it. That's why the guardrails are important—review AI-generated theses before accepting them. If the AI generates weak points or misses key risks, you can edit or delete them before they become part of your thesis. If the AI scores your thesis higher than you think is right, you're the final arbiter. The tool assists; you decide. This puts the error-catching burden on you, but it also means the final thesis is yours, not the AI's.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Does ThesisArc have real-time market data?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Yes, we pull real-time prices, earnings dates, and financial data for your holdings. The briefing updates daily with latest news and market moves for your stocks. Portfolio values update intraday. But we're not a trading platform—we don't execute trades or provide Level 2 order books. We focus on thesis monitoring, not real-time execution.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PRACTICAL -->
+        <section class="faq-section">
+            <h2 class="faq-section-title">Practical</h2>
+            <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What makes a good thesis point?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            A good thesis point is: (1) Specific—not "Apple is innovative" but "Apple services revenue growing 15%+ annually for 3 years"; (2) Falsifiable—you could learn data that proves it wrong; (3) Material—it would change your buy/hold/sell decision if it breaks; (4) Supportable—you can cite evidence. Avoid vague statements, unprovable hunches, and points that are nice-to-haves rather than core reasons for owning the stock.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How many thesis points should I have per stock?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            3–7 points is typical. Fewer than 3 suggests you haven't thought through why you own it; more than 10 suggests you're over-building the case and diluting focus. Focus on the points that would actually change your mind. If point #8 doesn't matter for your sell decision, cut it. Quality over quantity. The goal is a thesis you can defend and track, not a comprehensive investment report.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How is this different from Bloomberg or Koyfin?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Bloomberg and Koyfin are data terminals—they give you access to financial statements, research reports, and screening tools. ThesisArc is a thesis-structuring tool. It helps you *think* about what data matters and *organize* your reasoning. Bloomberg tells you the data; ThesisArc helps you make sense of it for *your* portfolio. They're complementary—use Bloomberg for research, ThesisArc to codify your thesis.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Is my data private?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Yes. Your theses and portfolios are private by default. We encrypt your data in transit and at rest. We don't sell your data, use it for marketing, or share it with third parties except as required by law. Your portfolio data is yours. If you choose to share a thesis or invite users to a shared portfolio, that's your choice. See our Privacy Policy for full details.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What's coming next?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            We're prioritizing: backtesting (test your thesis against historical data), tighter briefing-to-thesis linkage (news tagged to specific thesis points), watchlist mode (track stocks without owning them), mobile PWA (responsive design for on-the-go access), and community features (optionally share theses). Long-term, we're exploring real-time behavioral alerts and portfolio export. Check our roadmap or ask your account manager for quarterly updates.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <a href="./user-guide.html">User Guide</a>
+            <a href="./why-thesisarc.html">Why ThesisArc</a>
+            <a href="./debate.md">The Debate</a>
+        </div>
+    </footer>
+
+    <script>
+        function toggleFaq(button) {
+            const item = button.parentElement;
+            const answer = item.querySelector('.faq-answer');
+            const isOpen = button.classList.contains('open');
+
+            // Close all other items
+            document.querySelectorAll('.faq-question.open').forEach(openBtn => {
+                if (openBtn !== button) {
+                    openBtn.classList.remove('open');
+                    openBtn.parentElement.querySelector('.faq-answer').classList.remove('open');
+                }
+            });
+
+            // Toggle current item
+            button.classList.toggle('open');
+            answer.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

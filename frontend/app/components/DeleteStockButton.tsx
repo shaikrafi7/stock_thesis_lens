@@ -33,7 +33,7 @@ export default function DeleteStockButton({ ticker, redirectTo }: Props) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-zinc-600 hover:text-red-400 transition-colors disabled:opacity-50 p-1 rounded hover:bg-red-950/30"
+      className="text-gray-400 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
       title="Remove from portfolio"
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}

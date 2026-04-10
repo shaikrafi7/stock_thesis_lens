@@ -32,7 +32,7 @@ export default function EvaluateAllButton({ portfolioId }: { portfolioId?: numbe
       <button
         onClick={handleClick}
         disabled={loading}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-900 disabled:text-zinc-500 text-black rounded-lg transition-colors font-medium"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-gray-100 dark:disabled:bg-zinc-900 disabled:text-gray-400 dark:disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium"
       >
         {loading ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -42,7 +42,7 @@ export default function EvaluateAllButton({ portfolioId }: { portfolioId?: numbe
         {loading ? "Evaluating\u2026" : "Evaluate All"}
       </button>
       {result && (
-        <span className="text-zinc-500 text-[10px]">
+        <span className="text-gray-400 dark:text-zinc-500 text-[10px]">
           {result.evaluated.length} evaluated, {result.skipped.length} skipped
         </span>
       )}

@@ -40,12 +40,12 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
         value={ticker}
         onChange={(e) => setTicker(e.target.value)}
         placeholder="AAPL, NVDA..."
-        className="w-40 px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-accent"
+        className="w-40 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-accent"
       />
       <button
         type="submit"
         disabled={adding || !ticker.trim()}
-        className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-zinc-900 disabled:text-zinc-500 text-black rounded-lg transition-colors font-medium"
+        className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-accent hover:bg-accent-hover disabled:bg-gray-100 dark:disabled:bg-zinc-900 disabled:text-gray-400 dark:disabled:text-zinc-500 text-white rounded-lg transition-colors font-medium"
       >
         {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
         Add

@@ -22,6 +22,7 @@ export interface Thesis {
   weight: number;
   importance: "standard" | "important" | "critical";
   frozen: boolean;
+  conviction: "liked" | "disliked" | null;
   source: "ai" | "manual";
   created_at: string;
   last_confirmed: string | null;
@@ -237,6 +238,20 @@ export const updateThesisFrozen = (
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ frozen }),
+  });
+
+export const updateThesisConviction = (
+  ticker: string,
+  thesisId: number,
+  conviction: "liked" | "disliked" | null,
+  portfolioId?: number | null
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}${joinParams(pq(portfolioId))}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: conviction === null
+      ? JSON.stringify({ clear_conviction: true })
+      : JSON.stringify({ conviction }),
   });
 
 export const deleteThesis = (ticker: string, thesisId: number, portfolioId?: number | null): Promise<void> =>

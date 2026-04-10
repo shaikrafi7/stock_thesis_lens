@@ -1,18 +1,19 @@
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 
-@theme inline {
-  /* ThesisArc palette — warm dark, amber accent */
-  --color-background: #0c0c0e;
-  --color-foreground: #fafafa;
-  --color-accent: #f59e0b;
-  --color-accent-hover: #d97706;
-  --color-accent-muted: #fbbf24;
-  --color-indigo: #6366f1;
-  --color-surface: #18181b;
-  --color-surface-raised: #27272a;
+/* Enable class-based dark mode for Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
 
-  /* True neutral zinc */
+@theme inline {
+  /* Light palette (default) */
+  --color-background: #f9fafb;
+  --color-foreground: #111111;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+  --color-accent-muted: #818cf8;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f3f4f6;
+
   --color-zinc-50: #fafafa;
   --color-zinc-100: #f4f4f5;
   --color-zinc-200: #e4e4e7;
@@ -30,34 +31,41 @@
   --font-serif: "Instrument Serif", Georgia, serif;
 }
 
+/* ── Light mode base ── */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Instrument Serif utility */
+/* ── Dark mode overrides ── */
+.dark body {
+  background: #0f1117;
+  color: #e4e4e7;
+}
+
+.dark {
+  --color-background: #0f1117;
+  --color-foreground: #e4e4e7;
+  --color-surface: #1a1d27;
+  --color-surface-raised: #222535;
+}
+
+/* Serif utility */
 .font-serif {
   font-family: var(--font-serif);
 }
 
-/* Tabular numbers for data values */
+/* Tabular numbers */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
 /* Page entry animation */
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fade-up {
   animation: fadeUp 0.2s ease-out forwards;
 }
@@ -74,29 +82,58 @@ body {
 .stagger-children > *:nth-child(5) { animation-delay: 160ms; }
 .stagger-children > *:nth-child(6) { animation-delay: 200ms; }
 
-/* Smooth scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #f59e0b40; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
-/* Accent-colored form controls */
+/* Form controls */
 input[type="checkbox"] { accent-color: var(--color-accent); }
 
-/* Focus ring — amber */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: none;
-}
-
-/* Card highlight border utility */
+/* Card border — light */
 .card-border {
-  border: 1px solid rgba(255,255,255,0.06);
-  border-top-color: rgba(255,255,255,0.10);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+.dark .card-border {
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: none;
 }
 
-/* Button press feel */
+/* Dot grid */
+.dot-grid {
+  background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.dark .dot-grid {
+  background-image: radial-gradient(circle, #2a2d3a 1px, transparent 1px);
+}
+
+/* Button press */
 button:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+/* Fly.io-style gradient background for the app body area */
+.app-body-bg {
+  background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 50%, #fdf4ff 100%);
+}
+.dark .app-body-bg {
+  background: linear-gradient(135deg, #0f1117 0%, #12101f 50%, #130f1a 100%);
+}
+
+/* Card hover with purple border */
+.card-hover {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.card-hover:hover {
+  border-color: #a78bfa !important;
+  box-shadow: 0 0 0 1px #a78bfa, 0 4px 16px rgba(139, 92, 246, 0.12);
+}
+.dark .card-hover:hover {
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 1px #7c3aed, 0 4px 16px rgba(109, 40, 217, 0.2);
 }

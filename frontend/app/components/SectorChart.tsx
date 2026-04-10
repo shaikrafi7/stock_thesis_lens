@@ -43,8 +43,8 @@ export default function SectorChart({ compact = false, portfolioId }: { compact?
   if (loading) {
     return (
       <div className="p-3 animate-pulse">
-        <div className="h-3 bg-zinc-800 rounded w-24 mb-3" />
-        <div className={`bg-zinc-800 rounded ${compact ? "h-24" : "h-32"}`} />
+        <div className="h-3 bg-gray-100 dark:bg-zinc-800 rounded w-24 mb-3" />
+        <div className={`bg-gray-100 dark:bg-zinc-800 rounded ${compact ? "h-24" : "h-32"}`} />
       </div>
     );
   }
@@ -55,21 +55,21 @@ export default function SectorChart({ compact = false, portfolioId }: { compact?
   const outerR = compact ? 45 : 65;
 
   return (
-    <div className={compact ? "" : "rounded-2xl overflow-hidden bg-surface card-border"}>
+    <div className="rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 card-hover">
       <div
         onClick={() => setCollapsed((c) => !c)}
-        className={`flex items-center justify-between ${compact ? "px-3 py-2" : "px-4 py-3"} bg-surface hover:bg-surface-raised/50 transition-colors cursor-pointer select-none`}
+        className={`flex items-center justify-between ${compact ? "px-3 py-2" : "px-4 py-3"} bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer select-none`}
       >
         <div className="flex items-center gap-2">
-          <PieIcon className="w-3.5 h-3.5 text-zinc-500" />
-          <span className={`uppercase tracking-widest text-zinc-500 font-semibold ${compact ? "text-[10px]" : "text-xs"}`}>
+          <PieIcon className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
+          <span className={`uppercase tracking-widest text-gray-500 dark:text-zinc-500 font-semibold ${compact ? "text-[10px]" : "text-xs"}`}>
             Sectors
           </span>
         </div>
         {collapsed ? (
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+          <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
         ) : (
-          <ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
+          <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />
         )}
       </div>
 
@@ -116,9 +116,9 @@ export default function SectorChart({ compact = false, portfolioId }: { compact?
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: COLORS[i % COLORS.length] }}
                 />
-                <span className={`text-zinc-400 ${compact ? "text-[9px]" : "text-[10px]"}`}>
+                <span className={`text-gray-500 dark:text-zinc-400 ${compact ? "text-[9px]" : "text-[10px]"}`}>
                   {entry.name}
-                  <span className="text-zinc-600 ml-0.5">
+                  <span className="text-gray-400 dark:text-zinc-600 ml-0.5">
                     ({entry.tickers.join(", ")})
                   </span>
                 </span>

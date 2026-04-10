@@ -39,11 +39,12 @@ def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict |
             for t in selected_theses
         ]
 
-        # Build metadata lookup for importance multiplier + frozen break detection
+        # Build metadata lookup for importance multiplier + frozen break detection + conviction
         thesis_meta = {
             t.id: {
                 "importance": getattr(t, "importance", "standard") or "standard",
                 "frozen": bool(getattr(t, "frozen", False)),
+                "conviction": getattr(t, "conviction", None),
             }
             for t in selected_theses
         }

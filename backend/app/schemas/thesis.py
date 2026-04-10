@@ -18,6 +18,7 @@ class ThesisRead(BaseModel):
     weight: float
     importance: str = "standard"  # standard | important | critical
     frozen: bool = False
+    conviction: Optional[str] = None  # liked | disliked | null
     source: str = "ai"  # ai | manual
     created_at: datetime
     last_confirmed: Optional[datetime] = None
@@ -30,6 +31,8 @@ class ThesisUpdate(BaseModel):
     statement: Optional[str] = None
     frozen: Optional[bool] = None
     importance: Optional[Literal["standard", "important", "critical"]] = None
+    conviction: Optional[Literal["liked", "disliked"]] = None
+    clear_conviction: bool = False  # set True to clear conviction back to null
 
     @field_validator("statement")
     @classmethod

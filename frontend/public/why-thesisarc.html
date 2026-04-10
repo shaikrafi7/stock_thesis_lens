@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThesisArc — AI-Powered Investment Thesis Tracking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            color: #1f2937;
+        }
+
+        body {
+            background: linear-gradient(135deg, #dbeafe 0%, #c4b5fd 50%, #d8b4fe 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            display: inline-block;
+            font-family: 'Merriweather', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 1rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: white;
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-family: 'Merriweather', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.4);
+        }
+
+        /* Problem Section */
+        .problem-section {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .problem-item {
+            padding: 1.5rem;
+            background: #f9fafb;
+            border-left: 4px solid #4f46e5;
+            border-radius: 8px;
+        }
+
+        .problem-item h3 {
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .problem-item p {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* Features Section */
+        .features-section {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            padding: 2rem;
+            background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            border-radius: 12px;
+            border: 1px solid #e9d5ff;
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .feature-card p {
+            color: #6b7280;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Behavioral Profile Section */
+        .profile-section {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .profile-content h2 {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .profile-content p {
+            color: #6b7280;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .archetype-example {
+            background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #8b5cf6;
+            margin-top: 1.5rem;
+        }
+
+        .archetype-example p {
+            margin: 0;
+            font-style: italic;
+            color: #4f46e5;
+        }
+
+        .profile-visual {
+            background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            border: 2px dashed #c4b5fd;
+        }
+
+        .profile-visual p {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+        }
+
+        .bias-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .badge {
+            background: white;
+            color: #4f46e5;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: 2px solid #4f46e5;
+        }
+
+        /* Briefing Section */
+        .briefing-section {
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            color: white;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .briefing-section h2 {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .briefing-section p {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            max-width: 700px;
+        }
+
+        .briefing-highlight {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid white;
+            margin-top: 1.5rem;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .cta-section h2 {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            color: #6b7280;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Pricing Info */
+        .pricing-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-card {
+            background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px solid #e9d5ff;
+        }
+
+        .pricing-card p {
+            color: #4f46e5;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-card span {
+            display: block;
+            color: #1f2937;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 2rem;
+            padding: 2rem;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .profile-section {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 2rem 1rem;
+            }
+
+            .problem-section,
+            .features-section,
+            .briefing-section,
+            .cta-section {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ThesisArc</div>
+        </header>
+
+        <section class="hero">
+            <h1>Your Thesis. Stress-Tested Daily.</h1>
+            <p>Stop buying stocks on a hunch. ThesisArc is the investment journal meets AI analyst for self-directed investors who think rigorously about why they own what they own.</p>
+            <button class="cta-primary">Start Free</button>
+        </section>
+
+        <section class="problem-section">
+            <h2 class="section-title">The Investor's Dilemma</h2>
+            <div class="problem-grid">
+                <div class="problem-item">
+                    <h3>You Buy on a Hunch</h3>
+                    <p>A tip from a friend, a hot take on Twitter, a stock your advisor mentioned—but you never write down *why* you actually bought it.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>No Accountability</h3>
+                    <p>Without a thesis, you panic-sell on bad news or hold too long hoping it bounces back. You're flying blind.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>Information Overload</h3>
+                    <p>Bloomberg terminal? $20k/year. Generic news feeds? Noise. You need signal scoped to what you actually own.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>Blind to Your Biases</h3>
+                    <p>Anchoring bias, recency bias, overconfidence—they're already costing you money before you even know they exist.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>No Feedback Loop</h3>
+                    <p>How well is your thesis holding up? Are the news and fundamentals still supporting your original case? You don't track it.</p>
+                </div>
+                <div class="problem-item">
+                    <h3>Invisible Risk</h3>
+                    <p>You don't see the health of your entire portfolio at a glance. One thesis failure cascades without warning.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="features-section">
+            <h2 class="section-title">How ThesisArc Works</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>AI Thesis Generation</h3>
+                    <p>Add a stock. Our AI instantly pulls news, fundamentals, and analyst data to generate a comprehensive investment thesis with bull and bear signals.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚖️</div>
+                    <h3>Signal-Weighted Scoring</h3>
+                    <p>Like, dislike, or lock each thesis point as a core conviction. Your signals shape the weight—stronger convictions drive the overall health score.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✓</div>
+                    <h3>Daily Thesis Evaluation</h3>
+                    <p>Every morning, your thesis is stress-tested against fresh news and fundamentals. See a 0-100 score showing if the case still holds up.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📰</div>
+                    <h3>Morning Briefing</h3>
+                    <p>Skip the firehose of generic headlines. Get a curated digest of what matters for *your* portfolio, delivered every morning.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">❤️</div>
+                    <h3>Portfolio Health Gauge</h3>
+                    <p>One number shows whether your overall thesis is holding up across all holdings. See at a glance if you need to reassess.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Score History & Trends</h3>
+                    <p>Track how thesis health has evolved over weeks and months. See patterns in when and why your conviction gets tested.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Key Metrics at a Glance</h3>
+                    <p>P/E, beta, 52-week range, analyst targets, institutional ownership, short interest, dividends—everything in one place.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Portfolio Analytics</h3>
+                    <p>Compare performance across 1M, 3M, 6M, 1Y. See sector breakdown and individual stock news feeds tied to your holdings.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Multi-Portfolio Support</h3>
+                    <p>Create and switch between portfolios. Maintain separate theses for growth, value, income—whatever your investment style.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="profile-section">
+            <div class="profile-content">
+                <h2>Know Your Investor Profile</h2>
+                <p>Self-awareness is the first step to better investing. Answer a short behavioral quiz and get your investor archetype—complete with your personal bias fingerprint and tailored guidance.</p>
+                <p>Understand your anchor points, recency bias tendencies, overconfidence levels, and risk tolerance. Then watch ThesisArc account for these patterns as it evaluates your thesis.</p>
+                <div class="archetype-example">
+                    <p>Example: "Dynamic Growth Strategist with high recency bias and moderate overconfidence. Watch for tendency to chase hot sectors."</p>
+                </div>
+            </div>
+            <div class="profile-visual">
+                <p>Your Behavioral Fingerprint</p>
+                <div class="bias-badges">
+                    <span class="badge">Anchoring</span>
+                    <span class="badge">Recency</span>
+                    <span class="badge">Overconfidence</span>
+                    <span class="badge">Availability</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="briefing-section">
+            <h2>Start Your Day with Signal, Not Noise</h2>
+            <p>Every morning, you wake up to a briefing scoped entirely to your portfolio. Not generic market noise—only what matters for your thesis.</p>
+            <p>See which holdings have relevant news, which metrics have shifted, and which thesis signals are still holding strong. Then decide if your conviction remains intact.</p>
+            <div class="briefing-highlight">
+                <p><strong>Your morning briefing includes:</strong> Portfolio health summary, relevant news per holding, fundamental changes, key metric updates, thesis signal status, and a one-line recommendation to review any stock.</p>
+            </div>
+        </section>
+
+        <section class="features-section">
+            <h2 class="section-title">Why Investors Love ThesisArc</h2>
+            <div class="stats-section">
+                <div class="stat">
+                    <div class="stat-number">0-100</div>
+                    <div class="stat-label">Daily Thesis Score</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Signal Weights (Like, Dislike, Lock)</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Portfolios You Can Manage</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Glance to See Your Health</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section">
+            <h2>Ready to Invest with Conviction?</h2>
+            <p>Join self-directed investors who are tired of guessing. Build your thesis. Let AI hold you accountable. Watch your conviction compound.</p>
+
+            <div class="pricing-info">
+                <div class="pricing-card">
+                    <p>Free Tier</p>
+                    <span>Always Free</span>
+                </div>
+                <div class="pricing-card">
+                    <p>Pro Tier</p>
+                    <span>Coming Soon</span>
+                </div>
+                <div class="pricing-card">
+                    <p>Never</p>
+                    <span>$20k/year like Bloomberg</span>
+                </div>
+            </div>
+
+            <button class="cta-primary">Start Free</button>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 ThesisArc. Built by investors, for investors. Dark mode available.</p>
+        </footer>
+    </div>
+</body>
+</html>

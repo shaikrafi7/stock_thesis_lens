@@ -67,9 +67,9 @@ function saveHiddenStats(hidden: Set<string>) {
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-1.5 border-b border-zinc-800/50 last:border-0">
-      <span className="text-zinc-500 text-xs">{label}</span>
-      <span className="text-zinc-200 text-xs font-medium">{value}</span>
+    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800/50 last:border-0">
+      <span className="text-gray-500 dark:text-zinc-500 text-xs">{label}</span>
+      <span className="text-gray-800 dark:text-zinc-200 text-xs font-medium">{value}</span>
     </div>
   );
 }
@@ -118,17 +118,17 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
   if (loading) {
     return (
       <div className="flex flex-col gap-3 animate-pulse">
-        <div className="h-40 bg-zinc-800 rounded-xl" />
-        <div className="h-5 bg-zinc-800 rounded w-2/3" />
-        <div className="h-4 bg-zinc-800 rounded w-1/2" />
-        <div className="h-4 bg-zinc-800 rounded w-3/4" />
-        <div className="h-4 bg-zinc-800 rounded w-1/2" />
+        <div className="h-40 bg-gray-100 dark:bg-zinc-800 rounded-xl" />
+        <div className="h-5 bg-gray-100 dark:bg-zinc-800 rounded w-2/3" />
+        <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-1/2" />
+        <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-3/4" />
+        <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-1/2" />
       </div>
     );
   }
 
   if (error || !data) {
-    return <p className="text-red-400 text-sm">{error || "No data"}</p>;
+    return <p className="text-red-500 dark:text-red-400 text-sm">{error || "No data"}</p>;
   }
 
   const { company, prices } = data;
@@ -197,28 +197,25 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
       {/* Company name + 3-month delta */}
       <div>
         {company.name && (
-          <p className="text-white font-semibold text-sm leading-tight">{company.name}</p>
+          <p className="text-gray-900 dark:text-white font-semibold text-sm leading-tight">{company.name}</p>
         )}
         {company.sector && (
-          <p className="text-zinc-500 text-xs mt-0.5">{company.sector} · {company.industry}</p>
+          <p className="text-gray-400 dark:text-zinc-500 text-xs mt-0.5">{company.sector} · {company.industry}</p>
         )}
-        <div className={`flex items-center gap-1.5 mt-1 ${positive ? "text-green-400" : "text-red-400"}`}>
+        <div className={`flex items-center gap-1.5 mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
           {positive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          <span className="text-sm font-mono font-bold">
-            ${lastClose.toFixed(2)}
-          </span>
+          <span className="text-sm font-mono font-bold">${lastClose.toFixed(2)}</span>
           <span className="text-xs font-normal">
             {positive ? "+" : ""}{delta.toFixed(2)}% ({PERIOD_LABELS[period]})
           </span>
         </div>
-        {/* Analyst recommendation badge */}
         {company.recommendation && (
           <div className="flex items-center gap-2 mt-1.5">
             <span className={`text-xs font-semibold ${recColor(company.recommendation)}`}>
               {fmtRec(company.recommendation)}
             </span>
             {analystUpside != null && (
-              <span className={`text-xs font-mono ${analystUpside >= 0 ? "text-green-400" : "text-red-400"}`}>
+              <span className={`text-xs font-mono ${analystUpside >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
                 ({analystUpside > 0 ? "+" : ""}{analystUpside.toFixed(1)}% upside)
               </span>
             )}
@@ -235,14 +232,14 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
             className={`text-[10px] px-2 py-0.5 rounded-md transition-colors ${
               period === p
                 ? "bg-accent/20 text-accent border border-accent/40"
-                : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                : "text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 border border-transparent"
             }`}
           >
             {PERIOD_LABELS[p]}
           </button>
         ))}
       </div>
-      <div className="h-40 bg-surface rounded-xl p-2 border border-zinc-800">
+      <div className="h-40 bg-white dark:bg-zinc-900 rounded-xl p-2 border border-gray-200 dark:border-zinc-800">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={prices} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
             <defs>
@@ -274,9 +271,9 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
               tickFormatter={(v: number) => `$${v.toFixed(0)}`}
             />
             <Tooltip
-              contentStyle={{ background: "#1e222d", border: "1px solid #363a45", borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: "#a1a1aa" }}
-              itemStyle={{ color: "#e4e4e7" }}
+              contentStyle={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: "#6b7280" }}
+              itemStyle={{ color: "#111111" }}
               formatter={(v) => [`$${Number(v).toFixed(2)}`, "Close"]}
             />
             <Area
@@ -293,30 +290,29 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
       </div>
 
       {/* Stats panel — collapsible */}
-      <div className="bg-surface border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden card-hover">
         <div
           onClick={() => setCollapsed((c) => !c)}
-          className="w-full flex items-center justify-between px-3 py-2 hover:bg-surface-raised/50 transition-colors cursor-pointer select-none"
+          className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer select-none"
         >
-          <span className="text-xs uppercase tracking-widest text-zinc-500 font-medium">Key Metrics</span>
+          <span className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-medium">Key Metrics</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); setShowSettings((s) => !s); }}
-              className="p-0.5 rounded hover:bg-zinc-700 text-zinc-600 hover:text-zinc-400 transition-colors"
+              className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-400 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-400 transition-colors"
               title="Customize visible metrics"
             >
               <Settings2 className="w-3.5 h-3.5" />
             </button>
-            {collapsed ? <ChevronDown className="w-3.5 h-3.5 text-zinc-500" /> : <ChevronUp className="w-3.5 h-3.5 text-zinc-500" />}
+            {collapsed ? <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" /> : <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />}
           </div>
         </div>
 
-        {/* Settings dropdown */}
         {showSettings && (
-          <div className="border-t border-zinc-800 px-3 py-2 bg-zinc-900">
+          <div className="border-t border-gray-100 dark:border-zinc-800 px-3 py-2 bg-gray-50 dark:bg-zinc-900">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-widest text-zinc-500">Toggle Metrics</span>
-              <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-zinc-300">
+              <span className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-zinc-500">Toggle Metrics</span>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
                 <X className="w-3 h-3" />
               </button>
             </div>
@@ -327,7 +323,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
                   onClick={() => toggleStat(s.key)}
                   className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
                     hiddenStats.has(s.key)
-                      ? "border-zinc-700 text-zinc-600 bg-transparent"
+                      ? "border-gray-200 dark:border-zinc-700 text-gray-400 dark:text-zinc-600 bg-transparent"
                       : "border-accent/50 text-accent bg-accent/10"
                   }`}
                 >
@@ -345,7 +341,7 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
               if (groupStats.length === 0) return null;
               return (
                 <div key={group}>
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-600 mt-2 mb-0.5">{GROUP_LABELS[group]}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-zinc-600 mt-2 mb-0.5">{GROUP_LABELS[group]}</p>
                   {groupStats.map((s) => (
                     <StatRow key={s.key} label={s.label} value={s.value} />
                   ))}

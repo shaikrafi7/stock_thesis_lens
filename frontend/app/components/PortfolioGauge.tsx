@@ -32,12 +32,8 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
   const color = scoreColor(avgScore);
 
   return (
-    <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden bg-surface backdrop-blur-md shadow-lg" style={{border:"1px solid rgba(255,255,255,0.07)", borderTopColor:"rgba(255,255,255,0.11)"}}>
-      {/* Glassy overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
-      <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] pointer-events-none" />
-
-      <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1 relative z-10">
+    <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-lg">
+      <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 mb-1 relative z-10">
         Portfolio Thesis Health
       </p>
       <div className="relative z-10 w-full flex justify-center mb-0">
@@ -65,21 +61,21 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
         {hasEvaluations ? (
           <>
             <span
-              className="text-4xl font-mono font-bold text-white"
+              className="text-4xl font-mono font-bold text-gray-900 dark:text-white"
               style={{ textShadow: `0 0 20px ${color}40, 0 0 40px ${color}20` }}
             >
               {avgScore.toFixed(1)}
             </span>
-            <span className="text-zinc-500 text-sm ml-1">/100</span>
+            <span className="text-gray-400 dark:text-zinc-500 text-sm ml-1">/100</span>
             <p className="text-xs mt-1 font-semibold tracking-wide" style={{ color }}>
               {scoreLabel(avgScore)}
             </p>
           </>
         ) : (
           <>
-            <span className="text-2xl font-mono font-bold text-zinc-500">--</span>
-            <span className="text-zinc-500 text-sm ml-1">/100</span>
-            <p className="text-xs mt-1 text-zinc-500">No evaluations yet</p>
+            <span className="text-2xl font-mono font-bold text-gray-400 dark:text-zinc-500">--</span>
+            <span className="text-gray-400 dark:text-zinc-500 text-sm ml-1">/100</span>
+            <p className="text-xs mt-1 text-gray-400 dark:text-zinc-500">No evaluations yet</p>
           </>
         )}
       </div>
@@ -94,9 +90,9 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
             onMouseLeave={() => setHoveredZone(null)}
           >
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: zone.color }} />
-            <span className="text-[9px] text-zinc-500">{zone.label}</span>
+            <span className="text-[9px] text-gray-400 dark:text-zinc-500">{zone.label}</span>
             {hoveredZone === i && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-[10px] text-zinc-300 whitespace-nowrap z-20">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 dark:bg-zinc-800 border border-gray-700 dark:border-zinc-700 rounded text-[10px] text-gray-100 dark:text-zinc-300 whitespace-nowrap z-20">
                 {zone.range}
               </div>
             )}

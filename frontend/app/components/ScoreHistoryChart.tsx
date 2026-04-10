@@ -31,9 +31,9 @@ export default function ScoreHistoryChart({ ticker }: Props) {
 
   if (loading) {
     return (
-      <div className="animate-pulse bg-surface border border-zinc-800 rounded-xl p-4">
-        <div className="h-3 bg-zinc-800 rounded w-28 mb-3" />
-        <div className="h-32 bg-zinc-800 rounded" />
+      <div className="animate-pulse bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-4">
+        <div className="h-3 bg-gray-100 dark:bg-zinc-800 rounded w-28 mb-3" />
+        <div className="h-32 bg-gray-100 dark:bg-zinc-800 rounded" />
       </div>
     );
   }
@@ -55,21 +55,18 @@ export default function ScoreHistoryChart({ ticker }: Props) {
   const trendColor = delta > 0 ? "#22c55e" : delta < 0 ? "#ef4444" : "#eab308";
 
   return (
-    <div className="bg-surface border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden card-hover">
       <div
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-surface-raised/50 transition-colors select-none"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors select-none"
       >
-        <p className="text-xs uppercase tracking-widest text-zinc-500">Score History</p>
+        <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500">Score History</p>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-mono text-zinc-400">{history.length} evals</span>
-          <span
-            className="text-xs font-mono font-bold"
-            style={{ color: trendColor }}
-          >
+          <span className="text-xs font-mono text-gray-400 dark:text-zinc-400">{history.length} evals</span>
+          <span className="text-xs font-mono font-bold" style={{ color: trendColor }}>
             {delta > 0 ? "+" : ""}{delta.toFixed(1)}
           </span>
-          {open ? <ChevronUp className="w-3.5 h-3.5 text-zinc-500" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />}
+          {open ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500" />}
         </div>
       </div>
       {open && (
@@ -98,13 +95,13 @@ export default function ScoreHistoryChart({ ticker }: Props) {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1e222d",
-                  border: "1px solid #363a45",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #e5e7eb",
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                labelStyle={{ color: "#787b86" }}
-                itemStyle={{ color: "#d1d4dc" }}
+                labelStyle={{ color: "#6b7280" }}
+                itemStyle={{ color: "#111111" }}
                 formatter={(value) => [`${value}/100`, "Score"]}
               />
               <ReferenceLine y={75} stroke="#22c55e" strokeDasharray="3 3" strokeOpacity={0.3} />

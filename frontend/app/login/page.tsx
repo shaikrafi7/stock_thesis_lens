@@ -37,19 +37,22 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-6 h-6 animate-spin text-accent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Ambient glow behind card */}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dot-grid px-4 relative overflow-hidden">
+      {/* Gradient fade over dot grid */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-gray-50/60 to-gray-50" />
+
+      {/* Indigo glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(245,158,11,0.07) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 50% 40% at 50% 40%, rgba(99,102,241,0.08) 0%, transparent 70%)",
         }}
       />
 
@@ -62,22 +65,15 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div
-          className="bg-surface rounded-2xl p-6 shadow-2xl"
-          style={{
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderTopColor: "rgba(255,255,255,0.12)",
-            boxShadow: "0 0 0 1px rgba(0,0,0,0.5), 0 24px 48px rgba(0,0,0,0.4)",
-          }}
-        >
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
           {/* Tab toggle */}
-          <div className="flex mb-6 bg-zinc-900 rounded-xl p-1 gap-1">
+          <div className="flex mb-6 bg-gray-100 rounded-xl p-1 gap-1">
             <button
               onClick={() => { setMode("login"); setError(""); }}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
                 mode === "login"
-                  ? "bg-accent text-black shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Sign In
@@ -86,8 +82,8 @@ export default function LoginPage() {
               onClick={() => { setMode("register"); setError(""); }}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
                 mode === "register"
-                  ? "bg-accent text-black shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Sign Up
@@ -96,41 +92,35 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
-                Email
-              </label>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/60 rounded-xl text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition-all duration-150"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all duration-150"
                 placeholder="you@example.com"
               />
             </div>
 
             {mode === "register" && (
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
-                  Username
-                </label>
+                <label className="block text-xs text-gray-500 mb-1.5 font-medium">Username</label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   autoComplete="username"
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/60 rounded-xl text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition-all duration-150"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all duration-150"
                   placeholder="Choose a username"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs text-zinc-400 mb-1.5 font-medium">
-                Password
-              </label>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">Password</label>
               <input
                 type="password"
                 value={password}
@@ -138,13 +128,13 @@ export default function LoginPage() {
                 required
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 minLength={6}
-                className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/60 rounded-xl text-white placeholder-zinc-600 text-sm focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition-all duration-150"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all duration-150"
                 placeholder={mode === "register" ? "At least 6 characters" : "Your password"}
               />
             </div>
 
             {error && (
-              <p className="text-red-400 text-xs bg-red-950/30 border border-red-900/50 rounded-xl px-3 py-2">
+              <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
@@ -152,7 +142,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-black font-semibold text-sm rounded-xl transition-all duration-150 mt-2"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-all duration-150 mt-2"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -161,11 +151,7 @@ export default function LoginPage() {
               ) : (
                 <UserPlus className="w-4 h-4" />
               )}
-              {submitting
-                ? "Please wait…"
-                : mode === "login"
-                ? "Sign In"
-                : "Create Account"}
+              {submitting ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
         </div>

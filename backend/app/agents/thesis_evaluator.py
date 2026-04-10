@@ -94,10 +94,11 @@ def evaluate_thesis(
         if m.confidence < CONFIDENCE_THRESHOLD:
             continue
 
-        # Look up importance and frozen status for this thesis point
+        # Look up importance, frozen status, and user conviction for this thesis point
         point_meta = meta.get(m.thesis_id, {})
         importance = point_meta.get("importance", "standard")
         is_frozen = point_meta.get("frozen", False)
+        conviction = point_meta.get("conviction", None)
 
         # Multiplier: frozen overrides importance (both get 2x)
         if is_frozen:
@@ -105,8 +106,12 @@ def evaluate_thesis(
         else:
             multiplier = IMPORTANCE_MULTIPLIER.get(importance, 1.0)
 
+        # Conviction modifier: liked boosts credit, disliked amplifies deduction
+        conviction_multiplier = 1.2 if conviction == "liked" else (1.2 if conviction == "disliked" else 1.0)
+
         if m.sentiment == "negative":
-            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier
+            deduction_multiplier = conviction_multiplier if conviction == "disliked" else 1.0
+            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier * deduction_multiplier
             total_deduction += deduction
             point_data = {
                 "thesis_id": m.thesis_id,
@@ -123,7 +128,8 @@ def evaluate_thesis(
                 frozen_breaks.append(point_data)
 
         elif m.sentiment == "positive":
-            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier
+            credit_multiplier = conviction_multiplier if conviction == "liked" else 1.0
+            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier * credit_multiplier
             total_credit += credit
             confirmed_points.append({
                 "thesis_id": m.thesis_id,

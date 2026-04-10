@@ -383,9 +383,10 @@ def portfolio_returns(
     for stock in stocks:
         try:
             hist = yf.Ticker(stock.ticker).history(period=period)
-            if len(hist) >= 2:
-                first_close = hist["Close"].iloc[0]
-                last_close = hist["Close"].iloc[-1]
+            closes = hist["Close"].dropna()
+            if len(closes) >= 2:
+                first_close = closes.iloc[0]
+                last_close = closes.iloc[-1]
                 ret = (last_close - first_close) / first_close * 100
                 stock_returns.append({"ticker": stock.ticker, "return_pct": round(float(ret), 2)})
         except Exception:
@@ -397,10 +398,10 @@ def portfolio_returns(
 
     benchmark_return = 0.0
     try:
-        spy_hist = yf.Ticker("SPY").history(period=period)
-        if len(spy_hist) >= 2:
+        spy_closes = yf.Ticker("SPY").history(period=period)["Close"].dropna()
+        if len(spy_closes) >= 2:
             benchmark_return = round(
-                float((spy_hist["Close"].iloc[-1] - spy_hist["Close"].iloc[0]) / spy_hist["Close"].iloc[0] * 100), 2
+                float((spy_closes.iloc[-1] - spy_closes.iloc[0]) / spy_closes.iloc[0] * 100), 2
             )
     except Exception:
         pass
@@ -429,7 +430,7 @@ def portfolio_sparklines(portfolio_id: int | None = Query(None), db: Session = D
         try:
             hist = yf.Ticker(stock.ticker).history(period="1y")
             if len(hist) >= 2:
-                closes = hist["Close"].tolist()
+                closes = [v for v in hist["Close"].tolist() if v == v]  # filter NaN
                 if len(closes) > TARGET_POINTS:
                     step = len(closes) / TARGET_POINTS
                     sampled = [closes[int(i * step)] for i in range(TARGET_POINTS - 1)]
