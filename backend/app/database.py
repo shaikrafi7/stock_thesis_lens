@@ -50,7 +50,7 @@ def _run_migrations():
         # --- Thesis columns ---
         result = conn.execute(text("PRAGMA table_info(theses)"))
         thesis_columns = [row[1] for row in result.fetchall()]
-        for col, default in [("importance", "'standard'"), ("frozen", "0"), ("source", "'ai'")]:
+        for col, default in [("importance", "'standard'"), ("frozen", "0"), ("source", "'ai'"), ("conviction", "NULL")]:
             if col not in thesis_columns:
                 conn.execute(text(f"ALTER TABLE theses ADD COLUMN {col} TEXT DEFAULT {default}"))
                 conn.commit()

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { deleteStock } from "@/lib/api";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function DeleteStockButton({ ticker, redirectTo }: Props) {
+  const { bumpStocksVersion } = usePortfolio();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +21,7 @@ export default function DeleteStockButton({ ticker, redirectTo }: Props) {
     setLoading(true);
     try {
       await deleteStock(ticker);
+      bumpStocksVersion();
       if (redirectTo) {
         router.push(redirectTo);
       } else {

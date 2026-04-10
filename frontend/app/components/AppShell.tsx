@@ -51,7 +51,7 @@ function evalAge(history: EvaluationSummary[] | undefined): { label: string; col
   return { label: `${diffDays}d`, color };
 }
 
-function SidebarStockList({ activePortfolioId, pathname, collapsed }: { activePortfolioId: number | null; pathname: string; collapsed: boolean }) {
+function SidebarStockList({ activePortfolioId, pathname, collapsed, stocksVersion }: { activePortfolioId: number | null; pathname: string; collapsed: boolean; stocksVersion: number }) {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [histories, setHistories] = useState<Record<string, EvaluationSummary[]>>({});
   const [loading, setLoading] = useState(true);
@@ -61,7 +61,7 @@ function SidebarStockList({ activePortfolioId, pathname, collapsed }: { activePo
       fetchStocks(activePortfolioId).catch(() => [] as Stock[]),
       getPortfolioScoreHistories(5, activePortfolioId).catch(() => ({}) as Record<string, EvaluationSummary[]>),
     ]).then(([s, h]) => { setStocks(s); setHistories(h); setLoading(false); });
-  }, [activePortfolioId, pathname]);
+  }, [activePortfolioId, pathname, stocksVersion]);
 
   if (collapsed) return null;
   if (loading) return <div className="px-3 py-2"><Loader2 className="w-3 h-3 animate-spin text-gray-400 dark:text-zinc-600" /></div>;
@@ -115,7 +115,7 @@ function SidebarStockList({ activePortfolioId, pathname, collapsed }: { activePo
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const { portfolios, activePortfolio, activePortfolioId, switchPortfolio, create, remove } = usePortfolio();
+  const { portfolios, activePortfolio, activePortfolioId, switchPortfolio, create, remove, stocksVersion } = usePortfolio();
   const { isOpen: panelOpen } = useAssistant();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -197,7 +197,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               ? <ChevronDown className="w-3 h-3 text-gray-400 dark:text-zinc-600" />
               : <ChevronDown className="w-3 h-3 text-gray-400 dark:text-zinc-600 rotate-180" />}
           </button>
-          <SidebarStockList activePortfolioId={activePortfolioId} pathname={pathname} collapsed={stocksCollapsed} />
+          <SidebarStockList activePortfolioId={activePortfolioId} pathname={pathname} collapsed={stocksCollapsed} stocksVersion={stocksVersion} />
         </div>
       </nav>
 
@@ -213,7 +213,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen text-foreground flex flex-col app-body-bg">
+    <div className="h-screen overflow-hidden text-foreground flex flex-col app-body-bg">
       {/* Top header */}
       <header className="h-12 shrink-0 border-b border-gray-200/60 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm flex items-center px-4 gap-3 z-10">
         <button

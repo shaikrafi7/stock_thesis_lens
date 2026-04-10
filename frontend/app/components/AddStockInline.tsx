@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { addStock, generateAndEvaluate } from "@/lib/api";
+import { usePortfolio } from "@/app/context/PortfolioContext";
 import { Plus, Loader2 } from "lucide-react";
 
 export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () => void | Promise<void>; portfolioId?: number | null }) {
+  const { bumpStocksVersion } = usePortfolio();
   const [ticker, setTicker] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -27,6 +29,7 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
         }
       }
       setTicker("");
+      bumpStocksVersion();
       await onAdded?.();
     } finally {
       setAdding(false);

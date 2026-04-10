@@ -9,6 +9,8 @@ interface PortfolioContextValue {
   activePortfolio: Portfolio | null;
   activePortfolioId: number | null;
   portfolioLoaded: boolean;
+  stocksVersion: number;
+  bumpStocksVersion: () => void;
   switchPortfolio: (id: number) => void;
   reload: () => Promise<void>;
   create: (name: string, description?: string) => Promise<Portfolio>;
@@ -25,6 +27,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [portfolioLoaded, setPortfolioLoaded] = useState(false);
+  const [stocksVersion, setStocksVersion] = useState(0);
+  const bumpStocksVersion = useCallback(() => setStocksVersion((v) => v + 1), []);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -80,6 +84,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         activePortfolio,
         activePortfolioId: activeId,
         portfolioLoaded,
+        stocksVersion,
+        bumpStocksVersion,
         switchPortfolio,
         reload: load,
         create,
