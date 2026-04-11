@@ -10,6 +10,7 @@ import ThesisManager from "./ThesisManager";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
 import ScoreDeltaPanel from "@/app/components/ScoreDelta";
+import BacktestPanel from "@/app/components/BacktestPanel";
 import StockNews from "@/app/components/StockNews";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell } from "lucide-react";
@@ -29,6 +30,7 @@ export default function StockPage({ params }: Props) {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [evalVersion, setEvalVersion] = useState(0);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [backtestOpen, setBacktestOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -125,6 +127,20 @@ export default function StockPage({ params }: Props) {
               <StockInfoPanel ticker={upperTicker} />
               <ScoreDeltaPanel ticker={upperTicker} portfolioId={activePortfolioId} evalVersion={evalVersion} />
               <ScoreHistoryChart ticker={upperTicker} />
+              <div className="border border-gray-100 dark:border-zinc-800 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setBacktestOpen((v) => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+                >
+                  Conviction vs Returns
+                  <span className="text-gray-300 dark:text-zinc-600">{backtestOpen ? "▲" : "▼"}</span>
+                </button>
+                {backtestOpen && (
+                  <div className="px-3 pb-3">
+                    <BacktestPanel ticker={upperTicker} portfolioId={activePortfolioId} />
+                  </div>
+                )}
+              </div>
               <StockNews ticker={upperTicker} />
             </>
           )}

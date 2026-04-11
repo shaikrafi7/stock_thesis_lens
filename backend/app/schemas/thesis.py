@@ -145,6 +145,16 @@ class ConfirmPreviewRequest(BaseModel):
     points: list[ThesisPreview]
 
 
+class BacktestPoint(BaseModel):
+    date: str  # ISO date of evaluation
+    score: float
+    status: str
+    price_at_eval: Optional[float]
+    return_30d: Optional[float]
+    return_90d: Optional[float]
+    return_180d: Optional[float]
+
+
 class ThesisAuditRead(BaseModel):
     id: int
     thesis_id: Optional[int]

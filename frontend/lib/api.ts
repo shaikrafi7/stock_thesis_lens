@@ -610,3 +610,16 @@ export interface CalendarEvent {
 
 export const getPortfolioCalendar = (portfolioId?: number | null): Promise<CalendarEvent[]> =>
   apiFetch(`/portfolio/calendar${joinParams(pq(portfolioId))}`);
+
+export interface BacktestPoint {
+  date: string;
+  score: number;
+  status: string;
+  price_at_eval: number | null;
+  return_30d: number | null;
+  return_90d: number | null;
+  return_180d: number | null;
+}
+
+export const getStockBacktest = (ticker: string, portfolioId?: number | null): Promise<BacktestPoint[]> =>
+  apiFetch(`/stocks/${ticker}/backtest${joinParams(pq(portfolioId))}`);

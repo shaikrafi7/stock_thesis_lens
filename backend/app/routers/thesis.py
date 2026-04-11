@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -8,7 +9,7 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.user import User
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview, ConfirmPreviewRequest, ThesisAuditRead
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview, ConfirmPreviewRequest, ThesisAuditRead, BacktestPoint
 from app.schemas.evaluation import EvaluationRead
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as thesis_chat_stream
@@ -386,3 +387,74 @@ def get_thesis_audit(ticker: str, portfolio_id: int | None = Query(None), db: Se
         .all()
     )
     return audits
+
+
+@router.get("/{ticker}/backtest", response_model=list[BacktestPoint])
+def backtest_thesis(
+    ticker: str,
+    portfolio_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return historical thesis scores with forward price returns at +30/90/180 days."""
+    import yfinance as yf
+    from app.models.evaluation import Evaluation
+    from datetime import timedelta, timezone
+
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    evals = (
+        db.query(Evaluation)
+        .filter(Evaluation.stock_id == stock.id)
+        .order_by(Evaluation.evaluated_at.asc())
+        .all()
+    )
+    if not evals:
+        return []
+
+    # Fetch 2 years of daily history to cover 180d forward from old evals
+    hist = yf.Ticker(ticker).history(period="2y")
+    if hist.empty:
+        return []
+
+    # Build date -> close price map (UTC date string)
+    price_map: dict[str, float] = {}
+    for ts, row in hist.iterrows():
+        price_map[ts.strftime("%Y-%m-%d")] = float(row["Close"])
+
+    sorted_dates = sorted(price_map.keys())
+
+    def nearest_price(target_date: str) -> Optional[float]:
+        """Find closest available trading day price on or after target_date."""
+        for d in sorted_dates:
+            if d >= target_date:
+                return price_map[d]
+        return None
+
+    results: list[BacktestPoint] = []
+    for ev in evals:
+        ev_dt = ev.evaluated_at
+        if ev_dt.tzinfo is None:
+            ev_dt = ev_dt.replace(tzinfo=timezone.utc)
+        eval_date = ev_dt.strftime("%Y-%m-%d")
+        p0 = nearest_price(eval_date)
+
+        def fwd_return(days: int) -> Optional[float]:
+            if p0 is None:
+                return None
+            fwd_date = (ev_dt + timedelta(days=days)).strftime("%Y-%m-%d")
+            p1 = nearest_price(fwd_date)
+            if p1 is None:
+                return None
+            return round((p1 - p0) / p0 * 100, 2)
+
+        results.append(BacktestPoint(
+            date=eval_date,
+            score=ev.score,
+            status=ev.status,
+            price_at_eval=round(p0, 2) if p0 else None,
+            return_30d=fwd_return(30),
+            return_90d=fwd_return(90),
+            return_180d=fwd_return(180),
+        ))
+
+    return results
