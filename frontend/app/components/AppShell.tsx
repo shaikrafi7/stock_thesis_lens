@@ -15,6 +15,7 @@ import {
   Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
+import StreakBadge from "./StreakBadge";
 
 
 function NavLink({ href, label, Icon, pathname, onClick }: {
@@ -273,6 +274,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </span>
             </Link>
           )}
+          <StreakBadge />
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}

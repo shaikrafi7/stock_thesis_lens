@@ -596,3 +596,79 @@ def portfolio_calendar(portfolio_id: int | None = Query(None), db: Session = Dep
 
     events.sort(key=lambda e: e.date)
     return events
+
+
+class StreakResponse(BaseModel):
+    current_streak: int
+    longest_streak: int
+    last_activity_date: str | None
+
+
+@router.get("/streak", response_model=StreakResponse)
+def portfolio_streak(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return the user's current and longest consecutive review-day streak.
+
+    A streak day is any UTC calendar day where the user ran at least one evaluation.
+    """
+    from datetime import datetime, timezone, timedelta
+    from app.models.thesis_audit import ThesisAudit
+
+    # Collect all active days from evaluations
+    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).all()
+    stock_ids = [s.id for s in stocks]
+    if not stock_ids:
+        return StreakResponse(current_streak=0, longest_streak=0, last_activity_date=None)
+
+    eval_dates = db.query(Evaluation.evaluated_at).filter(Evaluation.stock_id.in_(stock_ids)).all()
+    audit_dates = db.query(ThesisAudit.created_at).filter(ThesisAudit.user_id == current_user.id).all()
+
+    active_days: set[str] = set()
+    for (dt,) in eval_dates:
+        if dt:
+            if hasattr(dt, "tzinfo") and dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            active_days.add(dt.strftime("%Y-%m-%d"))
+    for (dt,) in audit_dates:
+        if dt:
+            if hasattr(dt, "tzinfo") and dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            active_days.add(dt.strftime("%Y-%m-%d"))
+
+    if not active_days:
+        return StreakResponse(current_streak=0, longest_streak=0, last_activity_date=None)
+
+    sorted_days = sorted(active_days)
+    today = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+    yesterday = (datetime.now(tz=timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Compute longest streak
+    longest = 1
+    current_run = 1
+    from datetime import date as date_type
+    for i in range(1, len(sorted_days)):
+        a = date_type.fromisoformat(sorted_days[i - 1])
+        b = date_type.fromisoformat(sorted_days[i])
+        if (b - a).days == 1:
+            current_run += 1
+            longest = max(longest, current_run)
+        else:
+            current_run = 1
+
+    # Compute current streak (must include today or yesterday)
+    if sorted_days[-1] not in (today, yesterday):
+        current_streak = 0
+    else:
+        current_streak = 1
+        for i in range(len(sorted_days) - 2, -1, -1):
+            a = date_type.fromisoformat(sorted_days[i])
+            b = date_type.fromisoformat(sorted_days[i + 1])
+            if (b - a).days == 1:
+                current_streak += 1
+            else:
+                break
+
+    return StreakResponse(
+        current_streak=current_streak,
+        longest_streak=longest,
+        last_activity_date=sorted_days[-1],
+    )

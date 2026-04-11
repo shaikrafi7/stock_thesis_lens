@@ -623,3 +623,12 @@ export interface BacktestPoint {
 
 export const getStockBacktest = (ticker: string, portfolioId?: number | null): Promise<BacktestPoint[]> =>
   apiFetch(`/stocks/${ticker}/backtest${joinParams(pq(portfolioId))}`);
+
+export interface StreakInfo {
+  current_streak: number;
+  longest_streak: number;
+  last_activity_date: string | null;
+}
+
+export const getStreak = (): Promise<StreakInfo> =>
+  apiFetch("/portfolio/streak");
