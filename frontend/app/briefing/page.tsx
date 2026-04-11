@@ -78,6 +78,11 @@ function BriefingCard({ briefing, defaultOpen = true }: { briefing: MorningBrief
                             <p className="text-sm text-zinc-200 leading-snug">{item.headline}</p>
                           )}
                           <span className={`text-[10px] font-medium ${style.color} mt-0.5 block`}>{style.label}</span>
+                          {item.related_thesis && (
+                            <p className="text-[10px] text-zinc-500 mt-0.5 italic leading-snug">
+                              {item.impact === "bearish" ? "Challenges" : item.impact === "bullish" ? "Supports" : "Related to"}: &ldquo;{item.related_thesis}&rdquo;
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
