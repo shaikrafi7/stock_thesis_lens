@@ -723,3 +723,57 @@ def portfolio_quiz(portfolio_id: int | None = Query(None), db: Session = Depends
         correct_ticker=stock.ticker,
         choices=choices,
     )
+
+
+class ThesisOverviewItem(BaseModel):
+    ticker: str
+    thesis_id: int
+    category: str
+    statement: str
+    importance: str
+    conviction: str | None
+    score: float | None  # latest eval score for this stock
+
+
+@router.get("/thesis-overview", response_model=list[ThesisOverviewItem])
+def portfolio_thesis_overview(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return all selected thesis points across the portfolio, with stock + latest score."""
+    from app.models.thesis import Thesis
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    stock_map = {s.id: s for s in stocks}
+    stock_ids = list(stock_map.keys())
+    if not stock_ids:
+        return []
+
+    theses = (
+        db.query(Thesis)
+        .filter(Thesis.stock_id.in_(stock_ids), Thesis.selected == True)  # noqa: E712
+        .all()
+    )
+
+    # Get latest eval score per stock
+    from sqlalchemy import func
+    latest_evals = (
+        db.query(Evaluation.stock_id, Evaluation.score)
+        .filter(Evaluation.stock_id.in_(stock_ids))
+        .distinct(Evaluation.stock_id)
+        .order_by(Evaluation.stock_id, Evaluation.evaluated_at.desc())
+        .all()
+    )
+    score_map = {row.stock_id: row.score for row in latest_evals}
+
+    return [
+        ThesisOverviewItem(
+            ticker=stock_map[t.stock_id].ticker,
+            thesis_id=t.id,
+            category=t.category,
+            statement=t.statement,
+            importance=getattr(t, "importance", "standard") or "standard",
+            conviction=getattr(t, "conviction", None),
+            score=score_map.get(t.stock_id),
+        )
+        for t in theses
+        if t.stock_id in stock_map
+    ]

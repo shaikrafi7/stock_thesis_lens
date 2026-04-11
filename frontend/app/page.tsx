@@ -27,6 +27,7 @@ import WeeklyDigestCard from "./components/WeeklyDigest";
 import EarningsCalendar from "./components/EarningsCalendar";
 import ConvictionVsReturns from "./components/ConvictionVsReturns";
 import QuizModal from "./components/QuizModal";
+import ThesisOverviewPanel from "./components/ThesisOverviewPanel";
 import { Loader2, GitCompare, Brain } from "lucide-react";
 
 export default function DashboardPage() {
@@ -119,6 +120,7 @@ export default function DashboardPage() {
                 <WeeklyDigestCard portfolioId={activePortfolioId} />
                 <EarningsCalendar />
                 <ConvictionVsReturns />
+                <ThesisOverviewPanel portfolioId={activePortfolioId} />
               </div>
             </div>
 

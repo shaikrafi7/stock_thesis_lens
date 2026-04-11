@@ -643,3 +643,16 @@ export interface QuizQuestion {
 
 export const getQuizQuestion = (portfolioId?: number | null): Promise<QuizQuestion> =>
   apiFetch(`/portfolio/quiz${joinParams(pq(portfolioId))}`);
+
+export interface ThesisOverviewItem {
+  ticker: string;
+  thesis_id: number;
+  category: string;
+  statement: string;
+  importance: string;
+  conviction: string | null;
+  score: number | null;
+}
+
+export const getThesisOverview = (portfolioId?: number | null): Promise<ThesisOverviewItem[]> =>
+  apiFetch(`/portfolio/thesis-overview${joinParams(pq(portfolioId))}`);
