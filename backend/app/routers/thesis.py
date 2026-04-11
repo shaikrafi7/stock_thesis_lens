@@ -8,11 +8,12 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.user import User
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview, ConfirmPreviewRequest, ThesisAuditRead
 from app.schemas.evaluation import EvaluationRead
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as thesis_chat_stream
 from app.models.chat import ChatMessage as ChatMessageModel
+from app.models.thesis_audit import ThesisAudit
 from app.services.evaluation_service import run_evaluation_for_stock
 from app.utils.market_snapshot import get_snapshot, format_snapshot
 from app.utils.news import _fetch_polygon_news
@@ -47,6 +48,44 @@ def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
     generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
     return [ThesisPreview(category=g.category, statement=g.statement, importance=g.importance, weight=g.weight) for g in generated]
+
+
+@router.post("/{ticker}/confirm-preview", response_model=GenerateAndEvaluateResponse)
+def confirm_preview(ticker: str, payload: ConfirmPreviewRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Save exactly the user-approved preview points, preserving frozen/manual, then evaluate."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+
+    existing = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
+    preserved = [t for t in existing if t.frozen or getattr(t, "source", "ai") == "manual"]
+    for t in existing:
+        if not t.frozen and getattr(t, "source", "ai") != "manual":
+            db.delete(t)
+    db.flush()
+
+    preserved_statements = {t.statement for t in preserved}
+    new_theses = [
+        Thesis(
+            stock_id=stock.id,
+            category=p.category,
+            statement=p.statement,
+            weight=p.weight,
+            importance=p.importance,
+            selected=True,
+        )
+        for p in payload.points
+        if p.statement not in preserved_statements
+    ]
+    db.add_all(new_theses)
+    db.commit()
+
+    all_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
+    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
+    evaluation = EvaluationRead.model_validate(evaluation_obj) if evaluation_obj else None
+
+    return GenerateAndEvaluateResponse(
+        theses=[ThesisRead.model_validate(t) for t in all_theses],
+        evaluation=evaluation,
+    )
 
 
 @router.post("/{ticker}/generate-thesis", response_model=list[ThesisRead])
@@ -131,6 +170,11 @@ def add_manual_thesis(ticker: str, payload: ThesisCreate, portfolio_id: int | No
         source="manual",
     )
     db.add(thesis)
+    db.flush()
+    db.add(ThesisAudit(
+        thesis_id=thesis.id, stock_id=stock.id, user_id=current_user.id,
+        action="created", statement_snapshot=thesis.statement, category=thesis.category,
+    ))
     db.commit()
     db.refresh(thesis)
     return thesis
@@ -230,17 +274,31 @@ def update_thesis(ticker: str, thesis_id: int, payload: ThesisUpdate, portfolio_
     if not thesis:
         raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {stock.ticker}")
 
-    if payload.selected is not None:
+    def _audit(action: str, field: str | None = None, old: str | None = None, new: str | None = None):
+        db.add(ThesisAudit(
+            thesis_id=thesis.id, stock_id=thesis.stock_id, user_id=current_user.id,
+            action=action, field_changed=field, old_value=old, new_value=new,
+            statement_snapshot=thesis.statement, category=thesis.category,
+        ))
+
+    if payload.selected is not None and payload.selected != thesis.selected:
+        _audit("updated", "selected", str(thesis.selected), str(payload.selected))
         thesis.selected = payload.selected
-    if payload.statement is not None:
+    if payload.statement is not None and payload.statement != thesis.statement:
+        _audit("updated", "statement", thesis.statement, payload.statement)
         thesis.statement = payload.statement
-    if payload.frozen is not None:
+    if payload.frozen is not None and payload.frozen != thesis.frozen:
+        _audit("frozen" if payload.frozen else "unfrozen")
         thesis.frozen = payload.frozen
-    if payload.importance is not None:
+    if payload.importance is not None and payload.importance != thesis.importance:
+        _audit("updated", "importance", thesis.importance, payload.importance)
         thesis.importance = payload.importance
     if payload.clear_conviction:
+        if thesis.conviction:
+            _audit("conviction_cleared", "conviction", thesis.conviction, None)
         thesis.conviction = None
-    elif payload.conviction is not None:
+    elif payload.conviction is not None and payload.conviction != thesis.conviction:
+        _audit("liked" if payload.conviction == "liked" else "disliked", "conviction", thesis.conviction, payload.conviction)
         thesis.conviction = payload.conviction
 
     db.commit()
@@ -307,6 +365,24 @@ def delete_thesis(ticker: str, thesis_id: int, portfolio_id: int | None = Query(
     if not thesis:
         raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {stock.ticker}")
 
+    db.add(ThesisAudit(
+        thesis_id=thesis.id, stock_id=thesis.stock_id, user_id=current_user.id,
+        action="deleted", statement_snapshot=thesis.statement, category=thesis.category,
+    ))
     db.delete(thesis)
     db.commit()
     return None
+
+
+@router.get("/{ticker}/audit", response_model=list[ThesisAuditRead])
+def get_thesis_audit(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return full audit log for a stock's thesis history."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    audits = (
+        db.query(ThesisAudit)
+        .filter(ThesisAudit.stock_id == stock.id, ThesisAudit.user_id == current_user.id)
+        .order_by(ThesisAudit.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    return audits

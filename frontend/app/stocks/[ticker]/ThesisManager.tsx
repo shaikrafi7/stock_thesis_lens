@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: false });
 import {
-  generateAndEvaluate, previewThesis, updateThesisConviction, updateThesisStatement,
-  updateThesisFrozen, deleteThesis, runEvaluation, addManualThesis, getShareToken, reorderTheses,
+  generateAndEvaluate, previewThesis, confirmPreview as confirmPreview_api,
+  updateThesisConviction, updateThesisStatement,
+  updateThesisFrozen, deleteThesis, runEvaluation, addManualThesis, getShareToken, reorderTheses, getThesisAudit,
   type Thesis, type Evaluation, type ThesisPreview,
 } from "@/lib/api";
 import { useAssistant } from "@/app/context/AssistantContext";
@@ -15,7 +16,7 @@ import {
   Lock, Unlock, Pencil, X, AlertTriangle, Loader2, RefreshCw,
   Activity, Save, CircleDot, ChevronUp, ChevronDown, Plus,
   Zap, Star, ThumbsUp, ThumbsDown, Check, Download, Share2,
-  ArrowUp, ArrowDown,
+  Info, History,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -89,8 +90,11 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [shareCopied, setShareCopied] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterConviction, setFilterConviction] = useState<string>("all");
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLog, setAuditLog] = useState<import("@/lib/api").ThesisAuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
-  const { setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint } = useAssistant();
+  const { setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint, fireExplainThesisPoint, togglePanel, isOpen } = useAssistant();
   const { activePortfolioId: pid } = usePortfolio();
 
   useEffect(() => {
@@ -159,7 +163,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     if (!previewPoints) return;
     setConfirming(true); setError("");
     try {
-      const result = await generateAndEvaluate(ticker, pid);
+      const approved = previewPoints.filter((_, i) => !rejectedIndexes.has(i));
+      const result = await confirmPreview_api(ticker, approved, pid);
       setTheses(result.theses);
       if (result.evaluation) setEvaluation(result.evaluation);
       setPreviewPoints(null);
@@ -761,17 +766,12 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                             }`}>
                             {t.frozen ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                           </button>
-                          {/* Edit / Delete / Reorder — hover only */}
+                          {/* Edit / Delete / Explain — hover only */}
                           <div className="flex gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); moveThesis(t, "up"); }}
-                              title="Move up"
-                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
-                              <ArrowUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); moveThesis(t, "down"); }}
-                              title="Move down"
-                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
-                              <ArrowDown className="w-3.5 h-3.5" />
+                            <button onClick={(e) => { e.stopPropagation(); if (!isOpen) togglePanel(); fireExplainThesisPoint(t.statement); }}
+                              title="Explain this point"
+                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-indigo-500 rounded transition-colors">
+                              <Info className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); startEdit(t); }}
                               title="Edit"
@@ -794,6 +794,67 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
           })}
         </div>
       )}
+
+      {/* Audit log */}
+      <div className="mt-4 border border-gray-100 dark:border-zinc-800 rounded-xl overflow-hidden">
+        <button
+          onClick={async () => {
+            const next = !auditOpen;
+            setAuditOpen(next);
+            if (next && auditLog.length === 0) {
+              setAuditLoading(true);
+              try {
+                const entries = await getThesisAudit(ticker, pid);
+                setAuditLog(entries);
+              } catch { /* silent */ }
+              finally { setAuditLoading(false); }
+            }
+          }}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+        >
+          <span className="flex items-center gap-1.5 font-medium">
+            <History className="w-3.5 h-3.5" />
+            Change History
+          </span>
+          {auditOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+        {auditOpen && (
+          <div className="border-t border-gray-100 dark:border-zinc-800 divide-y divide-gray-50 dark:divide-zinc-800/60 max-h-72 overflow-y-auto">
+            {auditLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              </div>
+            ) : auditLog.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-zinc-500 px-4 py-4 text-center">No changes recorded yet.</p>
+            ) : auditLog.map((entry) => {
+              const actionColors: Record<string, string> = {
+                created: "text-green-600 dark:text-green-400",
+                deleted: "text-red-500",
+                frozen: "text-amber-500",
+                unfrozen: "text-amber-500",
+                liked: "text-green-500",
+                disliked: "text-red-400",
+                conviction_cleared: "text-gray-400",
+                updated: "text-blue-500",
+              };
+              const color = actionColors[entry.action] ?? "text-gray-400";
+              const when = new Date(entry.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+              return (
+                <div key={entry.id} className="px-4 py-2.5 flex items-start gap-3">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide mt-0.5 w-20 shrink-0 ${color}`}>{entry.action}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-600 dark:text-zinc-300 leading-snug line-clamp-2">{entry.statement_snapshot}</p>
+                    {entry.field_changed === "statement" && entry.old_value && (
+                      <p className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5 italic line-clamp-1">was: &ldquo;{entry.old_value}&rdquo;</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-400 dark:text-zinc-600 shrink-0">{when}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Confirmation dialog — only for unfreeze / delete-frozen / edit-frozen */}
       {confirmAction && (

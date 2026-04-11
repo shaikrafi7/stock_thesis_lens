@@ -348,6 +348,7 @@ export interface BriefingItem {
   impact: "bullish" | "bearish" | "neutral";
   suggestion?: ThesisSuggestion | null;
   source_url?: string | null;
+  related_thesis?: string | null;
 }
 
 export interface MorningBriefingResponse {
@@ -421,6 +422,13 @@ export interface ThesisPreview {
 
 export const previewThesis = (ticker: string, portfolioId?: number | null): Promise<ThesisPreview[]> =>
   apiFetch(`/stocks/${ticker}/preview-thesis${joinParams(pq(portfolioId))}`, { method: "POST" });
+
+export const confirmPreview = (ticker: string, points: ThesisPreview[], portfolioId?: number | null): Promise<GenerateAndEvaluateResponse> =>
+  apiFetch(`/stocks/${ticker}/confirm-preview${joinParams(pq(portfolioId))}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ points }),
+  });
 
 export interface NewsItem {
   title: string;
@@ -576,3 +584,29 @@ export const getSharedThesis = (token: string): Promise<PublicShareResponse> =>
     if (!r.ok) throw new Error("Share link not found");
     return r.json();
   });
+
+export interface ThesisAuditEntry {
+  id: number;
+  thesis_id: number | null;
+  action: string;
+  field_changed: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  statement_snapshot: string;
+  category: string;
+  note: string | null;
+  created_at: string;
+}
+
+export const getThesisAudit = (ticker: string, portfolioId?: number | null): Promise<ThesisAuditEntry[]> =>
+  apiFetch(`/stocks/${ticker}/audit${joinParams(pq(portfolioId))}`);
+
+export interface CalendarEvent {
+  ticker: string;
+  name: string;
+  event_type: "earnings" | "ex_dividend";
+  date: string;
+}
+
+export const getPortfolioCalendar = (portfolioId?: number | null): Promise<CalendarEvent[]> =>
+  apiFetch(`/portfolio/calendar${joinParams(pq(portfolioId))}`);

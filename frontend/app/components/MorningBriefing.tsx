@@ -87,6 +87,14 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               </a>
             )}
           </p>
+          {item.related_thesis && (
+            <div className="mt-1.5 flex items-start gap-1">
+              <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold mt-0.5 ${item.impact === "bearish" ? "text-red-500" : item.impact === "bullish" ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                {item.impact === "bearish" ? "Challenges" : item.impact === "bullish" ? "Supports" : "Related to"}:
+              </span>
+              <span className="text-[11px] text-gray-500 dark:text-zinc-400 italic leading-snug">&ldquo;{item.related_thesis}&rdquo;</span>
+            </div>
+          )}
           {item.suggestion && (
             <div className="mt-2 pt-2 border-t border-current opacity-60">
               <p className="text-[11px] italic leading-snug mb-1.5">

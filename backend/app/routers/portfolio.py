@@ -232,6 +232,7 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
                 impact=item.get("impact", "neutral"),
                 suggestion=suggestion,
                 source_url=item.get("source_url") or None,
+                related_thesis=item.get("related_thesis") or None,
             )
         )
     result.sort(key=lambda x: (0 if x.ticker == "MACRO" else 1))
@@ -276,6 +277,7 @@ async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: in
             "impact": item.impact,
             "suggestion": item.suggestion,
             "source_url": item.source_url,
+            "related_thesis": item.related_thesis,
         }
         items_for_db.append(entry)
 
@@ -538,3 +540,59 @@ def get_weekly_digest(portfolio_id: int | None = Query(None), db: Session = Depe
         portfolio_avg=avg,
         stocks=digest_stocks,
     )
+
+
+class CalendarEvent(BaseModel):
+    ticker: str
+    name: str
+    event_type: str  # "earnings" | "ex_dividend"
+    date: str
+
+
+@router.get("/calendar", response_model=list[CalendarEvent])
+def portfolio_calendar(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return upcoming earnings + ex-dividend dates for all portfolio stocks (next 60 days)."""
+    from datetime import datetime, timezone, timedelta
+    import yfinance as yf
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    now = datetime.now(tz=timezone.utc)
+    cutoff = now + timedelta(days=60)
+    events: list[CalendarEvent] = []
+
+    for stock in stocks:
+        try:
+            t = yf.Ticker(stock.ticker)
+            info = t.info or {}
+
+            # Earnings date
+            earnings_date_str = None
+            try:
+                cal = t.calendar
+                if cal is not None and not cal.empty:
+                    first_col = cal.columns[0]
+                    ed = cal.loc["Earnings Date", first_col] if "Earnings Date" in cal.index else None
+                    if ed is not None:
+                        earnings_date_str = ed.strftime("%Y-%m-%d") if hasattr(ed, "strftime") else str(ed)[:10]
+            except Exception:
+                pass
+            if earnings_date_str:
+                ed_dt = datetime.strptime(earnings_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if now <= ed_dt <= cutoff:
+                    events.append(CalendarEvent(ticker=stock.ticker, name=stock.name or stock.ticker, event_type="earnings", date=earnings_date_str))
+
+            # Ex-dividend date
+            ex_div_raw = info.get("exDividendDate")
+            if ex_div_raw:
+                try:
+                    ex_div_dt = datetime.fromtimestamp(ex_div_raw, tz=timezone.utc)
+                    if now <= ex_div_dt <= cutoff:
+                        events.append(CalendarEvent(ticker=stock.ticker, name=stock.name or stock.ticker, event_type="ex_dividend", date=ex_div_dt.strftime("%Y-%m-%d")))
+                except Exception:
+                    pass
+        except Exception:
+            continue
+
+    events.sort(key=lambda e: e.date)
+    return events

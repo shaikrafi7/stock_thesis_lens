@@ -27,6 +27,10 @@ interface AssistantContextValue {
   registerPrefillThesisPoint: (cb: ((statement: string) => void) | null) => void;
   /** Called by StockNews to pipe a headline into ThesisManager's add form. */
   firePrefillThesisPoint: (statement: string) => void;
+  /** AssistantPanel registers a handler to auto-send a message to the chat. */
+  registerExplainThesisPoint: (cb: ((statement: string) => void) | null) => void;
+  /** Called by ThesisManager ℹ button to open panel and explain a thesis point. */
+  fireExplainThesisPoint: (statement: string) => void;
 }
 
 const AssistantContext = createContext<AssistantContextValue>({
@@ -40,6 +44,8 @@ const AssistantContext = createContext<AssistantContextValue>({
   fireEvaluationTriggered: async () => null,
   registerPrefillThesisPoint: () => {},
   firePrefillThesisPoint: () => {},
+  registerExplainThesisPoint: () => {},
+  fireExplainThesisPoint: () => {},
 });
 
 export function AssistantProvider({ children }: { children: ReactNode }) {
@@ -48,6 +54,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const onThesisAddedRef = useRef<((t: Thesis) => void) | null>(null);
   const onEvalTriggeredRef = useRef<(() => Promise<Evaluation | null>) | null>(null);
   const onPrefillRef = useRef<((statement: string) => void) | null>(null);
+  const onExplainRef = useRef<((statement: string) => void) | null>(null);
 
   const togglePanel = useCallback(() => setIsOpen((p) => !p), []);
 
@@ -84,6 +91,14 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     onPrefillRef.current?.(statement);
   }, []);
 
+  const registerExplainThesisPoint = useCallback((cb: ((statement: string) => void) | null) => {
+    onExplainRef.current = cb;
+  }, []);
+
+  const fireExplainThesisPoint = useCallback((statement: string) => {
+    onExplainRef.current?.(statement);
+  }, []);
+
   return (
     <AssistantContext.Provider
       value={{
@@ -91,6 +106,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
         registerThesisAdded, fireThesisAdded,
         registerEvaluationTriggered, fireEvaluationTriggered,
         registerPrefillThesisPoint, firePrefillThesisPoint,
+        registerExplainThesisPoint, fireExplainThesisPoint,
       }}
     >
       {children}

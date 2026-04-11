@@ -24,6 +24,7 @@ import PortfolioScoreTrend from "./components/PortfolioScoreTrend";
 import OnboardingGuide from "./components/OnboardingGuide";
 import PortfolioComparison from "./components/PortfolioComparison";
 import WeeklyDigestCard from "./components/WeeklyDigest";
+import EarningsCalendar from "./components/EarningsCalendar";
 import { Loader2, GitCompare } from "lucide-react";
 
 export default function DashboardPage() {
@@ -113,6 +114,7 @@ export default function DashboardPage() {
                 <SectorChart compact portfolioId={activePortfolioId} />
                 <PortfolioScoreTrend scoreHistories={scoreHistories} />
                 <WeeklyDigestCard portfolioId={activePortfolioId} />
+                <EarningsCalendar />
               </div>
             </div>
 

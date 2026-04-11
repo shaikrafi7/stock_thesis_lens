@@ -105,6 +105,7 @@ class BriefingItemSchema(BaseModel):
     impact: str  # "bullish" | "bearish" | "neutral"
     suggestion: Optional[ThesisSuggestionSchema] = None
     source_url: Optional[str] = None
+    related_thesis: Optional[str] = None  # existing thesis statement this news challenges/supports
 
 
 class MorningBriefingResponse(BaseModel):
@@ -137,3 +138,23 @@ class ThesisPreview(BaseModel):
     statement: str
     importance: str = "standard"
     weight: float = 1.0
+
+
+class ConfirmPreviewRequest(BaseModel):
+    """Approved thesis points from the preview modal — save exactly these."""
+    points: list[ThesisPreview]
+
+
+class ThesisAuditRead(BaseModel):
+    id: int
+    thesis_id: Optional[int]
+    action: str
+    field_changed: Optional[str]
+    old_value: Optional[str]
+    new_value: Optional[str]
+    statement_snapshot: str
+    category: str
+    note: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

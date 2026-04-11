@@ -46,7 +46,7 @@ async function fetchHistory(ticker: string | null, portfolioId?: number | null):
 
 export default function AssistantPanel() {
   const router = useRouter();
-  const { isOpen, togglePanel, ticker, fireThesisAdded, fireEvaluationTriggered } = useAssistant();
+  const { isOpen, togglePanel, ticker, fireThesisAdded, fireEvaluationTriggered, registerExplainThesisPoint } = useAssistant();
   const { activePortfolioId } = usePortfolio();
   const isPortfolioMode = ticker === null;
 
@@ -59,6 +59,11 @@ export default function AssistantPanel() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatHistoryRef = useRef<ChatMessage[]>([]);
+  const chatLoadingRef = useRef(false);
+
+  useEffect(() => { chatHistoryRef.current = chatHistory; }, [chatHistory]);
+  useEffect(() => { chatLoadingRef.current = chatLoading; }, [chatLoading]);
 
   useEffect(() => {
     setChatHistory([]);
@@ -76,13 +81,19 @@ export default function AssistantPanel() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    const input = chatInput.trim();
-    if (!input || chatLoading) return;
+  useEffect(() => {
+    registerExplainThesisPoint((statement: string) => {
+      if (chatLoadingRef.current) return;
+      const msg = `Explain this thesis point for ${ticker ?? "this stock"}: "${statement}" — why does it matter, what signals support or challenge it?`;
+      sendMessageText(msg);
+    });
+    return () => registerExplainThesisPoint(null);
+  }, [ticker, registerExplainThesisPoint]);
 
-    const userMsg: ChatMessage = { role: "user", content: input };
-    const newHistory = [...chatHistory, userMsg];
+  async function sendMessageText(text: string) {
+    if (!text || chatLoadingRef.current) return;
+    const userMsg: ChatMessage = { role: "user", content: text };
+    const newHistory = [...chatHistoryRef.current, userMsg];
     setChatHistory(newHistory);
     setChatInput("");
     setChatLoading(true);
@@ -97,8 +108,8 @@ export default function AssistantPanel() {
     const path = isPortfolioMode ? "/portfolio/chat/stream" : `/stocks/${ticker}/chat/stream`;
 
     await streamChat(path, { messages: newHistory }, {
-      onToken(text) {
-        accumulated += text;
+      onToken(t) {
+        accumulated += t;
         setChatHistory((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = { role: "assistant", content: accumulated };
@@ -118,17 +129,15 @@ export default function AssistantPanel() {
         }
       },
       onDone() { setChatLoading(false); },
-      onError(message) {
-        if (!accumulated) {
-          setChatHistory((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = { role: "assistant", content: message };
-            return updated;
-          });
-        }
-        setChatLoading(false);
-      },
+      onError(err) { setError(err); setChatLoading(false); },
     });
+  }
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    const input = chatInput.trim();
+    if (!input || chatLoading) return;
+    await sendMessageText(input);
   }
 
   async function handleAddSuggestion() {

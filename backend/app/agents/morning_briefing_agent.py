@@ -48,6 +48,7 @@ You MUST respond with valid JSON in this exact format:
       "headline": "short version of the headline",
       "impact": "bullish",
       "source_url": "https://example.com/article",
+      "related_thesis": null,
       "suggestion": null
     }},
     {{
@@ -55,6 +56,7 @@ You MUST respond with valid JSON in this exact format:
       "headline": "short version of the headline",
       "impact": "bearish",
       "source_url": "https://example.com/article2",
+      "related_thesis": "NVDA's data center moat is widening due to CUDA ecosystem lock-in",
       "suggestion": {{
         "category": "one of: competitive_moat, growth_trajectory, valuation, financial_health, ownership_conviction, risks",
         "statement": "A complete sentence under 25 words written from a buyer's investment perspective"
@@ -65,6 +67,7 @@ You MUST respond with valid JSON in this exact format:
 
 impact must be one of: bullish, bearish, neutral
 source_url: pass through the URL from the news item you are summarizing
+related_thesis: copy the EXACT text of the existing thesis point this news most directly challenges or supports. Set to null if no existing thesis point is clearly relevant.
 suggestion is null unless you have a specific, well-formed thesis point to propose."""
 
 
@@ -75,6 +78,7 @@ class BriefingItemResult:
     impact: str
     suggestion: Optional[dict] = None  # {category, statement}
     source_url: Optional[str] = None
+    related_thesis: Optional[str] = None  # existing thesis statement this news challenges/supports
 
 
 @dataclass
@@ -223,11 +227,15 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_
                     suggestion = {"category": cat, "statement": stmt}
 
             source_url = item.get("source_url", "") or ""
+            related_thesis = item.get("related_thesis") or None
+            if isinstance(related_thesis, str):
+                related_thesis = related_thesis.strip() or None
 
             if ticker and headline:
                 items.append(BriefingItemResult(
                     ticker=ticker, headline=headline, impact=impact,
                     suggestion=suggestion, source_url=source_url or None,
+                    related_thesis=related_thesis,
                 ))
 
         # Macro items first, then stock-specific
