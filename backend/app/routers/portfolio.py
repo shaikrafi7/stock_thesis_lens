@@ -858,43 +858,54 @@ class ScreenerCard(BaseModel):
     in_watchlist: bool
 
 
+def _fetch_screener_card(ticker: str, portfolio_tickers: set, watchlist_tickers: set) -> "ScreenerCard | None":
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        fast = t.fast_info
+        full = t.info
+        price = getattr(fast, "last_price", None)
+        prev_close = getattr(fast, "previous_close", None)
+        change_pct = round((price - prev_close) / prev_close * 100, 2) if price and prev_close else None
+        market_cap_raw = getattr(fast, "market_cap", None)
+        market_cap = round(market_cap_raw / 1e9, 1) if market_cap_raw else None
+        return ScreenerCard(
+            ticker=ticker,
+            name=_clean_name(full.get("longName") or full.get("shortName") or ticker),
+            sector=full.get("sector"),
+            price=round(price, 2) if price else None,
+            change_pct=change_pct,
+            pe_ratio=round(full.get("trailingPE", 0), 1) if full.get("trailingPE") else None,
+            market_cap=market_cap,
+            analyst_rating=full.get("recommendationKey"),
+            in_portfolio=ticker in portfolio_tickers,
+            in_watchlist=ticker in watchlist_tickers,
+        )
+    except Exception:
+        return None
+
+
 @router.get("/screener", response_model=list[ScreenerCard])
 def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Return a curated list of popular stocks with basic market data for the screener."""
-    import yfinance as yf
     import random
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     portfolio = get_active_portfolio(portfolio_id, current_user, db)
     existing = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
     portfolio_tickers = {s.ticker for s in existing}
     watchlist_tickers = {s.ticker for s in existing if s.watchlist == "true"}
 
-    # Pick 20 random tickers not already in portfolio
     candidates = [t for t in SCREENER_TICKERS if t not in portfolio_tickers]
     sample = random.sample(candidates, min(20, len(candidates)))
 
     cards: list[ScreenerCard] = []
-    for ticker in sample:
-        try:
-            info = yf.Ticker(ticker).fast_info
-            full_info = yf.Ticker(ticker).info
-            price = getattr(info, "last_price", None)
-            prev_close = getattr(info, "previous_close", None)
-            change_pct = round((price - prev_close) / prev_close * 100, 2) if price and prev_close else None
-            market_cap = round(getattr(info, "market_cap", 0) / 1e9, 1) if getattr(info, "market_cap", None) else None
-            cards.append(ScreenerCard(
-                ticker=ticker,
-                name=_clean_name(full_info.get("longName") or full_info.get("shortName") or ticker),
-                sector=full_info.get("sector"),
-                price=round(price, 2) if price else None,
-                change_pct=change_pct,
-                pe_ratio=round(full_info.get("trailingPE", 0), 1) if full_info.get("trailingPE") else None,
-                market_cap=market_cap,
-                analyst_rating=full_info.get("recommendationKey"),
-                in_portfolio=ticker in portfolio_tickers,
-                in_watchlist=ticker in watchlist_tickers,
-            ))
-        except Exception:
-            continue
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(_fetch_screener_card, t, portfolio_tickers, watchlist_tickers): t for t in sample}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                cards.append(result)
 
+    cards.sort(key=lambda c: c.ticker)
     return cards
