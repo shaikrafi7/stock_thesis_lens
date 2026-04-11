@@ -12,6 +12,7 @@ import {
 import { useAssistant } from "@/app/context/AssistantContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import StatusBadge from "@/app/components/StatusBadge";
+import ThesisTemplateSelector from "@/app/components/ThesisTemplateSelector";
 import {
   Lock, Unlock, Pencil, X, AlertTriangle, Loader2, RefreshCw,
   Activity, Save, CircleDot, ChevronUp, ChevronDown, Plus,
@@ -403,6 +404,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Review Generated Points</h3>
             <span className="text-xs text-gray-400 dark:text-zinc-500">{previewPoints.length - rejectedIndexes.size} of {previewPoints.length} selected</span>
           </div>
+          <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-snug">
+            Uncheck any point you disagree with or find too generic. A strong thesis is one you can genuinely defend — edit or add your own after confirming.
+          </p>
           <div className="flex flex-col gap-2">
             {previewPoints.map((p, i) => {
               const rejected = rejectedIndexes.has(i);
@@ -594,7 +598,13 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Thesis bullets */}
       {theses.length === 0 ? (
-        <p className="text-gray-400 dark:text-zinc-600 text-sm">No thesis yet. Click &quot;Generate Thesis&quot; to get started.</p>
+        <ThesisTemplateSelector
+          ticker={ticker}
+          onSelect={(pt) => {
+            setAddForCategory(pt.category);
+            setAddStatement(pt.statement);
+          }}
+        />
       ) : filteredTheses.length === 0 ? (
         <p className="text-gray-400 dark:text-zinc-600 text-sm">No points match the current filter.</p>
       ) : (

@@ -41,7 +41,7 @@ IMPORTANCE_MULTIPLIER: dict[str, float] = {
 FROZEN_MULTIPLIER = 2.0
 
 # Confidence threshold — only apply if signal is confident enough
-CONFIDENCE_THRESHOLD = 0.45
+CONFIDENCE_THRESHOLD = 0.50
 
 
 @dataclass
@@ -106,12 +106,12 @@ def evaluate_thesis(
         else:
             multiplier = IMPORTANCE_MULTIPLIER.get(importance, 1.0)
 
-        # Conviction modifier: liked boosts credit, disliked amplifies deduction
-        conviction_multiplier = 1.2 if conviction == "liked" else (1.2 if conviction == "disliked" else 1.0)
+        # Conviction modifier: liked boosts credits, disliked amplifies deductions
+        liked_multiplier = 1.3 if conviction == "liked" else 1.0
+        disliked_multiplier = 1.3 if conviction == "disliked" else 1.0
 
         if m.sentiment == "negative":
-            deduction_multiplier = conviction_multiplier if conviction == "disliked" else 1.0
-            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier * deduction_multiplier
+            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier * disliked_multiplier
             total_deduction += deduction
             point_data = {
                 "thesis_id": m.thesis_id,
@@ -128,8 +128,7 @@ def evaluate_thesis(
                 frozen_breaks.append(point_data)
 
         elif m.sentiment == "positive":
-            credit_multiplier = conviction_multiplier if conviction == "liked" else 1.0
-            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier * credit_multiplier
+            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier * liked_multiplier
             total_credit += credit
             confirmed_points.append({
                 "thesis_id": m.thesis_id,

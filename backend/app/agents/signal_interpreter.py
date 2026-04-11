@@ -464,14 +464,6 @@ def _llm_news_mapping(
                 signal_summary=item.get("signal_summary", ""),
             ))
 
-        # Safety net: invert sentiment for risk theses.
-        for r in results:
-            if r.category == "risks":
-                if r.sentiment == "positive":
-                    r.sentiment = "negative"
-                elif r.sentiment == "negative":
-                    r.sentiment = "positive"
-
         return results
     except Exception as exc:
         logger.error("signal_interpreter: LLM news mapping failed: %s", exc)
