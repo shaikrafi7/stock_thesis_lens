@@ -25,6 +25,7 @@ import OnboardingGuide from "./components/OnboardingGuide";
 import PortfolioComparison from "./components/PortfolioComparison";
 import WeeklyDigestCard from "./components/WeeklyDigest";
 import EarningsCalendar from "./components/EarningsCalendar";
+import ConvictionVsReturns from "./components/ConvictionVsReturns";
 import { Loader2, GitCompare } from "lucide-react";
 
 export default function DashboardPage() {
@@ -115,6 +116,7 @@ export default function DashboardPage() {
                 <PortfolioScoreTrend scoreHistories={scoreHistories} />
                 <WeeklyDigestCard portfolioId={activePortfolioId} />
                 <EarningsCalendar />
+                <ConvictionVsReturns />
               </div>
             </div>
 
