@@ -656,3 +656,11 @@ export interface ThesisOverviewItem {
 
 export const getThesisOverview = (portfolioId?: number | null): Promise<ThesisOverviewItem[]> =>
   apiFetch(`/portfolio/thesis-overview${joinParams(pq(portfolioId))}`);
+
+export interface TickerSuggestion {
+  ticker: string;
+  name: string;
+}
+
+export const searchTickers = (q: string): Promise<TickerSuggestion[]> =>
+  apiFetch(`/stocks/search?q=${encodeURIComponent(q)}`);

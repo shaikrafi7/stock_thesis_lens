@@ -125,6 +125,25 @@ def list_stocks(
     return stocks
 
 
+@router.get("/search", response_model=list[dict])
+def search_tickers(q: str = Query(..., min_length=1), _current_user: User = Depends(get_current_user)):
+    """Search for ticker symbols by keyword. Returns up to 8 results."""
+    try:
+        import yfinance as yf
+        results = yf.Search(q, max_results=8)
+        quotes = results.quotes
+        out = []
+        for item in quotes[:8]:
+            ticker = item.get("symbol", "")
+            name = item.get("longname") or item.get("shortname") or ""
+            q_type = item.get("quoteType", "")
+            if ticker and q_type in ("EQUITY", "ETF"):
+                out.append({"ticker": ticker, "name": _clean_name(name)})
+        return out
+    except Exception:
+        return []
+
+
 @router.get("/{ticker}", response_model=StockRead)
 def get_stock(
     ticker: str,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { addStock, previewThesis, confirmPreview, type ThesisPreview } from "@/lib/api";
+import { useState, useRef, useEffect } from "react";
+import { addStock, previewThesis, confirmPreview, searchTickers, type ThesisPreview, type TickerSuggestion } from "@/lib/api";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import { Plus, Loader2, Check, X } from "lucide-react";
 
@@ -21,22 +21,68 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
   const [pendingTicker, setPendingTicker] = useState("");
   const [previewPoints, setPreviewPoints] = useState<ThesisPreview[]>([]);
   const [rejected, setRejected] = useState<Set<number>>(new Set());
+  const [suggestions, setSuggestions] = useState<TickerSuggestion[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounced search
+  useEffect(() => {
+    const val = ticker.trim();
+    if (!val || val.includes(",") || step !== "idle") {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchTickers(val);
+        setSuggestions(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [ticker, step]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+          inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  function selectSuggestion(s: TickerSuggestion) {
+    setTicker(s.ticker);
+    setShowDropdown(false);
+    setSuggestions([]);
+    inputRef.current?.focus();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const raw = ticker.trim().toUpperCase();
     if (!raw || step !== "idle") return;
+    setShowDropdown(false);
 
-    // Only handle single ticker in inline form; multi-ticker goes straight through
     const tickers = raw.split(",").map((t) => t.trim()).filter(Boolean);
     if (tickers.length > 1) {
-      // Multi-ticker: no preview, add all directly
       setStep("adding");
       try {
         for (const t of tickers) {
           try {
             await addStock(t, portfolioId);
-            await confirmPreview(t, [], portfolioId); // saves nothing, just evaluates
+            await confirmPreview(t, [], portfolioId);
           } catch { /* continue */ }
         }
         setTicker("");
@@ -96,6 +142,9 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
             {previewPoints.length - rejected.size} of {previewPoints.length} selected
           </span>
         </div>
+        <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-snug">
+          A good thesis point is specific, falsifiable, and time-bound. Uncheck any points that feel generic or don&rsquo;t match your view — you own this thesis.
+        </p>
         <div className="flex flex-col gap-1.5 max-h-96 overflow-y-auto">
           {previewPoints.map((p, i) => {
             const isRejected = rejected.has(i);
@@ -147,14 +196,36 @@ export default function AddStockInline({ onAdded, portfolioId }: { onAdded?: () 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-1.5">
-      <input
-        type="text"
-        value={ticker}
-        onChange={(e) => setTicker(e.target.value)}
-        placeholder="AAPL, NVDA..."
-        className="w-40 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-accent"
-      />
+    <form onSubmit={handleSubmit} className="flex gap-1.5 relative">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+          placeholder="AAPL, NVDA..."
+          className="w-44 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-accent"
+        />
+        {showDropdown && suggestions.length > 0 && (
+          <div
+            ref={dropdownRef}
+            className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 overflow-hidden"
+          >
+            {suggestions.map((s) => (
+              <button
+                key={s.ticker}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors text-left"
+              >
+                <span className="font-mono font-semibold text-xs text-accent w-14 shrink-0">{s.ticker}</span>
+                <span className="text-xs text-gray-500 dark:text-zinc-400 truncate">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <button
         type="submit"
         disabled={step !== "idle" || !ticker.trim()}
