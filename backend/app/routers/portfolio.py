@@ -777,3 +777,55 @@ def portfolio_thesis_overview(portfolio_id: int | None = Query(None), db: Sessio
         for t in theses
         if t.stock_id in stock_map
     ]
+
+
+@router.get("/export/csv")
+def export_portfolio_csv(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Export all portfolio thesis points + latest scores as CSV."""
+    import csv, io
+    from app.models.thesis import Thesis
+    from fastapi.responses import StreamingResponse as SR
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    stock_map = {s.id: s for s in stocks}
+    stock_ids = list(stock_map.keys())
+
+    theses = (
+        db.query(Thesis)
+        .filter(Thesis.stock_id.in_(stock_ids), Thesis.selected == True)  # noqa: E712
+        .order_by(Thesis.stock_id, Thesis.category)
+        .all()
+    ) if stock_ids else []
+
+    latest_evals = (
+        db.query(Evaluation.stock_id, Evaluation.score, Evaluation.status)
+        .filter(Evaluation.stock_id.in_(stock_ids))
+        .distinct(Evaluation.stock_id)
+        .order_by(Evaluation.stock_id, Evaluation.evaluated_at.desc())
+        .all()
+    ) if stock_ids else []
+    score_map = {row.stock_id: (row.score, row.status) for row in latest_evals}
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["ticker", "name", "score", "status", "category", "importance", "conviction", "statement"])
+    for t in theses:
+        stock = stock_map[t.stock_id]
+        score, status = score_map.get(t.stock_id, (None, None))
+        writer.writerow([
+            stock.ticker, stock.name or stock.ticker,
+            round(score, 1) if score is not None else "",
+            status or "",
+            t.category,
+            getattr(t, "importance", "standard") or "standard",
+            getattr(t, "conviction", None) or "",
+            t.statement,
+        ])
+
+    buf.seek(0)
+    return SR(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="thesisarc_{portfolio.name.replace(" ", "_")}.csv"'},
+    )

@@ -2,11 +2,33 @@
 
 import { useAuth } from "@/app/context/AuthContext";
 import { useTheme } from "@/app/context/ThemeContext";
-import { Sun, Moon, LogOut, User, Mail } from "lucide-react";
+import { usePortfolio } from "@/app/context/PortfolioContext";
+import { Sun, Moon, LogOut, User, Mail, Download } from "lucide-react";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { activePortfolioId } = usePortfolio();
+
+  function handleExportCSV() {
+    const token = typeof window !== "undefined" ? localStorage.getItem("thesisarc_token") : null;
+    if (!token) return;
+    const pid = activePortfolioId ? `?portfolio_id=${activePortfolioId}` : "";
+    const url = `${BASE_URL}/portfolio/export/csv${pid}`;
+    // Use fetch + blob to include auth header
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "thesisarc_portfolio.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(() => {});
+  }
 
   return (
     <div className="max-w-lg mx-auto px-6 py-8">
@@ -60,6 +82,23 @@ export default function SettingsPage() {
               />
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Data export */}
+      <section className="mb-6">
+        <h2 className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold mb-3">Data</h2>
+        <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl divide-y divide-gray-100 dark:divide-zinc-800">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-3 px-4 py-3 w-full text-left hover:bg-gray-50 dark:hover:bg-zinc-800/50 rounded-xl transition-colors"
+          >
+            <Download className="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">Export portfolio as CSV</p>
+              <p className="text-xs text-gray-400 dark:text-zinc-500">Download all thesis points + scores for the active portfolio</p>
+            </div>
+          </button>
         </div>
       </section>
 
