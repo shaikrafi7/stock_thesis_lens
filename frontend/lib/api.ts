@@ -381,6 +381,14 @@ export const getEvaluationHistory = (
 export const getPortfolioTrends = (portfolioId?: number | null): Promise<StockTrend[]> =>
   apiFetch(`/portfolio/trends${joinParams(pq(portfolioId))}`);
 
+export interface PriceSnapshot {
+  price: number | null;
+  change_pct: number | null;
+}
+
+export const getPortfolioPrices = (portfolioId?: number | null): Promise<Record<string, PriceSnapshot>> =>
+  apiFetch(`/portfolio/prices${joinParams(pq(portfolioId))}`);
+
 export interface EvaluateAllResult {
   evaluated: string[];
   skipped: string[];

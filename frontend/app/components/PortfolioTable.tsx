@@ -6,7 +6,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import DeleteStockButton from "./DeleteStockButton";
 import StatusBadge from "./StatusBadge";
-import type { Stock, Evaluation, StockTrend, EvaluationSummary } from "@/lib/api";
+import type { Stock, Evaluation, StockTrend, EvaluationSummary, PriceSnapshot } from "@/lib/api";
 import { toggleWatchlist } from "@/lib/api";
 import MiniSparkline from "./MiniSparkline";
 import { TrendingUp, TrendingDown, Minus, CircleDot, Clock, Bookmark, BookmarkCheck } from "lucide-react";
@@ -46,10 +46,11 @@ interface Props {
   trendMap: Record<string, StockTrend>;
   scoreHistories: Record<string, EvaluationSummary[]>;
   priceSparklines: Record<string, number[]>;
+  priceSnapshots?: Record<string, PriceSnapshot>;
   onStockUpdated?: (updated: Stock) => void;
 }
 
-export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHistories, priceSparklines, onStockUpdated }: Props) {
+export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHistories, priceSparklines, priceSnapshots, onStockUpdated }: Props) {
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [togglingWatchlist, setTogglingWatchlist] = useState<string | null>(null);
@@ -130,6 +131,7 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
           const trendInfo = trend ? TREND_ICONS[trend.trend] ?? TREND_ICONS.flat : null;
           const history = scoreHistories[stock.ticker];
           const prices = priceSparklines[stock.ticker];
+          const snap = priceSnapshots?.[stock.ticker];
           return (
             <div
               key={stock.ticker}
@@ -157,6 +159,20 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
                 {/* 1Y price sparkline */}
                 {prices && prices.length >= 2 && (
                   <MiniSparkline values={prices} />
+                )}
+                {/* Day price + change */}
+                {snap?.price != null && (
+                  <div className="flex flex-col items-end w-20 shrink-0">
+                    <span className="text-xs font-mono font-semibold text-gray-700 dark:text-zinc-200">
+                      ${snap.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {snap.change_pct != null && (
+                      <span className={`text-[10px] font-mono font-semibold flex items-center gap-0.5 ${snap.change_pct >= 0 ? "text-emerald-500" : "text-red-400"}`}>
+                        {snap.change_pct >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                        {snap.change_pct >= 0 ? "+" : ""}{snap.change_pct.toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
                 )}
                 {evaluation ? (
                   <>

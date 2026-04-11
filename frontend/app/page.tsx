@@ -7,10 +7,12 @@ import {
   getPortfolioTrends,
   getPortfolioScoreHistories,
   getPortfolioSparklines,
+  getPortfolioPrices,
   type Stock,
   type Evaluation,
   type StockTrend,
   type EvaluationSummary,
+  type PriceSnapshot,
 } from "@/lib/api";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import PortfolioGauge from "./components/PortfolioGauge";
@@ -40,6 +42,7 @@ export default function DashboardPage() {
   const [trendMap, setTrendMap] = useState<Record<string, StockTrend>>({});
   const [scoreHistories, setScoreHistories] = useState<Record<string, EvaluationSummary[]>>({});
   const [priceSparklines, setPriceSparklines] = useState<Record<string, number[]>>({});
+  const [priceSnapshots, setPriceSnapshots] = useState<Record<string, PriceSnapshot>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -48,7 +51,7 @@ export default function DashboardPage() {
       const stockList = await fetchStocks(pid);
       setStocks(stockList);
 
-      const [evals, trends, histories, sparklines] = await Promise.all([
+      const [evals, trends, histories, sparklines, prices] = await Promise.all([
         Promise.all(
           stockList.map((s) =>
             getLatestEvaluation(s.ticker, pid).catch(() => null)
@@ -57,6 +60,7 @@ export default function DashboardPage() {
         getPortfolioTrends(pid).catch(() => [] as StockTrend[]),
         getPortfolioScoreHistories(10, pid).catch(() => ({}) as Record<string, EvaluationSummary[]>),
         getPortfolioSparklines(pid).catch(() => ({}) as Record<string, number[]>),
+        getPortfolioPrices(pid).catch(() => ({}) as Record<string, PriceSnapshot>),
       ]);
 
       setEvaluations(evals);
@@ -67,6 +71,7 @@ export default function DashboardPage() {
 
       setScoreHistories(histories);
       setPriceSparklines(sparklines);
+      setPriceSnapshots(prices);
     } catch {
       // API errors handled per-call above
     } finally {
@@ -155,6 +160,7 @@ export default function DashboardPage() {
               trendMap={trendMap}
               scoreHistories={scoreHistories}
               priceSparklines={priceSparklines}
+              priceSnapshots={priceSnapshots}
               onStockUpdated={(updated) => setStocks((prev) => prev.map((s) => s.ticker === updated.ticker ? updated : s))}
             />
           </div>

@@ -918,6 +918,36 @@ def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_d
     return cards
 
 
+class PriceSnapshot(BaseModel):
+    price: float | None
+    change_pct: float | None
+
+
+@router.get("/prices", response_model=dict[str, PriceSnapshot])
+def portfolio_prices(
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return current price + day change% for all portfolio stocks."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    tickers = [s.ticker for s in stocks]
+
+    def _fetch(ticker: str) -> tuple[str, PriceSnapshot]:
+        snap = get_snapshot(ticker)
+        return ticker, PriceSnapshot(price=snap.price, change_pct=snap.change_pct)
+
+    result: dict[str, PriceSnapshot] = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(_fetch, t): t for t in tickers}
+        for future in as_completed(futures):
+            ticker, snap = future.result()
+            result[ticker] = snap
+    return result
+
+
 class DismissScreenerRequest(BaseModel):
     ticker: str
 
