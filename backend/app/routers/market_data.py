@@ -42,6 +42,9 @@ class CompanyInfo(BaseModel):
     revenue_growth: float | None = None
     # Earnings date
     earnings_date: str | None = None
+    # Live price
+    current_price: float | None = None
+    day_change_pct: float | None = None
 
 
 class PricePoint(BaseModel):
@@ -152,6 +155,11 @@ def get_market_data(ticker: str, period: str = Query("3mo")):
             profit_margin=info.get("profitMargins"),
             revenue_growth=info.get("revenueGrowth"),
             earnings_date=earnings_date_str,
+            # Live price
+            current_price=info.get("currentPrice") or info.get("regularMarketPrice"),
+            day_change_pct=round(
+                ((info["currentPrice"] - info["previousClose"]) / info["previousClose"] * 100), 2
+            ) if info.get("currentPrice") and info.get("previousClose") else None,
         )
 
         interval = "1h" if period == "5d" else "1d"

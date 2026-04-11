@@ -65,6 +65,9 @@ export interface CompanyInfo {
   revenue_growth: number | null;
   // Earnings
   earnings_date: string | null;
+  // Live price
+  current_price: number | null;
+  day_change_pct: number | null;
 }
 
 export interface PricePoint {

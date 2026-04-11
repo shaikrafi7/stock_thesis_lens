@@ -202,12 +202,33 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
         {company.sector && (
           <p className="text-gray-400 dark:text-zinc-500 text-xs mt-0.5">{company.sector} · {company.industry}</p>
         )}
-        <div className={`flex items-center gap-1.5 mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
-          {positive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          <span className="text-sm font-mono font-bold">${lastClose.toFixed(2)}</span>
-          <span className="text-xs font-normal">
-            {positive ? "+" : ""}{delta.toFixed(2)}% ({PERIOD_LABELS[period]})
-          </span>
+        {/* Live price (if available), else fall back to last close */}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {company.current_price != null ? (
+            <>
+              <span className="text-base font-mono font-bold text-gray-900 dark:text-white">
+                ${company.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              {company.day_change_pct != null && (
+                <span className={`flex items-center gap-0.5 text-xs font-mono font-semibold px-1.5 py-0.5 rounded-md ${
+                  company.day_change_pct >= 0
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                    : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                }`}>
+                  {company.day_change_pct >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {company.day_change_pct >= 0 ? "+" : ""}{company.day_change_pct.toFixed(2)}% today
+                </span>
+              )}
+            </>
+          ) : (
+            <div className={`flex items-center gap-1.5 ${positive ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+              {positive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span className="text-sm font-mono font-bold">${lastClose.toFixed(2)}</span>
+              <span className="text-xs font-normal">
+                {positive ? "+" : ""}{delta.toFixed(2)}% ({PERIOD_LABELS[period]})
+              </span>
+            </div>
+          )}
         </div>
         {company.recommendation && (
           <div className="flex items-center gap-2 mt-1.5">
