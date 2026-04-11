@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.user import User
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview
 from app.schemas.evaluation import EvaluationRead
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as thesis_chat_stream
@@ -39,6 +39,14 @@ def _get_investor_profile(user: User) -> dict | None:
         "primary_bias": p.primary_bias,
         "archetype_label": p.archetype_label,
     }
+
+
+@router.post("/{ticker}/preview-thesis", response_model=list[ThesisPreview])
+def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Generate thesis points without saving — for user review before committing."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
+    return [ThesisPreview(category=g.category, statement=g.statement, importance=g.importance, weight=g.weight) for g in generated]
 
 
 @router.post("/{ticker}/generate-thesis", response_model=list[ThesisRead])
@@ -275,6 +283,18 @@ def clear_chat_history(ticker: str, db: Session = Depends(get_db), current_user:
     db.query(ChatMessageModel).filter(
         ChatMessageModel.context_key == ticker, ChatMessageModel.user_id == current_user.id
     ).delete()
+    db.commit()
+    return None
+
+
+@router.post("/{ticker}/theses/reorder", status_code=204)
+def reorder_theses(ticker: str, payload: list[dict], portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Accept [{id, sort_order}, ...] and persist ordering."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    for item in payload:
+        db.query(Thesis).filter(Thesis.id == item["id"], Thesis.stock_id == stock.id).update(
+            {Thesis.sort_order: item["sort_order"]}, synchronize_session=False
+        )
     db.commit()
     return None
 

@@ -40,6 +40,8 @@ class CompanyInfo(BaseModel):
     # Profitability
     profit_margin: float | None = None
     revenue_growth: float | None = None
+    # Earnings date
+    earnings_date: str | None = None
 
 
 class PricePoint(BaseModel):
@@ -73,15 +75,48 @@ def get_market_data(ticker: str, period: str = Query("3mo")):
         if not clean_name:
             clean_name = raw_name
 
+        from datetime import datetime, timezone
+
         # Parse ex-dividend date
         ex_div_raw = info.get("exDividendDate")
         ex_div_str = None
         if ex_div_raw:
             try:
-                from datetime import datetime
                 ex_div_str = datetime.fromtimestamp(ex_div_raw).strftime("%Y-%m-%d")
             except Exception:
                 pass
+
+        # Parse next earnings date (yfinance returns a list of timestamps or strings)
+        earnings_date_str = None
+        try:
+            cal = t.calendar
+            if cal is not None and not cal.empty:
+                # calendar is a DataFrame with columns as dates; first column = next earnings
+                first_col = cal.columns[0]
+                ed = cal.loc["Earnings Date", first_col] if "Earnings Date" in cal.index else None
+                if ed is not None:
+                    if hasattr(ed, "strftime"):
+                        earnings_date_str = ed.strftime("%Y-%m-%d")
+                    else:
+                        earnings_date_str = str(ed)[:10]
+        except Exception:
+            pass
+
+        if not earnings_date_str:
+            # Fallback: info dict may have earningsTimestamp or earningsDate
+            for key in ("earningsTimestamp", "earningsDate"):
+                raw = info.get(key)
+                if raw:
+                    try:
+                        if isinstance(raw, (int, float)):
+                            dt = datetime.fromtimestamp(raw, tz=timezone.utc)
+                            if dt > datetime.now(tz=timezone.utc):
+                                earnings_date_str = dt.strftime("%Y-%m-%d")
+                        elif isinstance(raw, str):
+                            earnings_date_str = raw[:10]
+                        break
+                    except Exception:
+                        pass
 
         company = CompanyInfo(
             name=clean_name or None,
@@ -116,6 +151,7 @@ def get_market_data(ticker: str, period: str = Query("3mo")):
             # Profitability
             profit_margin=info.get("profitMargins"),
             revenue_growth=info.get("revenueGrowth"),
+            earnings_date=earnings_date_str,
         )
 
         interval = "1h" if period == "5d" else "1d"

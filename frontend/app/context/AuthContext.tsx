@@ -103,6 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, loading: false });
   }, []);
 
+  // Listen for 401s from apiFetch — clears auth state so AuthGate redirects to /login
+  useEffect(() => {
+    window.addEventListener("thesisarc:unauthorized", logout);
+    return () => window.removeEventListener("thesisarc:unauthorized", logout);
+  }, [logout]);
+
   return (
     <AuthContext.Provider value={{ ...state, login, register, logout }}>
       {children}

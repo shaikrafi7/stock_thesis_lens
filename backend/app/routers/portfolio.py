@@ -2,6 +2,7 @@ import json
 import logging
 from datetime import date
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, subqueryload
@@ -492,3 +493,48 @@ def portfolio_trends(portfolio_id: int | None = Query(None), db: Session = Depen
             trend=trend,
         ))
     return trends
+
+
+class DigestStock(BaseModel):
+    ticker: str
+    name: str
+    logo_url: str | None
+    current_score: float | None
+    previous_score: float | None
+    trend: str
+
+class WeeklyDigestResponse(BaseModel):
+    generated_at: str
+    portfolio_avg: float | None
+    stocks: list[DigestStock]
+
+@router.get("/digest", response_model=WeeklyDigestResponse)
+def get_weekly_digest(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from datetime import datetime, timedelta
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
+    digest_stocks = []
+    scores = []
+    for stock in stocks:
+        evals = db.query(Evaluation).filter(Evaluation.stock_id == stock.id).order_by(Evaluation.timestamp.desc()).limit(2).all()
+        current = evals[0].score if evals else None
+        previous = evals[1].score if len(evals) > 1 else None
+        if current is not None:
+            scores.append(current)
+        trend = "new"
+        if current is not None and previous is not None:
+            trend = "up" if current > previous + 2 else "down" if current < previous - 2 else "flat"
+        digest_stocks.append(DigestStock(
+            ticker=stock.ticker,
+            name=stock.name,
+            logo_url=stock.logo_url,
+            current_score=current,
+            previous_score=previous,
+            trend=trend,
+        ))
+    avg = sum(scores) / len(scores) if scores else None
+    return WeeklyDigestResponse(
+        generated_at=datetime.utcnow().isoformat(),
+        portfolio_avg=avg,
+        stocks=digest_stocks,
+    )

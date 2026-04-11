@@ -16,21 +16,28 @@ function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isPublic = pathname === "/login" || pathname.startsWith("/share/");
+
   useEffect(() => {
-    if (!loading && !user && pathname !== "/login") {
+    if (!loading && !user && !isPublic) {
       router.replace("/login");
     }
     if (!loading && user && pathname === "/login") {
       router.replace("/");
     }
-  }, [loading, user, pathname, router]);
+  }, [loading, user, pathname, isPublic, router]);
 
-  if (loading) {
+  if (loading && !isPublic) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-6 h-6 animate-spin text-accent" />
       </div>
     );
+  }
+
+  // Public pages — render without shell or auth
+  if (isPublic && pathname !== "/login") {
+    return <>{children}</>;
   }
 
   // On login page, render without shell

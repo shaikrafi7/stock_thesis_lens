@@ -18,6 +18,15 @@ export const IMPACT_STYLES: Record<string, { badge: string; dot: string }> = {
   neutral: { badge: "bg-gray-50 dark:bg-zinc-800/60 border-gray-200 dark:border-zinc-700 text-gray-500 dark:text-zinc-400", dot: "bg-gray-400 dark:bg-zinc-500" },
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  competitive_moat: "Moat",
+  growth_trajectory: "Growth",
+  valuation: "Valuation",
+  financial_health: "Financials",
+  ownership_conviction: "Conviction",
+  risks: "Risk",
+};
+
 export function BriefingCard({ item }: { item: BriefingItem }) {
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -57,6 +66,11 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               </Link>
             )}
             <span className="text-[10px] uppercase tracking-wide opacity-70">{item.impact}</span>
+            {item.suggestion?.category && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+                {CATEGORY_LABELS[item.suggestion.category] ?? item.suggestion.category}
+              </span>
+            )}
           </div>
           <p className="text-gray-600 dark:text-zinc-300 text-xs leading-relaxed">
             {item.headline}
@@ -177,8 +191,24 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     getMorningBriefing(portfolioId, controller.signal)
-      .then(setData)
-      .catch(() => {/* silent — section just won't render */})
+      .then(async (result) => {
+        const isEmpty = !result || (!result.summary && result.items.length === 0);
+        const isStale = result?.date
+          ? Date.now() - new Date(result.date).getTime() > 24 * 60 * 60 * 1000
+          : true;
+
+        if (isEmpty || isStale) {
+          try {
+            const fresh = await refreshMorningBriefing(portfolioId);
+            setData(fresh);
+          } catch {
+            setData(result);
+          }
+        } else {
+          setData(result);
+        }
+      })
+      .catch(() => {/* silent */})
       .finally(() => { clearTimeout(timeout); setLoading(false); });
 
     return () => { clearTimeout(timeout); controller.abort(); };
@@ -209,7 +239,27 @@ export default function MorningBriefing({ portfolioId }: { portfolioId?: number 
     );
   }
 
-  if (!data || (!data.summary && data.items.length === 0)) return null;
+  if (!data || (!data.summary && data.items.length === 0)) {
+    return (
+      <div className="border border-gray-200 dark:border-zinc-800 rounded-2xl mb-4 overflow-hidden bg-white dark:bg-zinc-900">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Newspaper className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+            <span className="text-xs uppercase tracking-widest text-gray-500 dark:text-zinc-500 font-semibold">Today&apos;s Briefing</span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white disabled:opacity-50 transition-colors"
+            title="Generate briefing"
+          >
+            {refreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+        <p className="px-4 pb-3 text-xs text-gray-400 dark:text-zinc-500">No briefing yet for today.</p>
+      </div>
+    );
+  }
 
   const today = new Date().toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" });
 

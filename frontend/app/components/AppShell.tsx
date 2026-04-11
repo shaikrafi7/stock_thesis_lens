@@ -12,7 +12,7 @@ import ProfileWizard from "./ProfileWizard";
 import StatusBadge from "./StatusBadge";
 import {
   Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2,
-  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles,
+  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
@@ -155,36 +155,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {/* Main nav */}
         <NavLink href="/" label="Dashboard" Icon={Home} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/briefing" label="Briefing" Icon={Newspaper} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/profile" label="Investor Profile" Icon={User} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/settings" label="Settings" Icon={Settings} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
-        {/* App info links — below Investor Profile */}
-        <a
-          href="/why-thesisarc.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 dark:text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
-        >
-          <Sparkles className="w-4 h-4 shrink-0" />
-          Why ThesisArc
-        </a>
-        <a
-          href="/user-guide.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 shrink-0" />
-          User Guide
-        </a>
-        <a
-          href="/faq.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 shrink-0" />
-          FAQ
-        </a>
+        {/* Docs */}
+        <NavLink href="/why" label="Why ThesisArc" Icon={Sparkles} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/guide" label="User Guide" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/faq" label="FAQ" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
         {/* Divider + stock list */}
         <div className="pt-3 pb-1">
@@ -201,14 +179,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {/* Bottom: Settings — always visible */}
-      <div className="px-2 pb-3 border-t border-gray-200/50 dark:border-zinc-800/50 pt-2 shrink-0">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-300 dark:text-zinc-700 cursor-not-allowed">
-          <Settings className="w-4 h-4 shrink-0" />
-          Settings
-          <span className="text-[9px] ml-auto opacity-60">soon</span>
-        </div>
-      </div>
     </aside>
   );
 

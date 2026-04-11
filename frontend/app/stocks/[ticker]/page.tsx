@@ -9,9 +9,10 @@ import {
 import ThesisManager from "./ThesisManager";
 import StockInfoPanel from "@/app/components/StockInfoPanel";
 import ScoreHistoryChart from "@/app/components/ScoreHistoryChart";
+import ScoreDeltaPanel from "@/app/components/ScoreDelta";
 import StockNews from "@/app/components/StockNews";
 import { usePortfolio } from "@/app/context/PortfolioContext";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell } from "lucide-react";
 
 interface Props {
   params: Promise<{ ticker: string }>;
@@ -26,6 +27,8 @@ export default function StockPage({ params }: Props) {
   const [stock, setStock] = useState<Stock | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [evalVersion, setEvalVersion] = useState(0);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -68,12 +71,9 @@ export default function StockPage({ params }: Props) {
   }
 
   return (
-    <div className="px-6 pt-4 pb-6 min-h-full">
+    <div className="px-6 pt-4 pb-24 min-h-full">
       {/* Stock header */}
       <div className="flex items-center gap-3 mb-4">
-        <Link href="/" className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors shrink-0" title="Back to Dashboard">
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
         <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-gray-200 dark:border-zinc-700">
           {stock.logo_url
             ? <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
@@ -85,22 +85,61 @@ export default function StockPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 2-column layout: left panel + thesis */}
-      <div className="flex gap-6">
-        {/* Left column — fixed width */}
-        <div className="w-[300px] shrink-0 flex flex-col gap-4">
-          <StockInfoPanel ticker={upperTicker} />
-          <ScoreHistoryChart ticker={upperTicker} />
-          <StockNews ticker={upperTicker} />
+      {/* Quarterly review prompt */}
+      {evaluation && (() => {
+        const daysSince = Math.floor((Date.now() - new Date(evaluation.timestamp).getTime()) / 86400000);
+        return daysSince >= 90 ? (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs">
+            <Bell className="w-4 h-4 shrink-0" />
+            <span>
+              Last evaluated <strong>{daysSince} days ago</strong> — time for a quarterly review. Re-run the evaluation to see if your thesis still holds.
+            </span>
+          </div>
+        ) : null;
+      })()}
+
+      {/* Layout: stacked on mobile, 2-column on lg+ */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left column — collapsible */}
+        <div className={`flex-col gap-4 lg:shrink-0 transition-all duration-200 ${leftCollapsed ? "hidden lg:flex lg:w-8" : "flex w-full lg:w-[300px]"}`}>
+          {leftCollapsed ? (
+            <button
+              onClick={() => setLeftCollapsed(false)}
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+              title="Expand panel"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold">Info</span>
+                <button
+                  onClick={() => setLeftCollapsed(true)}
+                  className="hidden lg:flex items-center justify-center w-6 h-6 rounded text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                  title="Collapse panel"
+                >
+                  <PanelLeftClose className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <StockInfoPanel ticker={upperTicker} />
+              <ScoreDeltaPanel ticker={upperTicker} portfolioId={activePortfolioId} evalVersion={evalVersion} />
+              <ScoreHistoryChart ticker={upperTicker} />
+              <StockNews ticker={upperTicker} />
+            </>
+          )}
         </div>
 
-        {/* Center column — thesis takes remaining space */}
-        <div className="flex-1 min-w-0">
-          <ThesisManager
-            ticker={upperTicker}
-            initialTheses={theses}
-            initialEvaluation={evaluation}
-          />
+        {/* Thesis column — centered with spacing when left is collapsed */}
+        <div className={`min-w-0 ${leftCollapsed ? "flex-1 flex justify-center" : "flex-1"}`}>
+          <div className={leftCollapsed ? "w-full max-w-3xl" : "w-full"}>
+            <ThesisManager
+              ticker={upperTicker}
+              initialTheses={theses}
+              initialEvaluation={evaluation}
+              onEvaluationComplete={() => setEvalVersion((v) => v + 1)}
+            />
+          </div>
         </div>
       </div>
     </div>

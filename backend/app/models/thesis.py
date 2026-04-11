@@ -17,6 +17,7 @@ class Thesis(Base):
     frozen = Column(Boolean, default=False, nullable=False)
     conviction = Column(String(10), nullable=True)  # liked | disliked | null
     source = Column(String(10), default="ai", nullable=False)  # ai | manual
+    sort_order = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_confirmed = Column(DateTime, nullable=True)
 

@@ -50,10 +50,17 @@ def _run_migrations():
         # --- Thesis columns ---
         result = conn.execute(text("PRAGMA table_info(theses)"))
         thesis_columns = [row[1] for row in result.fetchall()]
-        for col, default in [("importance", "'standard'"), ("frozen", "0"), ("source", "'ai'"), ("conviction", "NULL")]:
+        for col, default in [("importance", "'standard'"), ("frozen", "0"), ("source", "'ai'"), ("conviction", "NULL"), ("sort_order", "0"), ("last_confirmed", "NULL")]:
             if col not in thesis_columns:
                 conn.execute(text(f"ALTER TABLE theses ADD COLUMN {col} TEXT DEFAULT {default}"))
                 conn.commit()
+
+        # --- Stocks watchlist column ---
+        result = conn.execute(text("PRAGMA table_info(stocks)"))
+        stock_cols2 = [row[1] for row in result.fetchall()]
+        if "watchlist" not in stock_cols2:
+            conn.execute(text("ALTER TABLE stocks ADD COLUMN watchlist TEXT DEFAULT 'false'"))
+            conn.commit()
 
         # --- Briefings columns ---
         result = conn.execute(text("PRAGMA table_info(briefings)"))

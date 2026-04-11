@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchMarketData, type MarketData } from "@/lib/api";
-import { TrendingUp, TrendingDown, ChevronUp, ChevronDown, Settings2, X } from "lucide-react";
+import { TrendingUp, TrendingDown, ChevronUp, ChevronDown, Settings2, X, CalendarClock } from "lucide-react";
 
 function fmt(n: number | null | undefined, style: "currency" | "percent" | "decimal", decimals = 2) {
   if (n == null) return "\u2014";
@@ -221,6 +221,20 @@ export default function StockInfoPanel({ ticker }: { ticker: string }) {
             )}
           </div>
         )}
+        {company.earnings_date && (() => {
+          const daysUntil = Math.ceil((new Date(company.earnings_date).getTime() - Date.now()) / 86400000);
+          const soon = daysUntil >= 0 && daysUntil <= 30;
+          return (
+            <div className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+              soon
+                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
+                : "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400"
+            }`}>
+              <CalendarClock className="w-3 h-3" />
+              Earnings {daysUntil === 0 ? "today" : daysUntil > 0 ? `in ${daysUntil}d` : new Date(company.earnings_date).toLocaleDateString("default", { month: "short", day: "numeric" })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Period selector + Price chart */}

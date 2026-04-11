@@ -55,6 +55,14 @@ def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict |
         result = evaluate_thesis(mappings, thesis_meta, investor_profile=investor_profile)
         explanation = generate_explanation(stock.ticker, result)
 
+        # Update last_confirmed on confirmed thesis points
+        from datetime import datetime
+        confirmed_ids = {bp["thesis_id"] for bp in result.confirmed_points if "thesis_id" in bp}
+        if confirmed_ids:
+            db.query(Thesis).filter(Thesis.id.in_(confirmed_ids)).update(
+                {Thesis.last_confirmed: datetime.utcnow()}, synchronize_session=False
+            )
+
         # Save evaluation
         evaluation = Evaluation(
             stock_id=stock.id,

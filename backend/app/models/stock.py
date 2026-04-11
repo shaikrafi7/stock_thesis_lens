@@ -15,6 +15,7 @@ class Stock(Base):
     ticker = Column(String(10), nullable=False)
     name = Column(String(255), nullable=False)
     logo_url = Column(String(500), nullable=True)
+    watchlist = Column(String(5), default="false", nullable=False)  # "true" | "false" stored as string for SQLite compat
 
     owner = relationship("User", back_populates="stocks")
     portfolio = relationship("Portfolio", back_populates="stocks")

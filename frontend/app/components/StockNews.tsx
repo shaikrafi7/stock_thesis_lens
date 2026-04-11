@@ -8,7 +8,8 @@ import {
   type NewsItem,
 } from "@/lib/api";
 import { BriefingCard } from "./MorningBriefing";
-import { ExternalLink, Newspaper, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { ExternalLink, Newspaper, ChevronUp, ChevronDown, Loader2, Plus } from "lucide-react";
+import { useAssistant } from "@/app/context/AssistantContext";
 
 interface DayGroup {
   label: string;
@@ -45,6 +46,7 @@ export default function StockNews({ ticker }: { ticker: string }) {
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
+  const { firePrefillThesisPoint } = useAssistant();
 
   useEffect(() => {
     getBriefingHistory(7)
@@ -109,23 +111,31 @@ export default function StockNews({ ticker }: { ticker: string }) {
             /* Plain news fallback */
             <div className="space-y-1">
               {fallbackNews.map((item, i) => (
-                <a
-                  key={i}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-2 group py-1.5 border-b border-gray-100 dark:border-zinc-800/50 last:border-0"
-                >
-                  <span className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
-                    {item.title}
-                  </span>
-                  <span className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                    {item.published_utc && (
-                      <span className="text-[10px] text-gray-400 dark:text-zinc-600">{timeAgo(item.published_utc)}</span>
-                    )}
-                    <ExternalLink className="w-3 h-3 text-gray-400 dark:text-zinc-600 group-hover:text-gray-600 dark:group-hover:text-zinc-400 transition-colors" />
-                  </span>
-                </a>
+                <div key={i} className="flex items-start gap-2 group py-1.5 border-b border-gray-100 dark:border-zinc-800/50 last:border-0">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 flex-1 min-w-0"
+                  >
+                    <span className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors flex-1">
+                      {item.title}
+                    </span>
+                    <span className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                      {item.published_utc && (
+                        <span className="text-[10px] text-gray-400 dark:text-zinc-600">{timeAgo(item.published_utc)}</span>
+                      )}
+                      <ExternalLink className="w-3 h-3 text-gray-400 dark:text-zinc-600 group-hover:text-gray-600 dark:group-hover:text-zinc-400 transition-colors" />
+                    </span>
+                  </a>
+                  <button
+                    onClick={() => firePrefillThesisPoint(item.title)}
+                    title="Add as thesis point"
+                    className="shrink-0 p-0.5 text-gray-300 dark:text-zinc-700 hover:text-accent transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ))}
             </div>
           ) : (
@@ -138,7 +148,16 @@ export default function StockNews({ ticker }: { ticker: string }) {
                   </p>
                   <div className="flex flex-col gap-2">
                     {group.items.map((item, i) => (
-                      <BriefingCard key={i} item={item} />
+                      <div key={i} className="group relative">
+                        <BriefingCard item={item} />
+                        <button
+                          onClick={() => firePrefillThesisPoint(item.headline)}
+                          title="Add as thesis point"
+                          className="absolute top-2 right-2 p-0.5 text-gray-300 dark:text-zinc-700 hover:text-accent transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>

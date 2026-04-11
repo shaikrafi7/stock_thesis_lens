@@ -4,9 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 const GaugeComponent = dynamic(() => import("react-gauge-component"), { ssr: false });
 import {
-  generateAndEvaluate, updateThesisConviction, updateThesisStatement,
-  updateThesisFrozen, deleteThesis, runEvaluation, addManualThesis,
-  type Thesis, type Evaluation,
+  generateAndEvaluate, previewThesis, updateThesisConviction, updateThesisStatement,
+  updateThesisFrozen, deleteThesis, runEvaluation, addManualThesis, getShareToken, reorderTheses,
+  type Thesis, type Evaluation, type ThesisPreview,
 } from "@/lib/api";
 import { useAssistant } from "@/app/context/AssistantContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
@@ -14,7 +14,8 @@ import StatusBadge from "@/app/components/StatusBadge";
 import {
   Lock, Unlock, Pencil, X, AlertTriangle, Loader2, RefreshCw,
   Activity, Save, CircleDot, ChevronUp, ChevronDown, Plus,
-  Zap, Star, ThumbsUp, ThumbsDown,
+  Zap, Star, ThumbsUp, ThumbsDown, Check, Download, Share2,
+  ArrowUp, ArrowDown,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -64,9 +65,10 @@ interface Props {
   ticker: string;
   initialTheses: Thesis[];
   initialEvaluation: Evaluation | null;
+  onEvaluationComplete?: () => void;
 }
 
-export default function ThesisManager({ ticker, initialTheses, initialEvaluation }: Props) {
+export default function ThesisManager({ ticker, initialTheses, initialEvaluation, onEvaluationComplete }: Props) {
   const [theses, setTheses] = useState<Thesis[]>(initialTheses);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(initialEvaluation);
   const [generating, setGenerating] = useState(false);
@@ -80,8 +82,15 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [addForCategory, setAddForCategory] = useState<string | null>(null);
   const [addStatement, setAddStatement] = useState("");
   const [addingManual, setAddingManual] = useState(false);
+  const [previewPoints, setPreviewPoints] = useState<ThesisPreview[] | null>(null);
+  const [rejectedIndexes, setRejectedIndexes] = useState<Set<number>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterConviction, setFilterConviction] = useState<string>("all");
 
-  const { setTicker, registerThesisAdded, registerEvaluationTriggered } = useAssistant();
+  const { setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint } = useAssistant();
   const { activePortfolioId: pid } = usePortfolio();
 
   useEffect(() => {
@@ -91,17 +100,36 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       try {
         const result = await runEvaluation(ticker, pid);
         setEvaluation(result);
+        onEvaluationComplete?.();
         return result;
       } catch { return null; }
     });
-    return () => { setTicker(null); registerThesisAdded(null); registerEvaluationTriggered(null); };
-  }, [ticker, setTicker, registerThesisAdded, registerEvaluationTriggered]);
+    registerPrefillThesisPoint((statement) => {
+      setAddForCategory("risks");
+      setAddStatement(statement);
+    });
+    return () => {
+      setTicker(null);
+      registerThesisAdded(null);
+      registerEvaluationTriggered(null);
+      registerPrefillThesisPoint(null);
+    };
+  }, [ticker, setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint]);
 
   const likedCount = theses.filter((t) => t.conviction === "liked").length;
   const dislikedCount = theses.filter((t) => t.conviction === "disliked").length;
   const lockedCount = theses.filter((t) => t.frozen).length;
   const selectedCount = theses.filter((t) => t.selected).length;
-  const groups = groupByCategory(theses);
+
+  const filteredTheses = theses.filter((t) => {
+    if (filterCategory !== "all" && t.category !== filterCategory) return false;
+    if (filterConviction === "liked" && t.conviction !== "liked") return false;
+    if (filterConviction === "disliked" && t.conviction !== "disliked") return false;
+    if (filterConviction === "locked" && !t.frozen) return false;
+    if (filterConviction === "critical" && t.importance !== "critical") return false;
+    return true;
+  });
+  const groups = groupByCategory(filteredTheses);
 
   const impactMap = useMemo((): Map<number, { type: "confirmed" | "broken"; pts: number }> => {
     if (!evaluation) return new Map();
@@ -119,12 +147,25 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   async function handleGenerate() {
     setGenerating(true); setError("");
     try {
-      const result = await generateAndEvaluate(ticker, pid);
-      setTheses(result.theses);
-      if (result.evaluation) setEvaluation(result.evaluation);
+      const preview = await previewThesis(ticker, pid);
+      setPreviewPoints(preview);
+      setRejectedIndexes(new Set());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally { setGenerating(false); }
+  }
+
+  async function confirmPreview() {
+    if (!previewPoints) return;
+    setConfirming(true); setError("");
+    try {
+      const result = await generateAndEvaluate(ticker, pid);
+      setTheses(result.theses);
+      if (result.evaluation) setEvaluation(result.evaluation);
+      setPreviewPoints(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed");
+    } finally { setConfirming(false); }
   }
 
   async function handleConviction(thesis: Thesis, value: "liked" | "disliked") {
@@ -199,6 +240,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     try {
       const result = await runEvaluation(ticker, pid);
       setEvaluation(result);
+      onEvaluationComplete?.();
     } catch (err) { setError(err instanceof Error ? err.message : "Evaluation failed"); }
     finally { setEvaluating(false); }
   }
@@ -214,6 +256,75 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       setAddStatement(""); setAddForCategory(null);
     } catch (err) { setError(err instanceof Error ? err.message : "Failed to add point"); }
     finally { setAddingManual(false); }
+  }
+
+  function exportMarkdown() {
+    const lines: string[] = [`# ${ticker} Investment Thesis\n`];
+    lines.push(`_Exported ${new Date().toLocaleDateString()}_\n`);
+
+    if (evaluation) {
+      const statusLabel = evaluation.score >= 75 ? "Strong" : evaluation.score >= 50 ? "Under Pressure" : "At Risk";
+      lines.push(`## Thesis Health: ${evaluation.score}/100 — ${statusLabel}\n`);
+      if (evaluation.explanation) lines.push(`> ${evaluation.explanation}\n`);
+    }
+
+    for (const cat of [...CATEGORY_ORDER, ...Object.keys(groupByCategory(theses)).filter((c) => !CATEGORY_ORDER.includes(c))]) {
+      const items = theses.filter((t) => t.category === cat);
+      if (!items.length) continue;
+      lines.push(`## ${CATEGORY_LABELS[cat] ?? cat}\n`);
+      for (const t of items) {
+        const tags = [];
+        if (t.importance !== "standard") tags.push(t.importance.toUpperCase());
+        if (t.frozen) tags.push("LOCKED");
+        if (t.conviction === "liked") tags.push("LIKED");
+        if (t.conviction === "disliked") tags.push("DISLIKED");
+        const tagStr = tags.length ? ` \`${tags.join(" · ")}\`` : "";
+        lines.push(`- ${t.statement}${tagStr}`);
+      }
+      lines.push("");
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${ticker}_thesis.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function moveThesis(thesis: Thesis, direction: "up" | "down") {
+    const cat = thesis.category;
+    const inCat = [...theses]
+      .filter((t) => t.category === cat)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const idx = inCat.findIndex((t) => t.id === thesis.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= inCat.length) return;
+
+    const updated = inCat.map((t, i) => {
+      if (i === idx) return { ...t, sort_order: inCat[swapIdx].sort_order ?? swapIdx };
+      if (i === swapIdx) return { ...t, sort_order: inCat[idx].sort_order ?? idx };
+      return t;
+    });
+    // Normalise to 0-based
+    const normalised = updated.map((t, i) => ({ ...t, sort_order: i }));
+    setTheses((prev) => prev.map((t) => {
+      const n = normalised.find((x) => x.id === t.id);
+      return n ?? t;
+    }));
+    reorderTheses(ticker, normalised.map((t) => ({ id: t.id, sort_order: t.sort_order })), pid).catch(() => {});
+  }
+
+  async function handleShare() {
+    try {
+      const { token } = await getShareToken(ticker, pid);
+      const url = `${window.location.origin}/share/${token}`;
+      setShareLink(url);
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch { /* ignore */ }
   }
 
   const scoreColor = (s: number) => s >= 75 ? "#22c55e" : s >= 50 ? "#eab308" : "#ef4444";
@@ -245,7 +356,13 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       {/* Thesis health gauge */}
       {evaluation && (
         <div className="flex flex-col items-center py-4 bg-white dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-2xl">
-          <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 mb-1">Thesis Health</p>
+          <div className="flex items-center gap-1.5 mb-1">
+            <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500">Thesis Health</p>
+            <span
+              title="Score = base 50 pts + confirmed signals (+credit each) − broken signals (−deduction each). Locked points get 2× weight. Liked/disliked points amplify by 20%. Final score clamped 0–100."
+              className="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-zinc-400 text-[9px] font-bold flex items-center justify-center cursor-help shrink-0"
+            >?</span>
+          </div>
           <GaugeComponent
             type="semicircle"
             value={evaluation.score}
@@ -274,9 +391,62 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         </div>
       )}
 
+      {/* Preview modal */}
+      {previewPoints && (
+        <div className="border border-blue-200 dark:border-blue-800 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Review Generated Points</h3>
+            <span className="text-xs text-gray-400 dark:text-zinc-500">{previewPoints.length - rejectedIndexes.size} of {previewPoints.length} selected</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {previewPoints.map((p, i) => {
+              const rejected = rejectedIndexes.has(i);
+              return (
+                <div
+                  key={i}
+                  onClick={() => setRejectedIndexes((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(i)) next.delete(i); else next.add(i);
+                    return next;
+                  })}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    rejected
+                      ? "bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 opacity-40"
+                      : "bg-white dark:bg-zinc-800 border-blue-300 dark:border-blue-700"
+                  }`}
+                >
+                  <div className={`mt-0.5 w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
+                    rejected ? "border-gray-300 dark:border-zinc-600" : "bg-blue-500 border-blue-500"
+                  }`}>
+                    {!rejected && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                      {CATEGORY_LABELS[p.category] ?? p.category}
+                    </span>
+                    <p className="text-sm text-gray-800 dark:text-zinc-200 mt-0.5">{p.statement}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={confirmPreview} disabled={confirming || rejectedIndexes.size === previewPoints.length}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg transition-colors">
+              {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {confirming ? "Saving…" : "Add to Thesis"}
+            </button>
+            <button onClick={() => setPreviewPoints(null)}
+              className="px-4 py-2 text-sm text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 items-center flex-wrap">
-        <button onClick={handleGenerate} disabled={generating}
+        <button onClick={handleGenerate} disabled={generating || !!previewPoints}
           className="flex items-center gap-1.5 px-4 py-2 text-sm bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:opacity-50 text-gray-700 dark:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors">
           {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {generating ? "Generating…" : theses.length ? "Regenerate Thesis" : "Generate Thesis"}
@@ -287,6 +457,22 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
           {evaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
           {evaluating ? "Evaluating…" : "Evaluate Thesis"}
         </button>
+        {theses.length > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={handleShare}
+              title="Copy shareable link"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+              <Share2 className="w-4 h-4" />
+              {shareCopied ? "Copied!" : "Share"}
+            </button>
+            <button onClick={exportMarkdown}
+              title="Export thesis as Markdown"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+          </div>
+        )}
         {error && <p className="text-red-500 dark:text-red-400 text-xs">{error}</p>}
       </div>
 
@@ -361,9 +547,51 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         </div>
       )}
 
+      {/* Filter bar */}
+      {theses.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 focus:outline-none focus:border-accent"
+          >
+            <option value="all">All categories</option>
+            {CATEGORY_ORDER.map((c) => (
+              <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
+          <select
+            value={filterConviction}
+            onChange={(e) => setFilterConviction(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 focus:outline-none focus:border-accent"
+          >
+            <option value="all">All types</option>
+            <option value="liked">Liked</option>
+            <option value="disliked">Disliked</option>
+            <option value="locked">Locked</option>
+            <option value="critical">Critical</option>
+          </select>
+          {(filterCategory !== "all" || filterConviction !== "all") && (
+            <button
+              onClick={() => { setFilterCategory("all"); setFilterConviction("all"); }}
+              className="text-xs text-accent hover:text-accent-hover transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+          {(filterCategory !== "all" || filterConviction !== "all") && (
+            <span className="text-xs text-gray-400 dark:text-zinc-500 ml-auto">
+              {filteredTheses.length} of {theses.length}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Thesis bullets */}
       {theses.length === 0 ? (
         <p className="text-gray-400 dark:text-zinc-600 text-sm">No thesis yet. Click &quot;Generate Thesis&quot; to get started.</p>
+      ) : filteredTheses.length === 0 ? (
+        <p className="text-gray-400 dark:text-zinc-600 text-sm">No points match the current filter.</p>
       ) : (
         <div className="flex flex-col gap-6">
           {/* Conviction summary */}
@@ -394,7 +622,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
           </p>
 
           {[...CATEGORY_ORDER, ...Object.keys(groups).filter((c) => !CATEGORY_ORDER.includes(c))].map((cat) => {
-            const items = evaluation ? sortByImpact(groups[cat] ?? [], impactMap) : groups[cat];
+            const sorted = [...(groups[cat] ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+            const items = evaluation ? sortByImpact(sorted, impactMap) : sorted;
             if (!items || items.length === 0) return null;
             return (
               <div key={cat}>
@@ -435,6 +664,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                     const impact = impactMap.get(t.id);
                     const importanceIcon = IMPORTANCE_ICONS[t.importance];
                     const isFrozenBroken = frozenBreakIds.has(t.id);
+                    const isStale = t.last_confirmed
+                      ? (Date.now() - new Date(t.last_confirmed).getTime()) > 30 * 86400000
+                      : theses.some((x) => x.last_confirmed) // only flag if others have been confirmed
 
                     return editingId === t.id ? (
                       <div key={t.id} className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-600">
@@ -477,8 +709,19 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         )}
                         {t.frozen && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
 
-                        <span className="flex-1 text-sm leading-relaxed text-gray-800 dark:text-zinc-200">
-                          {t.statement}
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-start gap-1.5">
+                            <span className="text-sm leading-relaxed text-gray-800 dark:text-zinc-200">{t.statement}</span>
+                            {isStale && (
+                              <span title="Not confirmed in 30+ days — consider re-evaluating"
+                                className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500" />
+                            )}
+                          </span>
+                          {t.last_confirmed && (
+                            <span className="block text-[10px] text-gray-400 dark:text-zinc-600 mt-0.5">
+                              confirmed {new Date(t.last_confirmed).toLocaleDateString()}
+                            </span>
+                          )}
                         </span>
 
                         {impact && (
@@ -518,8 +761,18 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                             }`}>
                             {t.frozen ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                           </button>
-                          {/* Edit / Delete — hover only */}
+                          {/* Edit / Delete / Reorder — hover only */}
                           <div className="flex gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); moveThesis(t, "up"); }}
+                              title="Move up"
+                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); moveThesis(t, "down"); }}
+                              title="Move down"
+                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); startEdit(t); }}
                               title="Edit"
                               className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">

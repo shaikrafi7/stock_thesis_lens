@@ -11,6 +11,7 @@ export interface Stock {
   ticker: string;
   name: string;
   logo_url: string | null;
+  watchlist: string; // "true" | "false"
 }
 
 export interface Thesis {
@@ -24,6 +25,7 @@ export interface Thesis {
   frozen: boolean;
   conviction: "liked" | "disliked" | null;
   source: "ai" | "manual";
+  sort_order: number;
   created_at: string;
   last_confirmed: string | null;
 }
@@ -61,6 +63,8 @@ export interface CompanyInfo {
   // Profitability
   profit_margin: number | null;
   revenue_growth: number | null;
+  // Earnings
+  earnings_date: string | null;
 }
 
 export interface PricePoint {
@@ -114,10 +118,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   };
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers: mergedHeaders });
   if (res.status === 401) {
-    // Token expired or invalid — clear and redirect to login
+    // Token expired or invalid — dispatch event so AuthContext can logout cleanly
     if (typeof window !== "undefined") {
-      localStorage.removeItem("thesisarc_token");
-      window.location.href = "/login";
+      window.dispatchEvent(new Event("thesisarc:unauthorized"));
     }
     throw new Error("Session expired. Please log in again.");
   }
@@ -185,6 +188,20 @@ export const addStock = (ticker: string, portfolioId?: number | null): Promise<S
 
 export const deleteStock = (ticker: string, portfolioId?: number | null): Promise<void> =>
   apiFetch(`/stocks/${ticker}${joinParams(pq(portfolioId))}`, { method: "DELETE" });
+
+export const toggleWatchlist = (ticker: string, portfolioId?: number | null): Promise<Stock> =>
+  apiFetch(`/stocks/${ticker}/watchlist${joinParams(pq(portfolioId))}`, { method: "PATCH" });
+
+export const reorderTheses = (
+  ticker: string,
+  order: { id: number; sort_order: number }[],
+  portfolioId?: number | null
+): Promise<void> =>
+  apiFetch(`/stocks/${ticker}/theses/reorder${joinParams(pq(portfolioId))}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(order),
+  });
 
 export const getTheses = (ticker: string, portfolioId?: number | null): Promise<Thesis[]> =>
   apiFetch(`/stocks/${ticker}/theses${joinParams(pq(portfolioId))}`);
@@ -262,6 +279,21 @@ export const runEvaluation = (ticker: string, portfolioId?: number | null): Prom
 
 export const getLatestEvaluation = (ticker: string, portfolioId?: number | null): Promise<Evaluation> =>
   apiFetch(`/stocks/${ticker}/evaluation${joinParams(pq(portfolioId))}`);
+
+export interface ScoreDelta {
+  has_delta: boolean;
+  current_score?: number;
+  previous_score?: number;
+  score_delta?: number;
+  current_timestamp?: string;
+  previous_timestamp?: string;
+  newly_broken?: BrokenPoint[];
+  newly_confirmed?: ConfirmedPoint[];
+  recovered?: BrokenPoint[];
+}
+
+export const getEvaluationDelta = (ticker: string, portfolioId?: number | null): Promise<ScoreDelta> =>
+  apiFetch(`/stocks/${ticker}/evaluation/delta${joinParams(pq(portfolioId))}`);
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -380,6 +412,16 @@ export interface GenerateAndEvaluateResponse {
 export const generateAndEvaluate = (ticker: string, portfolioId?: number | null): Promise<GenerateAndEvaluateResponse> =>
   apiFetch(`/stocks/${ticker}/generate-and-evaluate${joinParams(pq(portfolioId))}`, { method: "POST" });
 
+export interface ThesisPreview {
+  category: string;
+  statement: string;
+  importance: string;
+  weight: number;
+}
+
+export const previewThesis = (ticker: string, portfolioId?: number | null): Promise<ThesisPreview[]> =>
+  apiFetch(`/stocks/${ticker}/preview-thesis${joinParams(pq(portfolioId))}`, { method: "POST" });
+
 export interface NewsItem {
   title: string;
   url: string;
@@ -482,3 +524,55 @@ export const updateInvestorProfile = (data: InvestorProfileCreateRequest): Promi
 
 export const skipProfileWizard = (): Promise<InvestorProfile> =>
   apiFetch("/profile/skip", { method: "POST" });
+
+export interface DigestStock {
+  ticker: string;
+  name: string;
+  logo_url: string | null;
+  current_score: number | null;
+  previous_score: number | null;
+  trend: string;
+}
+
+export interface WeeklyDigest {
+  generated_at: string;
+  portfolio_avg: number | null;
+  stocks: DigestStock[];
+}
+
+export const getWeeklyDigest = (portfolioId?: number | null): Promise<WeeklyDigest> =>
+  apiFetch(`/portfolio/digest${joinParams(pq(portfolioId))}`);
+
+export const getShareToken = (ticker: string, portfolioId?: number | null): Promise<{ token: string }> =>
+  apiFetch(`/stocks/${ticker}/share-token${joinParams(pq(portfolioId))}`);
+
+export interface PublicThesisPoint {
+  category: string;
+  statement: string;
+  importance: string;
+  frozen: boolean;
+  conviction: string | null;
+}
+
+export interface PublicEvaluation {
+  score: number;
+  status: string;
+  explanation: string | null;
+  confirmed_points: { thesis_id: number; statement: string; signal: string; credit: number }[];
+  broken_points: { thesis_id: number; statement: string; signal: string; deduction: number }[];
+}
+
+export interface PublicShareResponse {
+  ticker: string;
+  name: string;
+  logo_url: string | null;
+  share_token: string;
+  theses: PublicThesisPoint[];
+  evaluation: PublicEvaluation | null;
+}
+
+export const getSharedThesis = (token: string): Promise<PublicShareResponse> =>
+  fetch(`${BASE_URL}/share/${token}`).then((r) => {
+    if (!r.ok) throw new Error("Share link not found");
+    return r.json();
+  });

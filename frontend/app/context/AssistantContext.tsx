@@ -23,6 +23,10 @@ interface AssistantContextValue {
   registerEvaluationTriggered: (cb: (() => Promise<Evaluation | null>) | null) => void;
   /** Called by AssistantPanel when chat triggers an evaluation. */
   fireEvaluationTriggered: () => Promise<Evaluation | null>;
+  /** ThesisManager registers a handler to open the add-form pre-filled with a statement. */
+  registerPrefillThesisPoint: (cb: ((statement: string) => void) | null) => void;
+  /** Called by StockNews to pipe a headline into ThesisManager's add form. */
+  firePrefillThesisPoint: (statement: string) => void;
 }
 
 const AssistantContext = createContext<AssistantContextValue>({
@@ -34,6 +38,8 @@ const AssistantContext = createContext<AssistantContextValue>({
   fireThesisAdded: () => {},
   registerEvaluationTriggered: () => {},
   fireEvaluationTriggered: async () => null,
+  registerPrefillThesisPoint: () => {},
+  firePrefillThesisPoint: () => {},
 });
 
 export function AssistantProvider({ children }: { children: ReactNode }) {
@@ -41,6 +47,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const [ticker, setTicker] = useState<string | null>(null);
   const onThesisAddedRef = useRef<((t: Thesis) => void) | null>(null);
   const onEvalTriggeredRef = useRef<(() => Promise<Evaluation | null>) | null>(null);
+  const onPrefillRef = useRef<((statement: string) => void) | null>(null);
 
   const togglePanel = useCallback(() => setIsOpen((p) => !p), []);
 
@@ -69,12 +76,21 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
+  const registerPrefillThesisPoint = useCallback((cb: ((statement: string) => void) | null) => {
+    onPrefillRef.current = cb;
+  }, []);
+
+  const firePrefillThesisPoint = useCallback((statement: string) => {
+    onPrefillRef.current?.(statement);
+  }, []);
+
   return (
     <AssistantContext.Provider
       value={{
         isOpen, togglePanel, ticker, setTicker,
         registerThesisAdded, fireThesisAdded,
         registerEvaluationTriggered, fireEvaluationTriggered,
+        registerPrefillThesisPoint, firePrefillThesisPoint,
       }}
     >
       {children}

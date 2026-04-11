@@ -22,6 +22,7 @@ class StockRead(BaseModel):
     ticker: str
     name: str
     logo_url: str | None = None
+    watchlist: str = "false"  # "true" | "false"
 
     model_config = {"from_attributes": True}
 

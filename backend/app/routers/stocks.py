@@ -135,6 +135,33 @@ def get_stock(
     return get_user_stock(ticker, current_user, db, portfolio_id)
 
 
+@router.patch("/{ticker}/watchlist", response_model=StockRead)
+def toggle_watchlist(
+    ticker: str,
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    stock.watchlist = "false" if stock.watchlist == "true" else "true"
+    db.commit()
+    db.refresh(stock)
+    return stock
+
+
+@router.get("/{ticker}/share-token")
+def get_share_token(
+    ticker: str,
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    import base64
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    token = base64.urlsafe_b64encode(str(stock.id).encode()).decode().rstrip("=")
+    return {"token": token}
+
+
 @router.delete("/{ticker}", status_code=204)
 def delete_stock(
     ticker: str,

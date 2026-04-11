@@ -20,11 +20,16 @@ import EvaluateAllButton from "./components/EvaluateAllButton";
 import PortfolioTable from "./components/PortfolioTable";
 import AddStockInline from "./components/AddStockInline";
 import SectorChart from "./components/SectorChart";
-import { Loader2 } from "lucide-react";
+import PortfolioScoreTrend from "./components/PortfolioScoreTrend";
+import OnboardingGuide from "./components/OnboardingGuide";
+import PortfolioComparison from "./components/PortfolioComparison";
+import WeeklyDigestCard from "./components/WeeklyDigest";
+import { Loader2, GitCompare } from "lucide-react";
 
 export default function DashboardPage() {
   const { activePortfolioId, portfolioLoaded } = usePortfolio();
   const [loading, setLoading] = useState(true);
+  const [showComparison, setShowComparison] = useState(false);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
   const [trendMap, setTrendMap] = useState<Record<string, StockTrend>>({});
@@ -41,7 +46,7 @@ export default function DashboardPage() {
       const [evals, trends, histories, sparklines] = await Promise.all([
         Promise.all(
           stockList.map((s) =>
-            getLatestEvaluation(s.ticker).catch(() => null)
+            getLatestEvaluation(s.ticker, pid).catch(() => null)
           )
         ),
         getPortfolioTrends(pid).catch(() => [] as StockTrend[]),
@@ -86,7 +91,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="pb-6 min-h-full">
+    <div className="pb-24 min-h-full">
       {stocks.length > 0 ? (
         <>
           {/* Health gauge hero — dot-grid background */}
@@ -103,9 +108,11 @@ export default function DashboardPage() {
               <div className="min-w-0">
                 <MorningBriefing portfolioId={activePortfolioId} />
               </div>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 min-w-0">
                 <PortfolioReturns portfolioId={activePortfolioId} />
                 <SectorChart compact portfolioId={activePortfolioId} />
+                <PortfolioScoreTrend scoreHistories={scoreHistories} />
+                <WeeklyDigestCard portfolioId={activePortfolioId} />
               </div>
             </div>
 
@@ -114,6 +121,13 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Portfolio Stocks</h2>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowComparison(true)}
+                    title="Compare portfolios"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <GitCompare className="w-3.5 h-3.5" />
+                    Compare
+                  </button>
                   <EvaluateAllButton portfolioId={activePortfolioId} />
                   <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
                 </div>
@@ -126,17 +140,17 @@ export default function DashboardPage() {
               trendMap={trendMap}
               scoreHistories={scoreHistories}
               priceSparklines={priceSparklines}
+              onStockUpdated={(updated) => setStocks((prev) => prev.map((s) => s.ticker === updated.ticker ? updated : s))}
             />
           </div>
         </>
       ) : (
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center py-16">
-            <p className="text-gray-400 text-sm mb-4">No stocks in your portfolio yet.</p>
-            <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />
-          </div>
+        <div className="max-w-5xl mx-auto">
+          <OnboardingGuide onAdded={loadData} portfolioId={activePortfolioId} />
         </div>
       )}
+
+      {showComparison && <PortfolioComparison onClose={() => setShowComparison(false)} />}
     </div>
   );
 }

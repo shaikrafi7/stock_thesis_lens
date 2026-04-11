@@ -63,6 +63,47 @@ def get_latest_evaluation(ticker: str, portfolio_id: int | None = Query(None), d
     return evaluation
 
 
+@router.get("/{ticker}/evaluation/delta")
+def get_score_delta(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Compare the two most recent evaluations and return what changed."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+
+    evals = (
+        db.query(Evaluation)
+        .filter(Evaluation.stock_id == stock.id)
+        .order_by(Evaluation.timestamp.desc())
+        .limit(2)
+        .all()
+    )
+    if len(evals) < 2:
+        return {"has_delta": False}
+
+    current, previous = evals[0], evals[1]
+    score_delta = current.score - previous.score
+
+    import json
+    cur_broken = {p["thesis_id"]: p for p in (json.loads(current.broken_points or "[]"))}
+    cur_confirmed = {p["thesis_id"]: p for p in (json.loads(current.confirmed_points or "[]"))}
+    prev_broken = {p["thesis_id"]: p for p in (json.loads(previous.broken_points or "[]"))}
+    prev_confirmed = {p["thesis_id"]: p for p in (json.loads(previous.confirmed_points or "[]"))}
+
+    newly_broken = [p for tid, p in cur_broken.items() if tid not in prev_broken]
+    newly_confirmed = [p for tid, p in cur_confirmed.items() if tid not in prev_confirmed]
+    recovered = [p for tid, p in prev_broken.items() if tid in cur_confirmed]
+
+    return {
+        "has_delta": True,
+        "current_score": current.score,
+        "previous_score": previous.score,
+        "score_delta": round(score_delta, 1),
+        "current_timestamp": current.timestamp.isoformat(),
+        "previous_timestamp": previous.timestamp.isoformat(),
+        "newly_broken": newly_broken,
+        "newly_confirmed": newly_confirmed,
+        "recovered": recovered,
+    }
+
+
 @router.get("/{ticker}/evaluation-history", response_model=list[EvaluationSummary])
 def get_evaluation_history(
     ticker: str,
