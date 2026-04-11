@@ -829,3 +829,72 @@ def export_portfolio_csv(portfolio_id: int | None = Query(None), db: Session = D
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="thesisarc_{portfolio.name.replace(" ", "_")}.csv"'},
     )
+
+
+SCREENER_TICKERS = [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "BRK-B",
+    "JPM", "V", "UNH", "XOM", "JNJ", "WMT", "PG", "MA", "HD", "CVX",
+    "MRK", "LLY", "ABBV", "PEP", "COST", "AVGO", "CRM", "ACN", "TMO",
+    "MCD", "ADBE", "NKE", "TXN", "QCOM", "HON", "NEE", "PM", "AMD",
+    "INTC", "SCHW", "RTX", "LOW", "UPS", "CAT", "BA", "GS", "IBM",
+    "SBUX", "PYPL", "NFLX", "DIS", "SPOT", "SQ", "COIN", "UBER", "LYFT",
+    "SNAP", "RBLX", "HOOD", "PLTR", "SNOW", "DDOG", "ZS", "NET", "CRWD",
+    "OKTA", "MDB", "TWLO", "ZM", "DOCU", "SHOP", "ABNB", "DASH", "RIVN",
+    "LCID", "NIO", "BIDU", "BABA", "JD", "PDD", "TSM", "ASML", "SAP",
+    "TM", "SONY", "ARM", "SMCI", "MSTR", "CELH", "HIMS", "RKLB", "IONQ",
+]
+
+
+class ScreenerCard(BaseModel):
+    ticker: str
+    name: str
+    sector: str | None
+    price: float | None
+    change_pct: float | None  # 1-day change %
+    pe_ratio: float | None
+    market_cap: float | None  # in billions
+    analyst_rating: str | None
+    in_portfolio: bool
+    in_watchlist: bool
+
+
+@router.get("/screener", response_model=list[ScreenerCard])
+def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return a curated list of popular stocks with basic market data for the screener."""
+    import yfinance as yf
+    import random
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    existing = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    portfolio_tickers = {s.ticker for s in existing}
+    watchlist_tickers = {s.ticker for s in existing if s.watchlist == "true"}
+
+    # Pick 20 random tickers not already in portfolio
+    candidates = [t for t in SCREENER_TICKERS if t not in portfolio_tickers]
+    sample = random.sample(candidates, min(20, len(candidates)))
+
+    cards: list[ScreenerCard] = []
+    for ticker in sample:
+        try:
+            info = yf.Ticker(ticker).fast_info
+            full_info = yf.Ticker(ticker).info
+            price = getattr(info, "last_price", None)
+            prev_close = getattr(info, "previous_close", None)
+            change_pct = round((price - prev_close) / prev_close * 100, 2) if price and prev_close else None
+            market_cap = round(getattr(info, "market_cap", 0) / 1e9, 1) if getattr(info, "market_cap", None) else None
+            cards.append(ScreenerCard(
+                ticker=ticker,
+                name=_clean_name(full_info.get("longName") or full_info.get("shortName") or ticker),
+                sector=full_info.get("sector"),
+                price=round(price, 2) if price else None,
+                change_pct=change_pct,
+                pe_ratio=round(full_info.get("trailingPE", 0), 1) if full_info.get("trailingPE") else None,
+                market_cap=market_cap,
+                analyst_rating=full_info.get("recommendationKey"),
+                in_portfolio=ticker in portfolio_tickers,
+                in_watchlist=ticker in watchlist_tickers,
+            ))
+        except Exception:
+            continue
+
+    return cards

@@ -657,6 +657,22 @@ export interface ThesisOverviewItem {
 export const getThesisOverview = (portfolioId?: number | null): Promise<ThesisOverviewItem[]> =>
   apiFetch(`/portfolio/thesis-overview${joinParams(pq(portfolioId))}`);
 
+export interface ScreenerCard {
+  ticker: string;
+  name: string;
+  sector: string | null;
+  price: number | null;
+  change_pct: number | null;
+  pe_ratio: number | null;
+  market_cap: number | null;
+  analyst_rating: string | null;
+  in_portfolio: boolean;
+  in_watchlist: boolean;
+}
+
+export const getScreener = (portfolioId?: number | null): Promise<ScreenerCard[]> =>
+  apiFetch(`/portfolio/screener${joinParams(pq(portfolioId))}`);
+
 export interface TickerSuggestion {
   ticker: string;
   name: string;
