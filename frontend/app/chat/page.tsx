@@ -245,9 +245,30 @@ export default function ChatPage() {
           </div>
         )}
         {!historyLoading && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16 space-y-3">
+          <div className="flex flex-col items-center justify-center h-full text-center py-12 space-y-4">
             <Bot className="w-10 h-10 text-zinc-700" />
             <p className="text-zinc-500 text-sm max-w-md leading-relaxed">{placeholder}</p>
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+              {(context.type === "portfolio" ? [
+                "Which stock in my portfolio has the weakest thesis?",
+                "Which thesis points are most at risk right now?",
+                "Summarize my portfolio conviction in one paragraph",
+                "What should I evaluate next?",
+              ] : [
+                `What are the biggest risks for ${(context as { type: "stock"; ticker: string }).ticker}?`,
+                `Suggest a new thesis point for ${(context as { type: "stock"; ticker: string }).ticker}`,
+                `What signals support or challenge my current thesis?`,
+                `How does recent news affect the thesis?`,
+              ]).map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => { setInput(prompt); }}
+                  className="px-3 py-1.5 bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/6 rounded-lg text-xs text-zinc-400 hover:text-zinc-200 transition-colors text-left"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg, i) => (
