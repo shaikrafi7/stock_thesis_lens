@@ -79,6 +79,13 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE chat_messages ADD COLUMN user_id INTEGER REFERENCES users(id)"))
             conn.commit()
 
+        # --- Users screener_dismissed column ---
+        result = conn.execute(text("PRAGMA table_info(users)"))
+        user_columns = [row[1] for row in result.fetchall()]
+        if "screener_dismissed" not in user_columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN screener_dismissed TEXT"))
+            conn.commit()
+
         # --- Migrate stocks unique constraint ---
         _migrate_stocks_unique_constraint(conn)
 

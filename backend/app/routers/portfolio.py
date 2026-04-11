@@ -896,7 +896,14 @@ def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_d
     portfolio_tickers = {s.ticker for s in existing}
     watchlist_tickers = {s.ticker for s in existing if s.watchlist == "true"}
 
-    candidates = [t for t in SCREENER_TICKERS if t not in portfolio_tickers]
+    dismissed: set[str] = set()
+    if current_user.screener_dismissed:
+        try:
+            dismissed = set(json.loads(current_user.screener_dismissed))
+        except Exception:
+            pass
+
+    candidates = [t for t in SCREENER_TICKERS if t not in portfolio_tickers and t not in dismissed]
     sample = random.sample(candidates, min(20, len(candidates)))
 
     cards: list[ScreenerCard] = []
@@ -909,3 +916,36 @@ def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_d
 
     cards.sort(key=lambda c: c.ticker)
     return cards
+
+
+class DismissScreenerRequest(BaseModel):
+    ticker: str
+
+
+@router.post("/screener/dismiss", status_code=204)
+def dismiss_screener_stock(
+    body: DismissScreenerRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark a screener stock as dismissed so it won't appear again."""
+    dismissed: list[str] = []
+    if current_user.screener_dismissed:
+        try:
+            dismissed = json.loads(current_user.screener_dismissed)
+        except Exception:
+            pass
+    if body.ticker not in dismissed:
+        dismissed.append(body.ticker)
+    current_user.screener_dismissed = json.dumps(dismissed)
+    db.commit()
+
+
+@router.delete("/screener/dismissed", status_code=204)
+def clear_screener_dismissed(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Clear all dismissed screener stocks."""
+    current_user.screener_dismissed = None
+    db.commit()

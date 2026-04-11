@@ -673,6 +673,12 @@ export interface ScreenerCard {
 export const getScreener = (portfolioId?: number | null): Promise<ScreenerCard[]> =>
   apiFetch(`/portfolio/screener${joinParams(pq(portfolioId))}`);
 
+export const dismissScreenerStock = (ticker: string): Promise<void> =>
+  apiFetch("/portfolio/screener/dismiss", { method: "POST", body: JSON.stringify({ ticker }) });
+
+export const clearDismissedScreener = (): Promise<void> =>
+  apiFetch("/portfolio/screener/dismissed", { method: "DELETE" });
+
 export interface TickerSuggestion {
   ticker: string;
   name: string;
