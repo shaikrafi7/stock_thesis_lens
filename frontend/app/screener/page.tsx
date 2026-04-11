@@ -125,6 +125,7 @@ export default function ScreenerPage() {
   const { activePortfolioId, bumpStocksVersion } = usePortfolio();
   const [cards, setCards] = useState<ScreenerCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sectorFilter, setSectorFilter] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -159,9 +160,12 @@ export default function ScreenerPage() {
     bumpStocksVersion();
   }
 
+  const sectors = Array.from(new Set(cards.map((c) => c.sector).filter(Boolean) as string[])).sort();
+  const filtered = sectorFilter ? cards.filter((c) => c.sector === sectorFilter) : cards;
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">Screener</h1>
           <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">Discover stocks to research and add to your portfolio or watchlist</p>
@@ -176,15 +180,35 @@ export default function ScreenerPage() {
         </button>
       </div>
 
+      {sectors.length > 1 && !loading && (
+        <div className="flex gap-1.5 flex-wrap mb-4">
+          <button
+            onClick={() => setSectorFilter(null)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!sectorFilter ? "bg-accent text-white" : "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700"}`}
+          >
+            All
+          </button>
+          {sectors.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSectorFilter(sectorFilter === s ? null : s)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${sectorFilter === s ? "bg-accent text-white" : "bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700"}`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="w-6 h-6 animate-spin text-accent" />
         </div>
-      ) : cards.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-12">No stocks to show — you may already have all of them in your portfolio.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-12">No stocks to show.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {cards.map((card) => (
+          {filtered.map((card) => (
             <CardItem key={card.ticker} card={card} onAdd={handleAdd} onWatchlist={handleWatchlist} />
           ))}
         </div>
