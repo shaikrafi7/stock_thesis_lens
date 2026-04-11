@@ -632,3 +632,14 @@ export interface StreakInfo {
 
 export const getStreak = (): Promise<StreakInfo> =>
   apiFetch("/portfolio/streak");
+
+export interface QuizQuestion {
+  thesis_id: number;
+  statement: string;
+  category: string;
+  correct_ticker: string;
+  choices: string[];
+}
+
+export const getQuizQuestion = (portfolioId?: number | null): Promise<QuizQuestion> =>
+  apiFetch(`/portfolio/quiz${joinParams(pq(portfolioId))}`);

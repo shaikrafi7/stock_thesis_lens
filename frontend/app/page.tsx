@@ -26,12 +26,14 @@ import PortfolioComparison from "./components/PortfolioComparison";
 import WeeklyDigestCard from "./components/WeeklyDigest";
 import EarningsCalendar from "./components/EarningsCalendar";
 import ConvictionVsReturns from "./components/ConvictionVsReturns";
-import { Loader2, GitCompare } from "lucide-react";
+import QuizModal from "./components/QuizModal";
+import { Loader2, GitCompare, Brain } from "lucide-react";
 
 export default function DashboardPage() {
   const { activePortfolioId, portfolioLoaded } = usePortfolio();
   const [loading, setLoading] = useState(true);
   const [showComparison, setShowComparison] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [evaluations, setEvaluations] = useState<(Evaluation | null)[]>([]);
   const [trendMap, setTrendMap] = useState<Record<string, StockTrend>>({});
@@ -126,6 +128,13 @@ export default function DashboardPage() {
                 <h2 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Portfolio Stocks</h2>
                 <div className="flex items-center gap-3">
                   <button
+                    onClick={() => setShowQuiz(true)}
+                    title="Quiz yourself on your thesis"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <Brain className="w-3.5 h-3.5" />
+                    Quiz
+                  </button>
+                  <button
                     onClick={() => setShowComparison(true)}
                     title="Compare portfolios"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
@@ -155,6 +164,7 @@ export default function DashboardPage() {
       )}
 
       {showComparison && <PortfolioComparison onClose={() => setShowComparison(false)} />}
+      {showQuiz && <QuizModal portfolioId={activePortfolioId} onClose={() => setShowQuiz(false)} />}
     </div>
   );
 }

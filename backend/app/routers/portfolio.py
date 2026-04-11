@@ -672,3 +672,54 @@ def portfolio_streak(db: Session = Depends(get_db), current_user: User = Depends
         longest_streak=longest,
         last_activity_date=sorted_days[-1],
     )
+
+
+class QuizQuestion(BaseModel):
+    thesis_id: int
+    statement: str
+    category: str
+    correct_ticker: str
+    choices: list[str]  # 4 tickers including correct
+
+
+@router.get("/quiz", response_model=QuizQuestion)
+def portfolio_quiz(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return a random thesis statement and ask which stock it belongs to."""
+    import random
+    from app.models.thesis import Thesis
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    if len(stocks) < 2:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="Need at least 2 stocks for a quiz")
+
+    # Pick a random thesis from a random stock
+    stock = random.choice(stocks)
+    theses = db.query(Thesis).filter(Thesis.stock_id == stock.id, Thesis.selected == True).all()  # noqa: E712
+    if not theses:
+        # Fallback: try another stock
+        for s in random.sample(stocks, len(stocks)):
+            theses = db.query(Thesis).filter(Thesis.stock_id == s.id, Thesis.selected == True).all()  # noqa: E712
+            if theses:
+                stock = s
+                break
+    if not theses:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="No thesis points found")
+
+    thesis = random.choice(theses)
+
+    # Build 4 choices: correct + 3 random others
+    other_tickers = [s.ticker for s in stocks if s.ticker != stock.ticker]
+    wrong = random.sample(other_tickers, min(3, len(other_tickers)))
+    choices = wrong + [stock.ticker]
+    random.shuffle(choices)
+
+    return QuizQuestion(
+        thesis_id=thesis.id,
+        statement=thesis.statement,
+        category=thesis.category,
+        correct_ticker=stock.ticker,
+        choices=choices,
+    )
