@@ -136,11 +136,11 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   });
   const groups = groupByCategory(filteredTheses);
 
-  const impactMap = useMemo((): Map<number, { type: "confirmed" | "broken"; pts: number }> => {
+  const impactMap = useMemo((): Map<number, { type: "confirmed" | "broken"; pts: number; signal?: string }> => {
     if (!evaluation) return new Map();
-    const m = new Map<number, { type: "confirmed" | "broken"; pts: number }>();
-    for (const cp of evaluation.confirmed_points) m.set(cp.thesis_id, { type: "confirmed", pts: cp.credit });
-    for (const bp of evaluation.broken_points) m.set(bp.thesis_id, { type: "broken", pts: bp.deduction });
+    const m = new Map<number, { type: "confirmed" | "broken"; pts: number; signal?: string }>();
+    for (const cp of evaluation.confirmed_points) m.set(cp.thesis_id, { type: "confirmed", pts: cp.credit, signal: cp.signal });
+    for (const bp of evaluation.broken_points) m.set(bp.thesis_id, { type: "broken", pts: bp.deduction, signal: bp.signal });
     return m;
   }, [evaluation]);
 
@@ -740,9 +740,13 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         </span>
 
                         {impact && (
-                          <span className={`text-[10px] font-mono font-bold shrink-0 mt-0.5 ${
-                            impact.type === "confirmed" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
-                          }`}>
+                          <span
+                            title={impact.signal
+                              ? `${impact.type === "confirmed" ? "+" : "-"}${impact.pts} pts — ${impact.signal}`
+                              : `${impact.type === "confirmed" ? "+" : "-"}${impact.pts} pts`}
+                            className={`text-[10px] font-mono font-bold shrink-0 mt-0.5 cursor-help ${
+                              impact.type === "confirmed" ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                            }`}>
                             {impact.type === "confirmed" ? `+${impact.pts}` : `\u2212${impact.pts}`}
                           </span>
                         )}

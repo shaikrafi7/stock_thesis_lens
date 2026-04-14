@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -19,6 +19,7 @@ from app.services.evaluation_service import run_evaluation_for_stock
 from app.utils.market_snapshot import get_snapshot, format_snapshot
 from app.utils.news import _fetch_polygon_news
 from app.core.auth import get_current_user
+from app.core.utils import get_investor_profile
 from app.routers.stocks import get_user_stock
 
 logger = logging.getLogger(__name__)
@@ -26,28 +27,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/stocks", tags=["thesis"])
 
 
-def _get_investor_profile(user: User) -> dict | None:
-    """Extract investor profile dict from user for passing to agents."""
-    p = getattr(user, "investor_profile", None)
-    if p is None or not p.wizard_completed:
-        return None
-    return {
-        "investment_style": p.investment_style,
-        "time_horizon": p.time_horizon,
-        "loss_aversion": p.loss_aversion,
-        "risk_capacity": p.risk_capacity,
-        "experience_level": p.experience_level,
-        "overconfidence_bias": p.overconfidence_bias,
-        "primary_bias": p.primary_bias,
-        "archetype_label": p.archetype_label,
-    }
 
 
 @router.post("/{ticker}/preview-thesis", response_model=list[ThesisPreview])
 def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Generate thesis points without saving — for user review before committing."""
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
-    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
+    existing_stmts = [t.statement for t in db.query(Thesis).filter(Thesis.stock_id == stock.id).all()]
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=get_investor_profile(current_user), existing_statements=existing_stmts)
     return [ThesisPreview(category=g.category, statement=g.statement, importance=g.importance, weight=g.weight) for g in generated]
 
 
@@ -80,7 +67,7 @@ def confirm_preview(ticker: str, payload: ConfirmPreviewRequest, portfolio_id: i
     db.commit()
 
     all_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
-    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
+    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=get_investor_profile(current_user))
     evaluation = EvaluationRead.model_validate(evaluation_obj) if evaluation_obj else None
 
     return GenerateAndEvaluateResponse(
@@ -95,7 +82,7 @@ def generate_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), d
 
     db.query(Thesis).filter(Thesis.stock_id == stock.id).delete()
 
-    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=get_investor_profile(current_user))
 
     theses = [
         Thesis(
@@ -128,9 +115,8 @@ def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), d
             db.delete(t)
     db.flush()
 
-    generated = generate_thesis(stock.ticker, stock.name, investor_profile=_get_investor_profile(current_user))
-
     preserved_statements = {t.statement for t in preserved_points}
+    generated = generate_thesis(stock.ticker, stock.name, investor_profile=get_investor_profile(current_user), existing_statements=list(preserved_statements))
 
     theses = [
         Thesis(
@@ -149,7 +135,7 @@ def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), d
 
     all_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
 
-    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
+    evaluation_obj = run_evaluation_for_stock(stock, db, investor_profile=get_investor_profile(current_user))
     evaluation = EvaluationRead.model_validate(evaluation_obj) if evaluation_obj else None
 
     return GenerateAndEvaluateResponse(
@@ -206,7 +192,7 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, portfolio_id: int | N
         stock.ticker, stock.name, thesis_dicts, messages,
         market_data=market_data,
         recent_news=recent_news,
-        investor_profile=_get_investor_profile(current_user),
+        investor_profile=get_investor_profile(current_user),
     )
 
     return ChatResponse(
@@ -219,7 +205,7 @@ def chat_with_assistant(ticker: str, payload: ChatRequest, portfolio_id: int | N
 
 
 @router.post("/{ticker}/chat/stream")
-def chat_with_assistant_stream(ticker: str, payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def chat_with_assistant_stream(ticker: str, payload: ChatRequest, background_tasks: BackgroundTasks, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing_theses = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
@@ -234,35 +220,35 @@ def chat_with_assistant_stream(ticker: str, payload: ChatRequest, portfolio_id: 
         recent_news = []
 
     user_id = current_user.id
-
     context_key = stock.ticker
+    user_content = messages[-1]["content"] if messages else ""
 
-    # Collect all events first, then stream + persist
-    all_events = list(thesis_chat_stream(
-        stock.ticker, stock.name, thesis_dicts, messages,
-        market_data=market_data,
-        recent_news=recent_news,
-        investor_profile=_get_investor_profile(current_user),
-    ))
-    accumulated = "".join(
-        e["data"].get("content", "") or e["data"].get("text", "")
-        for e in all_events if e["event"] == "token"
-    )
+    def _persist(assistant_text: str):
+        from app.database import SessionLocal
+        session = SessionLocal()
+        try:
+            if user_content:
+                session.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
+            if assistant_text:
+                session.add(ChatMessageModel(context_key=context_key, role="assistant", content=assistant_text, user_id=user_id))
+            session.commit()
+        except Exception:
+            logger.warning("Failed to persist chat for %s", context_key)
+        finally:
+            session.close()
 
     def event_generator():
-        for event in all_events:
+        tokens = []
+        for event in thesis_chat_stream(
+            stock.ticker, stock.name, thesis_dicts, messages,
+            market_data=market_data,
+            recent_news=recent_news,
+            investor_profile=get_investor_profile(current_user),
+        ):
+            if event["event"] == "token":
+                tokens.append(event["data"].get("content", "") or event["data"].get("text", ""))
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
-
-    # Persist before streaming — guarantees it runs
-    try:
-        user_content = messages[-1]["content"] if messages else ""
-        if user_content:
-            db.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
-        if accumulated:
-            db.add(ChatMessageModel(context_key=context_key, role="assistant", content=accumulated, user_id=user_id))
-        db.commit()
-    except Exception:
-        logger.warning("Failed to persist chat for %s", context_key)
+        background_tasks.add_task(_persist, "".join(tokens))
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

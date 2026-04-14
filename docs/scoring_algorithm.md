@@ -1,18 +1,18 @@
-# Scoring Algorithm — Stock Thesis Lens
+# Scoring Algorithm — ThesisArc
 
 ## Overview
 
 The scoring system answers one question: **how well is your selected investment thesis holding up against current market signals?**
 
-A score starts at **100** and is deducted based on negative signals that contradict your selected thesis points. The score never goes above 100.
+Scoring is **bidirectional**: the score starts at **50** and moves up or down based on positive and negative signals. Score is clamped to `[0, 100]`.
 
 ---
 
 ## Inputs
 
-1. **Selected thesis points** — the subset of thesis bullets the user has checked (minimum 3)
-2. **Price signals** — from Polygon.io: 30-day price change, day change %, volume ratio vs average, MA20 vs MA50 trend
-3. **News signals** — recent headlines from Serper Google News
+1. **Selected thesis points** — the subset of thesis bullets the user has checked (minimum 3 required to evaluate)
+2. **Price signals** — from Polygon.io: day change %, 22-trading-day price change, volume ratio vs average, MA20 vs MA50 trend
+3. **News signals** — recent headlines fetched from Serper/Polygon news
 
 ---
 
@@ -24,7 +24,7 @@ collect_signals → interpret_signals → evaluate_thesis → explanation
 
 ### Step 1 — Signal Collection
 Fetches two signal types for the ticker:
-- **Price signals**: snapshot, 30-day aggregate, moving averages (MA20, MA50), volume ratio
+- **Price signals**: snapshot, 22-trading-day aggregate, moving averages (MA20, MA50), volume ratio
 - **News signals**: up to 10 recent headlines
 
 ### Step 2 — Signal Interpretation
@@ -34,74 +34,77 @@ Maps signals to specific selected thesis points. Two methods run in parallel and
 
 | Condition | Category targeted | Confidence |
 |---|---|---|
-| 30-day price drop > 10% | risks | 0.50 |
-| 30-day price drop > 15% | core_beliefs, strengths | 0.70 |
-| Volume spike (>2×) + day drop > 3% | strengths, leadership | 0.65 |
+| 22-trading-day price drop > 10% | risks | 0.50 |
+| 22-trading-day price drop > 15% | competitive_moat, growth_trajectory | 0.70 |
+| Volume spike (>2x) + day drop > 3% | growth_trajectory, ownership_conviction | 0.65 |
 | MA20 < MA50 (downtrend) + growth language in statement | any | 0.50 |
 
 **B. LLM news mapping** (GPT-4o-mini):
 Each news headline is evaluated against each selected thesis statement. The LLM returns a sentiment (positive/negative/neutral) and a confidence score (0.0–1.0) for each mapping.
 
-**Merge logic**: for each thesis point, only the single highest-confidence negative signal is kept. Duplicate or weaker signals for the same point are discarded.
+**Merge logic**: for each thesis point, only the single highest-confidence signal per direction (positive/negative) is kept.
 
 ### Step 3 — Evaluation (Deterministic)
 
-Only mappings with `sentiment = "negative"` and `confidence ≥ 0.45` trigger deductions.
+Only mappings with `confidence >= 0.50` are applied.
 
-**Deduction formula per thesis point:**
+**Per-thesis-point formula:**
 ```
-deduction = CATEGORY_WEIGHT × confidence
+effective_weight = CATEGORY_WEIGHT * importance_multiplier * conviction_multiplier
+deduction = effective_weight * confidence          (negative signals)
+credit    = effective_weight * confidence          (positive signals)
 ```
 
 **Category weights:**
 
-| Category | Weight | Rationale |
+| Category | Deduction weight | Credit weight |
 |---|---|---|
-| core_beliefs | 15.0 | Foundation of the thesis — most critical |
-| risks | 12.0 | Materializing risks are high-impact |
-| leadership | 10.0 | Management quality affects execution |
-| strengths | 8.0 | Competitive advantages can erode slowly |
-| catalysts | 5.0 | Timing-sensitive, lower structural weight |
+| competitive_moat | 8.0 | 8.0 |
+| risks | 7.0 | 4.0 |
+| growth_trajectory | 6.0 | 6.0 |
+| valuation | 5.0 | 5.0 |
+| financial_health | 5.0 | 5.0 |
+| ownership_conviction | 4.0 | 4.0 |
+
+**Importance multipliers:**
+
+| Importance | Multiplier |
+|---|---|
+| standard | 1.0x |
+| important | 1.5x |
+| critical | 2.0x |
+
+**Frozen multiplier:** 1.5x (committed conviction — applied instead of importance if the point is frozen)
+
+**Conviction multipliers:** `liked` or `disliked` thesis points apply an additional 1.3x to their respective direction.
 
 **Final score:**
 ```
-score = max(0, 100 - sum(all deductions))
+score = clamp(50 + sum(credits) - sum(deductions), 0, 100)
 ```
 
 **Status thresholds:**
 
 | Score | Status | Label |
 |---|---|---|
-| ≥ 75 | green | Thesis Intact |
-| 50–74 | yellow | Under Pressure |
+| >= 70 | green | Thesis Intact |
+| 50–69 | yellow | Under Pressure |
 | < 50 | red | Thesis Breaking |
 
 ### Step 4 — Explanation
-GPT-4o-mini generates a plain-language summary of the result. No buy/sell language. Summarises which points were flagged and why.
+GPT-4o-mini generates a plain-language summary of the result. No buy/sell language.
 
 ---
 
-## Known Limitations (current MVP)
+## Investor Profile Adjustments
 
-1. **Purely deduction-based** — positive signals give zero credit. A company firing on all cylinders still scores 100 at best.
-
-2. **Price rules don't target risks category well** — most price rules map to `strengths` and `core_beliefs`. Risk points only trigger on >10% 30-day drop.
-
-3. **LLM confidence is uncalibrated** — GPT confidence scores are not statistically meaningful. A 0.7 confidence doesn't mean 70% probability of the signal being real.
-
-4. **No source weighting** — a throwaway blog headline carries the same weight as a Reuters report.
-
-5. **Single signal per thesis point** — even if 5 headlines all contradict a thesis point, only the highest-confidence one is counted.
-
-6. **No historical trend** — score is a point-in-time snapshot. There is no "score has been declining for 3 weeks" signal.
+If the user has completed the investor profile wizard, category weights are adjusted based on their style (value/growth/dividend/blend), time horizon, loss aversion, and risk capacity.
 
 ---
 
-## Areas to Improve (for future scoring redesign)
+## Known Limitations
 
-- **Bidirectional scoring**: base score of 50, positive signals add up to +50, negative signals subtract up to -50
-- **Source credibility weighting**: tier news sources (SEC filings > earnings calls > major press > social)
-- **Confidence calibration**: use multiple signals to cross-validate before applying full deduction
-- **Time decay**: recent signals (last 7 days) weighted higher than older ones (30+ days)
-- **Category rebalancing**: risks materialising should carry more weight than strengths eroding
-- **Portfolio-level correlation**: if multiple stocks share a risk (e.g. "rising interest rates"), flag it once at portfolio level rather than independently per stock
+1. **LLM confidence is uncalibrated** — GPT confidence scores are not statistically meaningful.
+2. **No source weighting** — a blog headline carries the same weight as a Reuters report.
+3. **Single signal per thesis point** — only the highest-confidence signal per direction per point is counted.
+4. **No historical trend** — score is a point-in-time snapshot.

@@ -497,6 +497,31 @@
                     <h3>Multi-Portfolio Support</h3>
                     <p>Create and switch between portfolios. Maintain separate theses for growth, value, income—whatever your investment style.</p>
                 </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Stock Screener</h3>
+                    <p>Discover 80+ curated stocks across all sectors. Browse in grid mode or swipe Tinder-style to quickly build your watchlist with conviction—not FOMO.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📉</div>
+                    <h3>Conviction Backtesting</h3>
+                    <p>See if your high-conviction scores have actually predicted good returns. Pearson correlation at 30, 90, and 180 days shows whether your thesis is working.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔥</div>
+                    <h3>Habit Loops</h3>
+                    <p>Streak badge tracks daily evaluation habits. Thesis quiz tests if you remember why you own what you own. Behavioral data you actually build over time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💹</div>
+                    <h3>Live Market Prices</h3>
+                    <p>Real-time price and day-change % in your portfolio table. See your conviction score and current price side-by-side — does the market agree?</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">△</div>
+                    <h3>Score Delta Explained</h3>
+                    <p>After every re-evaluation, see exactly what moved your score: newly confirmed points, newly broken points, and recovered thesis elements—no guessing.</p>
+                </div>
             </div>
         </section>
 
@@ -537,17 +562,71 @@
                     <div class="stat-label">Daily Thesis Score</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-number">3</div>
-                    <div class="stat-label">Signal Weights (Like, Dislike, Lock)</div>
+                    <div class="stat-number">80+</div>
+                    <div class="stat-label">Curated Stocks in Screener</div>
                 </div>
                 <div class="stat">
                     <div class="stat-number">∞</div>
                     <div class="stat-label">Portfolios You Can Manage</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-number">1</div>
-                    <div class="stat-label">Glance to See Your Health</div>
+                    <div class="stat-number">🔥</div>
+                    <div class="stat-label">Daily Habit Loop with Streak Tracking</div>
                 </div>
+            </div>
+        </section>
+
+        <!-- A Week with ThesisArc -->
+        <section class="problem-section" style="margin-bottom:2rem;">
+            <h2 class="section-title">A Week with ThesisArc</h2>
+            <p style="text-align:center;color:#6b7280;max-width:620px;margin:0 auto 2rem;">Here's how a typical investor uses ThesisArc through a real market week.</p>
+            <div style="display:flex;flex-direction:column;gap:0;">
+
+                <!-- Monday -->
+                <div style="display:flex;gap:1.5rem;padding:1.5rem 0;border-bottom:1px solid #f3f4f6;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">📰</div>
+                    <div>
+                        <div style="font-weight:700;color:#1f2937;margin-bottom:4px;">Monday — Morning Briefing flags a bearish signal</div>
+                        <p style="color:#6b7280;font-size:0.95rem;margin:0;">Your briefing shows MSFT news: "Microsoft delays Copilot enterprise rollout due to integration issues." ThesisArc maps it to your thesis point <em>"AI integration across enterprise is a growth catalyst"</em> and marks it bearish. Score drops from 52 → 35. Zone shifts to <strong style="color:#dc2626;">At Risk</strong>.</p>
+                    </div>
+                </div>
+
+                <!-- Tuesday -->
+                <div style="display:flex;gap:1.5rem;padding:1.5rem 0;border-bottom:1px solid #f3f4f6;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">💬</div>
+                    <div>
+                        <div style="font-weight:700;color:#1f2937;margin-bottom:4px;">Tuesday — Clicking ℹ on the at-risk thesis point</div>
+                        <p style="color:#6b7280;font-size:0.95rem;margin:0;">You click the <strong>ℹ</strong> icon next to the broken thesis point. ThesisArc opens an AI chat pre-loaded with context. You ask: "Is this delay structural or a one-quarter blip?" The AI references filing data and explains it looks temporary. You decide to dispute the signal and lock the point as a core conviction.</p>
+                    </div>
+                </div>
+
+                <!-- Wednesday -->
+                <div style="display:flex;gap:1.5rem;padding:1.5rem 0;border-bottom:1px solid #f3f4f6;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">△</div>
+                    <div>
+                        <div style="font-weight:700;color:#1f2937;margin-bottom:4px;">Wednesday — Re-evaluation: Score Delta +8</div>
+                        <p style="color:#6b7280;font-size:0.95rem;margin:0;">You run a fresh evaluation. The Score Delta panel shows <strong style="color:#16a34a;">+8</strong>: 1 recovered point (your locked conviction held), 1 newly confirmed point from an Azure earnings beat. MSFT climbs back to 43 — still cautious, but no longer at risk. You breathe easier.</p>
+                    </div>
+                </div>
+
+                <!-- Thursday -->
+                <div style="display:flex;gap:1.5rem;padding:1.5rem 0;border-bottom:1px solid #f3f4f6;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">🔍</div>
+                    <div>
+                        <div style="font-weight:700;color:#1f2937;margin-bottom:4px;">Thursday — Screener surfaces a new idea</div>
+                        <p style="color:#6b7280;font-size:0.95rem;margin:0;">You open the Screener and swipe through a few cards. A semiconductor stock you hadn't considered appears. You swipe up to add to your watchlist. ThesisArc pre-fills thesis templates based on your Growth archetype. You customize 3 points and save.</p>
+                    </div>
+                </div>
+
+                <!-- Friday -->
+                <div style="display:flex;gap:1.5rem;padding:1.5rem 0;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">🔥</div>
+                    <div>
+                        <div style="font-weight:700;color:#1f2937;margin-bottom:4px;">Friday — 5-day streak, quiz reinforces your NVDA conviction</div>
+                        <p style="color:#6b7280;font-size:0.95rem;margin:0;">Your streak badge glows orange — 5 consecutive evaluation days. The Thesis Quiz pops up: "Which statement is part of your NVDA thesis?" You pick correctly from 4 options. That thesis point — CUDA ecosystem entrenchment — is now locked in muscle memory, not just a note in an app.</p>
+                    </div>
+                </div>
+
             </div>
         </section>
 

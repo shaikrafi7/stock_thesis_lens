@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
@@ -18,3 +19,15 @@ class Evaluation(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     stock = relationship("Stock", back_populates="evaluations")
+
+    @property
+    def parsed_broken_points(self) -> list:
+        return json.loads(self.broken_points or "[]")
+
+    @property
+    def parsed_confirmed_points(self) -> list:
+        return json.loads(self.confirmed_points or "[]")
+
+    @property
+    def parsed_frozen_breaks(self) -> list:
+        return json.loads(self.frozen_breaks or "[]")

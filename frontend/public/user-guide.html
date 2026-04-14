@@ -315,19 +315,151 @@
     <nav class="toc">
       <h2>Contents</h2>
       <ol>
+        <li><a href="#demo">Demo Walkthrough</a></li>
         <li><a href="#getting-started">Getting Started</a></li>
         <li><a href="#investor-profile">Investor Profile</a></li>
         <li><a href="#portfolios">Managing Portfolios</a></li>
         <li><a href="#adding-stocks">Adding Stocks</a></li>
         <li><a href="#stock-detail">Stock Detail Page</a></li>
         <li><a href="#thesis-manager">Thesis Manager</a></li>
+        <li><a href="#thesis-templates">Thesis Templates</a></li>
         <li><a href="#dashboard">Portfolio Dashboard</a></li>
         <li><a href="#briefing">Morning Briefing</a></li>
+        <li><a href="#screener">Stock Screener</a></li>
         <li><a href="#scoring">Scoring System</a></li>
+        <li><a href="#score-delta">Score Delta</a></li>
+        <li><a href="#backtesting">Backtesting Panel</a></li>
+        <li><a href="#thesis-overview">Thesis Overview</a></li>
+        <li><a href="#streak-quiz">Streak & Quiz</a></li>
+        <li><a href="#live-prices">Live Prices</a></li>
+        <li><a href="#export">Export & Share</a></li>
         <li><a href="#dark-mode">Dark & Light Mode</a></li>
         <li><a href="#tips">Tips & Best Practices</a></li>
       </ol>
     </nav>
+
+    <!-- 0. Demo Walkthrough -->
+    <div class="section" id="demo">
+      <h2>Demo Walkthrough — Synthetic Portfolio</h2>
+      <p>Below is a live-style walkthrough of ThesisArc using a synthetic 3-stock portfolio. Each panel mirrors exactly what you'd see in the app.</p>
+
+      <!-- Portfolio Table Mockup -->
+      <h3>Portfolio Overview</h3>
+      <p>The dashboard shows all holdings, their live price, conviction score, and score zone at a glance.</p>
+      <div style="background:#09090b;border-radius:12px;padding:16px 20px;font-family:'Consolas',monospace;font-size:13px;border:1px solid rgba(255,255,255,0.08);overflow-x:auto;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <span style="color:#a1a1aa;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Holdings · Tech Growth Portfolio</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;color:#fafafa;">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+              <th style="text-align:left;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Ticker</th>
+              <th style="text-align:left;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Name</th>
+              <th style="text-align:right;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Price</th>
+              <th style="text-align:right;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Day</th>
+              <th style="text-align:right;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Score</th>
+              <th style="text-align:right;padding:6px 10px;color:#71717a;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Zone</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:8px 10px;font-weight:700;color:#818cf8;">NVDA</td>
+              <td style="padding:8px 10px;color:#a1a1aa;">Nvidia Corp</td>
+              <td style="padding:8px 10px;text-align:right;color:#fafafa;font-weight:600;">$875.40</td>
+              <td style="padding:8px 10px;text-align:right;color:#10b981;font-size:12px;">▲ +2.1%</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700;color:#10b981;">82</td>
+              <td style="padding:8px 10px;text-align:right;"><span style="background:#052e16;color:#10b981;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">Thesis Strong</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:8px 10px;font-weight:700;color:#818cf8;">AAPL</td>
+              <td style="padding:8px 10px;color:#a1a1aa;">Apple Inc</td>
+              <td style="padding:8px 10px;text-align:right;color:#fafafa;font-weight:600;">$192.15</td>
+              <td style="padding:8px 10px;text-align:right;color:#ef4444;font-size:12px;">▼ -0.4%</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700;color:#f59e0b;">61</td>
+              <td style="padding:8px 10px;text-align:right;"><span style="background:#451a03;color:#f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">Holding</span></td>
+            </tr>
+            <tr>
+              <td style="padding:8px 10px;font-weight:700;color:#818cf8;">MSFT</td>
+              <td style="padding:8px 10px;color:#a1a1aa;">Microsoft Corp</td>
+              <td style="padding:8px 10px;text-align:right;color:#fafafa;font-weight:600;">$380.00</td>
+              <td style="padding:8px 10px;text-align:right;color:#10b981;font-size:12px;">▲ +0.8%</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700;color:#ef4444;">35</td>
+              <td style="padding:8px 10px;text-align:right;"><span style="background:#450a0a;color:#ef4444;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">At Risk</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:13px;color:#6b7280;margin-top:8px;">NVDA is thesis-strong (score 82), AAPL is in a holding pattern (61), and MSFT has slipped into "At Risk" territory (35) — likely requiring a thesis review.</p>
+
+      <!-- Portfolio Gauge Mockup -->
+      <h3>Portfolio Health Gauge</h3>
+      <p>The gauge at the top of your dashboard summarizes the weighted average conviction score across all holdings.</p>
+      <div style="background:#09090b;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;gap:8px;max-width:320px;">
+        <span style="color:#71717a;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Portfolio Score</span>
+        <div style="position:relative;width:160px;height:80px;overflow:hidden;">
+          <svg viewBox="0 0 160 80" width="160" height="80">
+            <path d="M10,80 A70,70 0 0,1 150,80" stroke="#27272a" stroke-width="14" fill="none" stroke-linecap="round"/>
+            <path d="M10,80 A70,70 0 0,1 150,80" stroke="url(#gaugeGrad)" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="78"/>
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ef4444"/>
+                <stop offset="50%" stop-color="#f59e0b"/>
+                <stop offset="100%" stop-color="#10b981"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div style="position:absolute;bottom:0;left:0;right:0;text-align:center;">
+            <span style="font-size:26px;font-weight:700;color:#f59e0b;font-family:monospace;">59</span>
+          </div>
+        </div>
+        <span style="color:#f59e0b;font-size:13px;font-weight:600;">Holding</span>
+        <span style="color:#52525b;font-size:11px;">3 stocks · avg weighted score</span>
+      </div>
+      <p style="font-size:13px;color:#6b7280;margin-top:8px;">At 59, the portfolio is in "Holding" zone — no immediate action needed, but MSFT is dragging the average down and deserves attention.</p>
+
+      <!-- Score Delta Mockup -->
+      <h3>Score Delta — "What Changed"</h3>
+      <p>After re-evaluating NVDA, the Score Delta panel shows exactly what moved since the last evaluation.</p>
+      <div style="background:#09090b;border-radius:12px;padding:16px 20px;border:1px solid rgba(255,255,255,0.08);max-width:380px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="color:#a1a1aa;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">What Changed</span>
+          <span style="background:#052e16;color:#10b981;border-radius:4px;padding:1px 8px;font-family:monospace;font-weight:700;font-size:12px;">+7</span>
+          <span style="color:#10b981;font-size:14px;">↑</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;color:#71717a;font-size:12px;margin-bottom:12px;">
+          <span style="font-family:monospace;">75</span>
+          <span>→</span>
+          <span style="font-family:monospace;font-weight:700;color:#fafafa;">82</span>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="color:#10b981;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:6px;">✓ Newly Confirmed (2)</div>
+          <div style="border-left:2px solid #10b981;padding:4px 10px;color:#d1d5db;font-size:12px;margin-bottom:4px;"><span style="color:#10b981;font-weight:600;">+4pts</span> CUDA ecosystem is entrenching enterprise developers</div>
+          <div style="border-left:2px solid #10b981;padding:4px 10px;color:#d1d5db;font-size:12px;"><span style="color:#10b981;font-weight:600;">+3pts</span> Data center revenue growing 400% YoY confirms AI demand</div>
+        </div>
+        <div>
+          <div style="color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:6px;">✗ Newly Broken (1)</div>
+          <div style="border-left:2px solid #ef4444;padding:4px 10px;color:#d1d5db;font-size:12px;"><span style="color:#ef4444;font-weight:600;">−0pts</span> Export control concerns increased, but fully priced in</div>
+        </div>
+      </div>
+
+      <!-- Morning Briefing Mockup -->
+      <h3>Morning Briefing Item</h3>
+      <p>Each morning, ThesisArc scans news and maps it back to your specific thesis points.</p>
+      <div style="background:#09090b;border-radius:12px;padding:16px 20px;border:1px solid rgba(255,255,255,0.08);max-width:460px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <span style="background:#1e1e2e;color:#818cf8;border-radius:4px;padding:2px 8px;font-family:monospace;font-weight:700;font-size:12px;">NVDA</span>
+          <span style="color:#fafafa;font-weight:600;">Nvidia posts record data center revenue — $22.6B</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <span style="background:#052e16;color:#10b981;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;">Bullish</span>
+          <span style="color:#71717a;font-size:11px;">from Reuters · 2h ago</span>
+        </div>
+        <div style="border-left:2px solid #6366f1;padding:6px 12px;color:#a1a1aa;font-size:12px;background:rgba(99,102,241,0.06);border-radius:0 6px 6px 0;">
+          <span style="color:#818cf8;font-weight:600;">Supports:</span> "CUDA ecosystem dominance is widening the competitive moat" — your thesis point
+        </div>
+      </div>
+      <p style="font-size:13px;color:#6b7280;margin-top:8px;">Notice the briefing item doesn't just say "NVDA had good news" — it tells you <em>which specific thesis point</em> this news supports or challenges.</p>
+    </div>
 
     <!-- 1. Getting Started -->
     <div class="section" id="getting-started">
@@ -905,6 +1037,174 @@
         <li><strong>Freezing on emotion.</strong> Freeze core convictions when you're calm and analytical, not after a down day. Emotional freezing often leads to regret.</li>
         <li><strong>Ignoring importance levels.</strong> Mark truly critical points with the Critical flag. If everything is important, nothing is.</li>
       </ul>
+    </div>
+
+    <!-- Thesis Templates -->
+    <div class="section" id="thesis-templates">
+      <h2>Thesis Templates</h2>
+      <p>When you add a stock for the first time and have no thesis points yet, ThesisArc shows the <strong>Thesis Template Selector</strong> — a set of pre-built thesis starting points organized by investor archetype.</p>
+      <h3>Archetypes</h3>
+      <table>
+        <thead><tr><th>Archetype</th><th>Focus</th><th>Example Points</th></tr></thead>
+        <tbody>
+          <tr><td>Growth Investor</td><td>Revenue acceleration, TAM expansion, competitive moat</td><td>"Revenue growing 30%+ YoY with improving margins"</td></tr>
+          <tr><td>Value Investor</td><td>Undervaluation, FCF yield, balance sheet strength</td><td>"Trading at 40% discount to intrinsic value on DCF"</td></tr>
+          <tr><td>Dividend / Income</td><td>Yield sustainability, payout ratio, dividend history</td><td>"12 consecutive years of dividend growth with 65% payout ratio"</td></tr>
+          <tr><td>Blend</td><td>Balanced mix of the above</td><td>Mix of growth, value, and income metrics</td></tr>
+        </tbody>
+      </table>
+      <h3>How to Use Templates</h3>
+      <ol class="steps">
+        <li>Add a new stock — you'll see the template selector in the empty thesis state.</li>
+        <li>Click your archetype tab. ThesisArc auto-selects the archetype from your Investor Profile.</li>
+        <li>Click any template point — it pre-fills the thesis add form with the category and statement.</li>
+        <li>Edit the statement to be specific to this stock before saving.</li>
+      </ol>
+      <div class="callout">
+        <strong>Tip:</strong> Templates are starting points, not finished thesis points. Always customize the statement with specifics: numbers, dates, and conditions that can actually be evaluated.
+      </div>
+    </div>
+
+    <!-- Stock Screener -->
+    <div class="section" id="screener">
+      <h2>Stock Screener</h2>
+      <p>The <strong>Screener</strong> (accessible from the sidebar) lets you discover 80+ curated stocks across sectors. Use it to explore new ideas, add to your portfolio or watchlist, or dismiss stocks you're not interested in.</p>
+      <h3>Grid Mode</h3>
+      <p>The default view shows stock cards in a grid, organized by sector filter chips at the top. Each card shows the ticker, company name, sector, and a brief description. You can:</p>
+      <ul>
+        <li><strong>Add to Portfolio</strong> — opens the add stock flow with AI thesis preview</li>
+        <li><strong>Watchlist</strong> — stars the stock for monitoring without adding to portfolio</li>
+        <li><strong>Dismiss</strong> — hides the stock from future screener views</li>
+        <li>Filter by sector using the chips at the top</li>
+      </ul>
+      <h3>Swipe Mode</h3>
+      <p>Click <strong>Swipe Mode</strong> to enter a Tinder-style card-by-card view. One stock appears at a time with a description and sector tag. Use the buttons (or keyboard shortcuts) to:</p>
+      <ul>
+        <li><strong>Thumbs up</strong> — add to watchlist immediately</li>
+        <li><strong>Thumbs down</strong> — dismiss this stock</li>
+      </ul>
+      <p>When you've seen all available cards, a completion screen appears. You can <strong>Reset Dismissed</strong> to start fresh or <strong>Load New Batch</strong> to fetch another set of stocks.</p>
+      <div class="callout warning">
+        <strong>Dismissed stocks stay hidden</strong> across sessions — they're stored in your account, not just your browser.
+      </div>
+    </div>
+
+    <!-- Score Delta -->
+    <div class="section" id="score-delta">
+      <h2>Score Delta — "What Changed"</h2>
+      <p>On the stock detail page, the <strong>What Changed</strong> panel appears after you run a second evaluation. It shows exactly what moved your score since last time — no guessing.</p>
+      <h3>What the Panel Shows</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>+/− Score badge</td><td>Net change in conviction score since last evaluation</td></tr>
+          <tr><td>Previous → Current</td><td>Raw score before and after</td></tr>
+          <tr><td>Newly Confirmed</td><td>Thesis points that were uncertain before and are now supported by evidence</td></tr>
+          <tr><td>Newly Broken</td><td>Points that were previously supported and are now challenged</td></tr>
+          <tr><td>Recovered</td><td>Points that were broken before and have been restored</td></tr>
+        </tbody>
+      </table>
+      <p>Hover over the panel header to see the tooltip <em>"See what changed since your last evaluation."</em> Click to expand/collapse the detail view.</p>
+      <div class="callout success">
+        <strong>Best practice:</strong> Run evaluations consistently (weekly or after major news). The delta is only meaningful when you compare two evaluations close in time.
+      </div>
+    </div>
+
+    <!-- Backtesting Panel -->
+    <div class="section" id="backtesting">
+      <h2>Backtesting Panel — Conviction vs Returns</h2>
+      <p>The <strong>Conviction vs Returns</strong> collapsible panel on the stock detail page answers: "Have my high-conviction scores actually predicted good returns?"</p>
+      <h3>How It Works</h3>
+      <ul>
+        <li>ThesisArc looks at all your past evaluations for the stock and the price at each evaluation date.</li>
+        <li>It then checks what the price was <strong>30, 90, and 180 days</strong> after each evaluation.</li>
+        <li>It calculates a <strong>Pearson correlation</strong> between your conviction score at evaluation time and the forward return.</li>
+      </ul>
+      <h3>Reading the Results</h3>
+      <table>
+        <thead><tr><th>Correlation</th><th>Interpretation</th></tr></thead>
+        <tbody>
+          <tr><td>+0.7 to +1.0</td><td>Your conviction scores are strong leading indicators for this stock</td></tr>
+          <tr><td>+0.3 to +0.7</td><td>Moderate positive relationship — your thesis has some predictive value</td></tr>
+          <tr><td>−0.3 to +0.3</td><td>No clear relationship — keep evaluating to build a longer track record</td></tr>
+          <tr><td>Below −0.3</td><td>Negative correlation — your scores may be contrarian indicators (or too few data points)</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warning">
+        <strong>Caveat:</strong> Backtesting requires at least 3–4 evaluations before the correlation is meaningful. Don't read too much into results from a single evaluation.
+      </div>
+    </div>
+
+    <!-- Thesis Overview -->
+    <div class="section" id="thesis-overview">
+      <h2>Portfolio Thesis Overview</h2>
+      <p>The <strong>Portfolio Thesis Overview</strong> panel on your dashboard lets you see all thesis points across your entire portfolio, grouped by category — giving you a bird's-eye view of your conviction map.</p>
+      <h3>Categories</h3>
+      <ul>
+        <li><strong>Competitive Moat</strong> — barriers to entry, brand, network effects</li>
+        <li><strong>Growth Trajectory</strong> — revenue growth, TAM, product pipeline</li>
+        <li><strong>Valuation</strong> — DCF, P/E, EV/EBITDA, price vs intrinsic value</li>
+        <li><strong>Financial Health</strong> — FCF, debt/equity, profitability</li>
+        <li><strong>Ownership & Conviction</strong> — your personal rationale, skin-in-the-game</li>
+        <li><strong>Risks & Bear Case</strong> — known headwinds, downside scenarios</li>
+      </ul>
+      <p>Click a category to expand and see all thesis points from all stocks under that category. Ticker links take you directly to that stock's detail page. Score color (green/yellow/red) reflects the stock's current evaluation score.</p>
+      <div class="callout">
+        <strong>Use case:</strong> Spot concentration risk — if 80% of your "Valuation" points read "undervalued", you may be taking more P/E risk than you realize.
+      </div>
+    </div>
+
+    <!-- Streak & Quiz -->
+    <div class="section" id="streak-quiz">
+      <h2>Streak Badge &amp; Thesis Quiz</h2>
+      <h3>Streak Tracker</h3>
+      <p>The <strong>streak badge</strong> (flame icon in the nav bar) tracks how many consecutive days you've run at least one evaluation. Streaks encourage the habit of regular portfolio check-ins.</p>
+      <ul>
+        <li>Badge glows <strong>orange at 7+ days</strong> and turns <strong>gold at 30+ days</strong>.</li>
+        <li>Missing a day resets your streak — evaluate at least one stock to keep it alive.</li>
+        <li>Long streaks indicate high-quality, up-to-date thesis scores across your portfolio.</li>
+      </ul>
+      <h3>Thesis Quiz</h3>
+      <p>Click the <strong>Brain button</strong> on the dashboard to open the Thesis Quiz. A stock from your portfolio appears with 4 possible thesis statements — choose the one that actually belongs to that stock.</p>
+      <ul>
+        <li>Uses your <em>actual</em> thesis points as both correct and distractor options.</li>
+        <li>Tests recall — can you remember why you own what you own?</li>
+        <li>Score is shown after each question. Track your recall accuracy over time.</li>
+      </ul>
+      <div class="callout success">
+        <strong>Why this matters:</strong> Studies show that investors who can articulate their thesis from memory are significantly less likely to panic-sell. The quiz builds that muscle.
+      </div>
+    </div>
+
+    <!-- Live Prices -->
+    <div class="section" id="live-prices">
+      <h2>Live Prices</h2>
+      <p>ThesisArc fetches live market data to show real-time context alongside your thesis scores.</p>
+      <h3>Portfolio Table</h3>
+      <p>Each stock row in the portfolio table shows:</p>
+      <ul>
+        <li><strong>Current Price</strong> — fetched on page load from Yahoo Finance</li>
+        <li><strong>Day Change %</strong> — green for positive, red for negative with a trend arrow</li>
+      </ul>
+      <h3>Stock Detail Page</h3>
+      <p>The info panel on the left side of the stock detail page prominently shows the live price with a colored % badge. If live data is unavailable, it falls back to the last known closing price.</p>
+      <div class="callout">
+        <strong>Data source:</strong> Prices are pulled via Yahoo Finance. There may be a 15-minute delay for some tickers depending on exchange rules.
+      </div>
+    </div>
+
+    <!-- Export & Share -->
+    <div class="section" id="export">
+      <h2>Export &amp; Share</h2>
+      <h3>Thesis Markdown Export</h3>
+      <p>In the Thesis Manager, click <strong>Export</strong> to download your thesis as a Markdown file. This is useful for sharing with a mentor, pasting into Notion, or creating a paper trail for your investment journal.</p>
+      <h3>CSV Portfolio Export</h3>
+      <p>Go to <strong>Settings → Export Portfolio Data</strong> to download a CSV containing all your stocks, scores, and thesis summaries. Useful for analysis in Excel or a personal dashboard.</p>
+      <h3>Public Share Link</h3>
+      <p>From a stock's thesis page, you can generate a <strong>public share link</strong> that lets anyone view your thesis (read-only) without needing an account. Useful for sharing your reasoning with a study group or getting feedback from a financial advisor.</p>
+      <div class="callout warning">
+        <strong>Privacy:</strong> Share links expose your thesis publicly. Only share links for stocks you're comfortable discussing publicly. Revoke the link at any time from the same menu.
+      </div>
     </div>
 
   </main>

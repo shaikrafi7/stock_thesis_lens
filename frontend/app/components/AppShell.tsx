@@ -125,6 +125,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [newName, setNewName] = useState("");
   const [showWizard, setShowWizard] = useState(false);
   const [stocksCollapsed, setStocksCollapsed] = useState(false);
+  const [portfoliosCollapsed, setPortfoliosCollapsed] = useState(false);
   const [investorProfile, setInvestorProfile] = useState<InvestorProfile | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -167,16 +168,44 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <NavLink href="/guide" label="User Guide" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/faq" label="FAQ" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
-        {/* Divider + stock list */}
+        {/* Portfolios section */}
         <div className="pt-3 pb-1">
+          <button
+            onClick={() => setPortfoliosCollapsed((c) => !c)}
+            className="w-full flex items-center justify-between px-3 mb-1 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors group"
+          >
+            <p className="text-[9px] uppercase tracking-widest text-gray-400 dark:text-zinc-600 font-semibold group-hover:text-gray-500 dark:group-hover:text-zinc-500">Portfolios</p>
+            <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-zinc-600 transition-transform ${portfoliosCollapsed ? "" : "rotate-180"}`} />
+          </button>
+          {!portfoliosCollapsed && portfolios.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              {portfolios.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { switchPortfolio(p.id); setMobileOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all text-xs ${
+                    p.id === activePortfolioId
+                      ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-100 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{p.name}</span>
+                  {p.id === activePortfolioId && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Stocks section */}
+        <div className="pb-1">
           <button
             onClick={() => setStocksCollapsed((c) => !c)}
             className="w-full flex items-center justify-between px-3 mb-1 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors group"
           >
             <p className="text-[9px] uppercase tracking-widest text-gray-400 dark:text-zinc-600 font-semibold group-hover:text-gray-500 dark:group-hover:text-zinc-500">Stocks</p>
-            {stocksCollapsed
-              ? <ChevronDown className="w-3 h-3 text-gray-400 dark:text-zinc-600" />
-              : <ChevronDown className="w-3 h-3 text-gray-400 dark:text-zinc-600 rotate-180" />}
+            <ChevronDown className={`w-3 h-3 text-gray-400 dark:text-zinc-600 transition-transform ${stocksCollapsed ? "" : "rotate-180"}`} />
           </button>
           <SidebarStockList activePortfolioId={activePortfolioId} pathname={pathname} collapsed={stocksCollapsed} stocksVersion={stocksVersion} />
         </div>

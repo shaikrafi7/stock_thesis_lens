@@ -230,9 +230,9 @@ def _is_duplicate(stmt: str, existing: list[str], threshold: float = 0.6) -> boo
     return False
 
 
-def _parse_bullets(data: dict) -> list[GeneratedThesis]:
+def _parse_bullets(data: dict, existing_statements: list[str] | None = None) -> list[GeneratedThesis]:
     results = []
-    seen_statements: list[str] = []
+    seen_statements: list[str] = list(existing_statements or [])
     for category in CATEGORIES:
         items = data.get(category, [])
         if not isinstance(items, list):
@@ -259,7 +259,7 @@ def _parse_bullets(data: dict) -> list[GeneratedThesis]:
     return results
 
 
-def generate_thesis(ticker: str, company_name: str, investor_profile: dict | None = None) -> list[GeneratedThesis]:
+def generate_thesis(ticker: str, company_name: str, investor_profile: dict | None = None, existing_statements: list[str] | None = None) -> list[GeneratedThesis]:
     """Generate structured thesis bullets for a stock.
 
     Returns placeholder bullets if the OpenAI call fails.
@@ -283,13 +283,13 @@ def generate_thesis(ticker: str, company_name: str, investor_profile: dict | Non
         else:
             data = _call_openai(ticker, company_name, profile, financials, investor_profile)
 
-        results = _parse_bullets(data)
+        results = _parse_bullets(data, existing_statements)
         if results:
             return results
 
         logger.warning("thesis_generator: OpenAI returned empty bullets for %s, using fallback", ticker)
-        return _parse_bullets(FALLBACK_THESIS)
+        return _parse_bullets(FALLBACK_THESIS, existing_statements)
 
     except Exception as exc:
         logger.error("thesis_generator: OpenAI call failed for %s (%s), using fallback", ticker, exc)
-        return _parse_bullets(FALLBACK_THESIS)
+        return _parse_bullets(FALLBACK_THESIS, existing_statements)

@@ -106,7 +106,8 @@ def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: i
                 .count()
             )
             if selected_count < MIN_SELECTED:
-                generated = generate_thesis(stock.ticker, stock.name)
+                existing_stmts = [t.statement for t in db.query(Thesis).filter(Thesis.stock_id == stock.id).all()]
+                generated = generate_thesis(stock.ticker, stock.name, existing_statements=existing_stmts)
                 new_theses = [
                     Thesis(
                         stock_id=stock.id,

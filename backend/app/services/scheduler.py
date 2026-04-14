@@ -11,18 +11,27 @@ _scheduler: BackgroundScheduler | None = None
 
 
 def _run_daily_evaluation(session_factory):
-    """Job function: evaluate all stocks with enough selected theses."""
+    """Job function: evaluate each user's stocks using their investor profile."""
+    from app.models.user import User
+    from app.core.utils import get_investor_profile
     from app.services.evaluation_service import evaluate_all_stocks
 
     logger.info("scheduler: starting daily evaluation at %s", datetime.utcnow().isoformat())
     db = session_factory()
     try:
-        summary = evaluate_all_stocks(db)
+        users = db.query(User).all()
+        total = {"evaluated": [], "skipped": [], "errors": {}}
+        for user in users:
+            profile = get_investor_profile(user)
+            summary = evaluate_all_stocks(db, user_id=user.id, investor_profile=profile)
+            total["evaluated"].extend(summary["evaluated"])
+            total["skipped"].extend(summary["skipped"])
+            total["errors"].update(summary["errors"])
         logger.info(
             "scheduler: daily evaluation complete — evaluated=%s, skipped=%s, errors=%s",
-            summary["evaluated"],
-            summary["skipped"],
-            list(summary["errors"].keys()),
+            len(total["evaluated"]),
+            len(total["skipped"]),
+            list(total["errors"].keys()),
         )
     except Exception as exc:
         logger.error("scheduler: daily evaluation failed: %s", exc)

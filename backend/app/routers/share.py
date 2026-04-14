@@ -1,6 +1,5 @@
 """Public share endpoint — no auth required."""
-import base64
-import json
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -10,17 +9,20 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.evaluation import Evaluation
+from app.models.share_token import ShareToken
 
 router = APIRouter(prefix="/share", tags=["share"])
 
 
-def _encode(stock_id: int) -> str:
-    return base64.urlsafe_b64encode(str(stock_id).encode()).decode().rstrip("=")
-
-
-def _decode(token: str) -> int:
-    padded = token + "=" * (-len(token) % 4)
-    return int(base64.urlsafe_b64decode(padded).decode())
+def get_or_create_token(stock_id: int, db: Session) -> str:
+    """Return existing share token for stock, or create a new UUID one."""
+    existing = db.query(ShareToken).filter(ShareToken.stock_id == stock_id).first()
+    if existing:
+        return existing.token
+    token = str(uuid.uuid4())
+    db.add(ShareToken(token=token, stock_id=stock_id))
+    db.commit()
+    return token
 
 
 class PublicThesisPoint(BaseModel):
@@ -50,12 +52,12 @@ class PublicShareResponse(BaseModel):
 
 @router.get("/{token}", response_model=PublicShareResponse)
 def get_shared_thesis(token: str, db: Session = Depends(get_db)):
-    try:
-        stock_id = _decode(token)
-    except Exception:
+    # Look up by UUID token
+    share = db.query(ShareToken).filter(ShareToken.token == token).first()
+    if not share:
         raise HTTPException(status_code=404, detail="Invalid share link")
 
-    stock = db.query(Stock).filter(Stock.id == stock_id).first()
+    stock = db.query(Stock).filter(Stock.id == share.stock_id).first()
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -70,27 +72,19 @@ def get_shared_thesis(token: str, db: Session = Depends(get_db)):
 
     eval_out = None
     if evaluation:
-        def _parse(raw):
-            if isinstance(raw, str):
-                try:
-                    return json.loads(raw)
-                except Exception:
-                    return []
-            return raw or []
-
         eval_out = PublicEvaluation(
             score=round(evaluation.score),
             status=evaluation.status,
             explanation=evaluation.explanation,
-            confirmed_points=_parse(evaluation.confirmed_points),
-            broken_points=_parse(evaluation.broken_points),
+            confirmed_points=evaluation.parsed_confirmed_points,
+            broken_points=evaluation.parsed_broken_points,
         )
 
     return PublicShareResponse(
         ticker=stock.ticker,
         name=stock.name,
         logo_url=stock.logo_url,
-        share_token=_encode(stock.id),
+        share_token=get_or_create_token(stock.id, db),
         theses=[
             PublicThesisPoint(
                 category=t.category,

@@ -10,16 +10,10 @@ from app.models.user import User
 from app.schemas.evaluation import EvaluationRead, EvaluationSummary
 from app.services.evaluation_service import run_evaluation_for_stock
 from app.core.auth import get_current_user
+from app.core.utils import get_investor_profile
 from app.routers.stocks import get_user_stock
 
 router = APIRouter(prefix="/stocks", tags=["evaluate"])
-
-
-def _get_investor_profile(user: User) -> dict | None:
-    p = getattr(user, "investor_profile", None)
-    if p and p.wizard_completed:
-        return {"investment_style": p.investment_style, "time_horizon": p.time_horizon, "loss_aversion": p.loss_aversion, "risk_capacity": p.risk_capacity, "experience_level": p.experience_level}
-    return None
 
 
 @router.post("/{ticker}/evaluate", response_model=EvaluationRead)
@@ -40,7 +34,7 @@ def run_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Sess
             ),
         )
 
-    evaluation = run_evaluation_for_stock(stock, db, investor_profile=_get_investor_profile(current_user))
+    evaluation = run_evaluation_for_stock(stock, db, investor_profile=get_investor_profile(current_user))
     if evaluation is None:
         raise HTTPException(status_code=500, detail=f"Evaluation failed for {stock.ticker}")
 
@@ -81,15 +75,14 @@ def get_score_delta(ticker: str, portfolio_id: int | None = Query(None), db: Ses
     current, previous = evals[0], evals[1]
     score_delta = current.score - previous.score
 
-    import json
-    cur_broken = {p["thesis_id"]: p for p in (json.loads(current.broken_points or "[]"))}
-    cur_confirmed = {p["thesis_id"]: p for p in (json.loads(current.confirmed_points or "[]"))}
-    prev_broken = {p["thesis_id"]: p for p in (json.loads(previous.broken_points or "[]"))}
-    prev_confirmed = {p["thesis_id"]: p for p in (json.loads(previous.confirmed_points or "[]"))}
+    cur_broken = {p["thesis_id"]: p for p in current.parsed_broken_points}
+    cur_confirmed = {p["thesis_id"]: p for p in current.parsed_confirmed_points}
+    prev_broken = {p["thesis_id"]: p for p in previous.parsed_broken_points}
+    prev_confirmed = {p["thesis_id"]: p for p in previous.parsed_confirmed_points}
 
     newly_broken = [p for tid, p in cur_broken.items() if tid not in prev_broken]
     newly_confirmed = [p for tid, p in cur_confirmed.items() if tid not in prev_confirmed]
-    recovered = [p for tid, p in prev_broken.items() if tid in cur_confirmed]
+    recovered = [p for tid, p in prev_broken.items() if tid not in cur_broken]
 
     return {
         "has_delta": True,
@@ -117,8 +110,8 @@ def get_evaluation_history(
     evaluations = (
         db.query(Evaluation)
         .filter(Evaluation.stock_id == stock.id)
-        .order_by(Evaluation.timestamp.asc())
+        .order_by(Evaluation.timestamp.desc())
         .limit(limit)
         .all()
     )
-    return evaluations
+    return list(reversed(evaluations))

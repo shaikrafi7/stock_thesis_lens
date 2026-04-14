@@ -3,8 +3,9 @@ import logging
 from datetime import date
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session, subqueryload
 
 from app.database import get_db
@@ -24,6 +25,7 @@ from app.schemas.thesis import (
 )
 from app.models.chat import ChatMessage as ChatMessageModel
 from app.core.auth import get_current_user
+from app.core.utils import get_investor_profile
 from app.routers.portfolios import get_active_portfolio
 
 from app.agents import portfolio_chat_agent, morning_briefing_agent
@@ -36,34 +38,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
-def _get_investor_profile(user: User) -> dict | None:
-    p = getattr(user, "investor_profile", None)
-    if p is None or not p.wizard_completed:
-        return None
-    return {
-        "investment_style": p.investment_style,
-        "time_horizon": p.time_horizon,
-        "loss_aversion": p.loss_aversion,
-        "risk_capacity": p.risk_capacity,
-        "experience_level": p.experience_level,
-        "overconfidence_bias": p.overconfidence_bias,
-        "primary_bias": p.primary_bias,
-        "archetype_label": p.archetype_label,
-    }
-
 
 def _build_portfolio_data(db: Session, user: User, portfolio_id: int | None = None) -> list[dict]:
+    from app.models.evaluation import Evaluation
     portfolio = get_active_portfolio(portfolio_id, user, db)
     stocks = (
         db.query(Stock)
         .filter(Stock.portfolio_id == portfolio.id)
-        .options(subqueryload(Stock.theses), subqueryload(Stock.evaluations))
+        .options(subqueryload(Stock.theses))
         .order_by(Stock.ticker)
         .all()
     )
+    stock_ids = [s.id for s in stocks]
+
+    # Latest eval per stock via a single query
+    latest_eval_ids = (
+        db.query(func.max(Evaluation.id))
+        .filter(Evaluation.stock_id.in_(stock_ids))
+        .group_by(Evaluation.stock_id)
+        .subquery()
+    )
+    latest_evals = {
+        e.stock_id: e
+        for e in db.query(Evaluation).filter(Evaluation.id.in_(latest_eval_ids)).all()
+    }
+
     result = []
     for stock in stocks:
-        latest_eval = max(stock.evaluations, key=lambda e: e.id, default=None)
+        latest_eval = latest_evals.get(stock.id)
         result.append(
             {
                 "ticker": stock.ticker,
@@ -113,7 +115,7 @@ def portfolio_chat(payload: ChatRequest, portfolio_id: int | None = Query(None),
 
 
 @router.post("/chat/stream")
-def portfolio_chat_stream(payload: ChatRequest, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def portfolio_chat_stream(payload: ChatRequest, background_tasks: BackgroundTasks, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     portfolio = get_active_portfolio(portfolio_id, current_user, db)
     context_key = _portfolio_context_key(portfolio.id)
     portfolio_data = _build_portfolio_data(db, current_user, portfolio.id)
@@ -128,26 +130,29 @@ def portfolio_chat_stream(payload: ChatRequest, portfolio_id: int | None = Query
 
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
     user_id = current_user.id
+    user_content = messages[-1]["content"] if messages else ""
 
-    all_events = list(portfolio_chat_agent.chat_stream(portfolio_data, messages, investor_profile=_get_investor_profile(current_user)))
-    accumulated = "".join(
-        e["data"].get("content", "") or e["data"].get("text", "")
-        for e in all_events if e["event"] == "token"
-    )
+    def _persist(assistant_text: str):
+        from app.database import SessionLocal
+        session = SessionLocal()
+        try:
+            if user_content:
+                session.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
+            if assistant_text:
+                session.add(ChatMessageModel(context_key=context_key, role="assistant", content=assistant_text, user_id=user_id))
+            session.commit()
+        except Exception as exc:
+            logger.warning("Failed to persist portfolio chat: %s", exc)
+        finally:
+            session.close()
 
     def event_generator():
-        for event in all_events:
+        tokens = []
+        for event in portfolio_chat_agent.chat_stream(portfolio_data, messages, investor_profile=get_investor_profile(current_user)):
+            if event["event"] == "token":
+                tokens.append(event["data"].get("content", "") or event["data"].get("text", ""))
             yield f"event: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
-
-    try:
-        user_content = messages[-1]["content"] if messages else ""
-        if user_content:
-            db.add(ChatMessageModel(context_key=context_key, role="user", content=user_content, user_id=user_id))
-        if accumulated:
-            db.add(ChatMessageModel(context_key=context_key, role="assistant", content=accumulated, user_id=user_id))
-        db.commit()
-    except Exception as exc:
-        logger.warning("Failed to persist portfolio chat: %s", exc)
+        background_tasks.add_task(_persist, "".join(tokens))
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -180,7 +185,7 @@ def clear_portfolio_chat_history(portfolio_id: int | None = Query(None), db: Ses
 @router.post("/evaluate-all")
 def evaluate_all(portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     portfolio = get_active_portfolio(portfolio_id, current_user, db)
-    summary = evaluate_all_stocks(db, user_id=current_user.id, portfolio_id=portfolio.id, investor_profile=_get_investor_profile(current_user))
+    summary = evaluate_all_stocks(db, user_id=current_user.id, portfolio_id=portfolio.id, investor_profile=get_investor_profile(current_user))
     return summary
 
 

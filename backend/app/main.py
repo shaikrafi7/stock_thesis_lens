@@ -11,7 +11,8 @@ from app.services.scheduler import start_scheduler, stop_scheduler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_all_tables()
-    start_scheduler(SessionLocal)
+    if settings.SCHEDULER_ENABLED.lower() == "true":
+        start_scheduler(SessionLocal)
     yield
     stop_scheduler()
 

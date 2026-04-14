@@ -31,6 +31,7 @@ export default function ScoreDeltaPanel({ ticker, portfolioId, evalVersion }: Pr
     <div className="rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden text-sm">
       <button
         onClick={() => setOpen((o) => !o)}
+        title="See what changed since your last evaluation"
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">

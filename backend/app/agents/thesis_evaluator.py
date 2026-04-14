@@ -37,8 +37,8 @@ IMPORTANCE_MULTIPLIER: dict[str, float] = {
     "critical": 2.0,
 }
 
-# Frozen points get the same multiplier as critical
-FROZEN_MULTIPLIER = 2.0
+# Frozen points: committed conviction, 1.5x multiplier
+FROZEN_MULTIPLIER = 1.5
 
 # Confidence threshold — only apply if signal is confident enough
 CONFIDENCE_THRESHOLD = 0.50
@@ -100,7 +100,7 @@ def evaluate_thesis(
         is_frozen = point_meta.get("frozen", False)
         conviction = point_meta.get("conviction", None)
 
-        # Multiplier: frozen overrides importance (both get 2x)
+        # Multiplier: frozen=1.5x (committed conviction), importance scales up to 2x
         if is_frozen:
             multiplier = FROZEN_MULTIPLIER
         else:

@@ -217,6 +217,8 @@ export default function ScreenerPage() {
   const [swipeMode, setSwipeMode] = useState(false);
   const [swipeIndex, setSwipeIndex] = useState(0);
   const [swipeDone, setSwipeDone] = useState(false);
+  const [shadowPortfolio, setShadowPortfolio] = useState<Array<{ ticker: string; name: string; price: number; likedAt: string }>>([]);
+  const [shadowOpen, setShadowOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -233,6 +235,21 @@ export default function ScreenerPage() {
   }
 
   useEffect(() => { load(); }, [activePortfolioId]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("screener_shadow_portfolio");
+      if (stored) setShadowPortfolio(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  function saveShadow(entry: { ticker: string; name: string; price: number; likedAt: string }) {
+    setShadowPortfolio((prev) => {
+      const updated = [entry, ...prev.filter((e) => e.ticker !== entry.ticker)];
+      localStorage.setItem("screener_shadow_portfolio", JSON.stringify(updated));
+      return updated;
+    });
+  }
 
   async function handleAdd(ticker: string) {
     await addStock(ticker, activePortfolioId);
@@ -258,6 +275,9 @@ export default function ScreenerPage() {
     const card = swipeCards[swipeIndex];
     if (!card) return;
     await handleWatchlist(card.ticker);
+    if (card.price != null) {
+      saveShadow({ ticker: card.ticker, name: card.name, price: card.price, likedAt: new Date().toISOString() });
+    }
     advance();
   }
 
@@ -316,6 +336,45 @@ export default function ScreenerPage() {
           </button>
         </div>
       </div>
+
+      {/* Shadow portfolio panel */}
+      {shadowPortfolio.length > 0 && (
+        <div className="mb-4 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShadowOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-zinc-900 text-xs text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+          >
+            <span className="font-medium text-gray-700 dark:text-zinc-300">Swipe Tracker — {shadowPortfolio.length} liked</span>
+            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${shadowOpen ? "rotate-90" : ""}`} />
+          </button>
+          {shadowOpen && (
+            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+              {shadowPortfolio.map((entry) => {
+                const current = cards.find((c) => c.ticker === entry.ticker)?.price ?? null;
+                const pctChange = current != null && entry.price > 0
+                  ? ((current - entry.price) / entry.price) * 100
+                  : null;
+                return (
+                  <div key={entry.ticker} className="flex items-center gap-3 px-4 py-2 text-xs">
+                    <span className="font-mono font-semibold w-12 text-gray-800 dark:text-zinc-200">{entry.ticker}</span>
+                    <span className="text-gray-400 dark:text-zinc-500 flex-1">{entry.name}</span>
+                    <span className="text-gray-400 dark:text-zinc-500">liked at ${entry.price.toFixed(2)}</span>
+                    {current != null && (
+                      <span className="text-gray-600 dark:text-zinc-400">now ${current.toFixed(2)}</span>
+                    )}
+                    {pctChange != null && (
+                      <span className={`font-mono font-bold ${pctChange >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                        {pctChange >= 0 ? "+" : ""}{pctChange.toFixed(1)}%
+                      </span>
+                    )}
+                    <span className="text-gray-300 dark:text-zinc-600">{new Date(entry.likedAt).toLocaleDateString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">

@@ -130,6 +130,7 @@ export default function StockPage({ params }: Props) {
               <div className="border border-gray-100 dark:border-zinc-800 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setBacktestOpen((v) => !v)}
+                  title="Compare your conviction scores to actual forward price returns"
                   className="w-full flex items-center justify-between px-3 py-2 text-[10px] uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
                   Conviction vs Returns

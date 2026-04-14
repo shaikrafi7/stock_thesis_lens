@@ -175,9 +175,9 @@ def get_share_token(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    import base64
+    from app.routers.share import get_or_create_token
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
-    token = base64.urlsafe_b64encode(str(stock.id).encode()).decode().rstrip("=")
+    token = get_or_create_token(stock.id, db)
     return {"token": token}
 
 

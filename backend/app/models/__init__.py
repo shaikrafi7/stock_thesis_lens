@@ -7,5 +7,6 @@ from .evaluation import Evaluation
 from .briefing import Briefing
 from .chat import ChatMessage
 from .investor_profile import InvestorProfile
+from .share_token import ShareToken
 
-__all__ = ["User", "Portfolio", "Stock", "Thesis", "ThesisAudit", "Evaluation", "Briefing", "ChatMessage", "InvestorProfile"]
+__all__ = ["User", "Portfolio", "Stock", "Thesis", "ThesisAudit", "Evaluation", "Briefing", "ChatMessage", "InvestorProfile", "ShareToken"]

@@ -51,6 +51,7 @@ export default function ThesisOverviewPanel({ portfolioId }: { portfolioId?: num
     <div className="border border-gray-100 dark:border-zinc-800 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
+        title="View all thesis points across your portfolio, grouped by category"
         className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
       >
         <span>Portfolio Thesis Overview</span>

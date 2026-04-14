@@ -79,6 +79,20 @@ def _run_migrations():
             conn.execute(text("ALTER TABLE chat_messages ADD COLUMN user_id INTEGER REFERENCES users(id)"))
             conn.commit()
 
+        # --- Share tokens table ---
+        result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='share_tokens'"))
+        if not result.fetchone():
+            conn.execute(text("""
+                CREATE TABLE share_tokens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    token VARCHAR(36) UNIQUE NOT NULL,
+                    stock_id INTEGER NOT NULL REFERENCES stocks(id),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_share_tokens_token ON share_tokens (token)"))
+            conn.commit()
+
         # --- Users screener_dismissed column ---
         result = conn.execute(text("PRAGMA table_info(users)"))
         user_columns = [row[1] for row in result.fetchall()]

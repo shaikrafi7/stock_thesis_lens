@@ -169,9 +169,9 @@ def _collect_price(ticker: str) -> PriceSignal | None:
         day_change_pct = ((current_price - prev_close) / prev_close * 100) if prev_close else 0.0
 
         price_5d_ago = bars[-5]["c"] if len(bars) >= 5 else bars[0]["c"]
-        price_30d_ago = bars[-22]["c"] if len(bars) >= 22 else bars[0]["c"]
+        price_22trading_days_ago = bars[-22]["c"] if len(bars) >= 22 else bars[0]["c"]
         week_change_pct = ((current_price - price_5d_ago) / price_5d_ago * 100) if price_5d_ago else 0.0
-        month_change_pct = ((current_price - price_30d_ago) / price_30d_ago * 100) if price_30d_ago else 0.0
+        month_change_pct = ((current_price - price_22trading_days_ago) / price_22trading_days_ago * 100) if price_22trading_days_ago else 0.0
 
         fifty_two_week_high = max(b["h"] for b in bars)
         fifty_two_week_low = min(b["l"] for b in bars)
