@@ -30,11 +30,17 @@ router = APIRouter(prefix="/stocks", tags=["thesis"])
 
 
 @router.post("/{ticker}/preview-thesis", response_model=list[ThesisPreview])
-def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), max_groups: int | None = Query(None, ge=1, le=6), max_per_group: int | None = Query(None, ge=1, le=5), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Generate thesis points without saving — for user review before committing."""
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
     existing_stmts = [t.statement for t in db.query(Thesis).filter(Thesis.stock_id == stock.id).all()]
-    generated = generate_thesis(stock.ticker, stock.name, investor_profile=get_investor_profile(current_user), existing_statements=existing_stmts)
+    generated = generate_thesis(
+        stock.ticker, stock.name,
+        investor_profile=get_investor_profile(current_user),
+        existing_statements=existing_stmts,
+        max_groups=max_groups or 5,
+        max_per_group=max_per_group or 2,
+    )
     return [ThesisPreview(category=g.category, statement=g.statement, importance=g.importance, weight=g.weight) for g in generated]
 
 

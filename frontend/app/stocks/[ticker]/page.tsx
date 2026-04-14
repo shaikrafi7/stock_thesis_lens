@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import {
-  fetchStocks, getTheses, getLatestEvaluation,
+  fetchStocks, getTheses, getLatestEvaluation, updateEdgeStatement,
   type Stock, type Thesis, type Evaluation,
 } from "@/lib/api";
 import ThesisManager from "./ThesisManager";
@@ -13,7 +13,7 @@ import ScoreDeltaPanel from "@/app/components/ScoreDelta";
 import BacktestPanel from "@/app/components/BacktestPanel";
 import StockNews from "@/app/components/StockNews";
 import { usePortfolio } from "@/app/context/PortfolioContext";
-import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell } from "lucide-react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell, Lightbulb } from "lucide-react";
 
 interface Props {
   params: Promise<{ ticker: string }>;
@@ -31,6 +31,8 @@ export default function StockPage({ params }: Props) {
   const [evalVersion, setEvalVersion] = useState(0);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [backtestOpen, setBacktestOpen] = useState(false);
+  const [edgeDraft, setEdgeDraft] = useState("");
+  const [edgeSaving, setEdgeSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +40,7 @@ export default function StockPage({ params }: Props) {
         const stocks = await fetchStocks(activePortfolioId);
         const found = stocks.find((s) => s.ticker === upperTicker) ?? null;
         setStock(found);
+        if (found?.edge_statement) setEdgeDraft(found.edge_statement);
         if (found) {
           const [t, e] = await Promise.all([
             getTheses(upperTicker, activePortfolioId).catch(() => [] as Thesis[]),
@@ -150,6 +153,38 @@ export default function StockPage({ params }: Props) {
         {/* Thesis column — centered with spacing when left is collapsed */}
         <div className={`min-w-0 ${leftCollapsed ? "flex-1 flex justify-center" : "flex-1"}`}>
           <div className={leftCollapsed ? "w-full max-w-3xl" : "w-full"}>
+            {/* Articulate Your Edge */}
+            <div className="mb-4 border border-gray-200 dark:border-zinc-800 rounded-xl px-4 py-3 bg-white dark:bg-zinc-900">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-[11px] font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-widest">Your Edge</span>
+              </div>
+              <textarea
+                value={edgeDraft}
+                onChange={(e) => setEdgeDraft(e.target.value)}
+                placeholder="What do you see that the market is missing?"
+                rows={2}
+                className="w-full text-sm text-gray-800 dark:text-zinc-200 bg-transparent border-none outline-none resize-none placeholder-gray-300 dark:placeholder-zinc-600 leading-relaxed"
+              />
+              {edgeDraft !== (stock?.edge_statement ?? "") && (
+                <div className="flex justify-end mt-1">
+                  <button
+                    onClick={async () => {
+                      setEdgeSaving(true);
+                      try {
+                        const updated = await updateEdgeStatement(upperTicker, edgeDraft, activePortfolioId);
+                        setStock(updated);
+                      } finally { setEdgeSaving(false); }
+                    }}
+                    disabled={edgeSaving}
+                    className="text-xs px-3 py-1 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+                  >
+                    {edgeSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <ThesisManager
               ticker={upperTicker}
               initialTheses={theses}

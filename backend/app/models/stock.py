@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -16,6 +16,7 @@ class Stock(Base):
     name = Column(String(255), nullable=False)
     logo_url = Column(String(500), nullable=True)
     watchlist = Column(String(5), default="false", nullable=False)  # "true" | "false" stored as string for SQLite compat
+    edge_statement = Column(Text, nullable=True)  # "What do you see that the market is missing?"
 
     owner = relationship("User", back_populates="stocks")
     portfolio = relationship("Portfolio", back_populates="stocks")

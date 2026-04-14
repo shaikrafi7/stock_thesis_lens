@@ -152,7 +152,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   async function handleGenerate() {
     setGenerating(true); setError("");
     try {
-      const preview = await previewThesis(ticker, pid);
+      const { getThesisSettings } = await import("@/app/settings/page");
+      const { maxGroups, maxPerGroup } = getThesisSettings();
+      const preview = await previewThesis(ticker, pid, maxGroups, maxPerGroup);
       setPreviewPoints(preview);
       setRejectedIndexes(new Set());
     } catch (err) {

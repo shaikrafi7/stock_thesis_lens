@@ -55,11 +55,14 @@ def _run_migrations():
                 conn.execute(text(f"ALTER TABLE theses ADD COLUMN {col} TEXT DEFAULT {default}"))
                 conn.commit()
 
-        # --- Stocks watchlist column ---
+        # --- Stocks watchlist + edge_statement columns ---
         result = conn.execute(text("PRAGMA table_info(stocks)"))
         stock_cols2 = [row[1] for row in result.fetchall()]
         if "watchlist" not in stock_cols2:
             conn.execute(text("ALTER TABLE stocks ADD COLUMN watchlist TEXT DEFAULT 'false'"))
+            conn.commit()
+        if "edge_statement" not in stock_cols2:
+            conn.execute(text("ALTER TABLE stocks ADD COLUMN edge_statement TEXT"))
             conn.commit()
 
         # --- Briefings columns ---

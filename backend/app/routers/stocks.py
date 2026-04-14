@@ -168,6 +168,22 @@ def toggle_watchlist(
     return stock
 
 
+@router.patch("/{ticker}/edge", response_model=StockRead)
+def update_edge_statement(
+    ticker: str,
+    payload: dict,
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save the user's 'what do I see that the market is missing' statement."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    stock.edge_statement = payload.get("edge_statement", "")
+    db.commit()
+    db.refresh(stock)
+    return stock
+
+
 @router.get("/{ticker}/share-token")
 def get_share_token(
     ticker: str,

@@ -12,6 +12,7 @@ export interface Stock {
   name: string;
   logo_url: string | null;
   watchlist: string; // "true" | "false"
+  edge_statement?: string | null;
 }
 
 export interface Thesis {
@@ -194,6 +195,13 @@ export const deleteStock = (ticker: string, portfolioId?: number | null): Promis
 
 export const toggleWatchlist = (ticker: string, portfolioId?: number | null): Promise<Stock> =>
   apiFetch(`/stocks/${ticker}/watchlist${joinParams(pq(portfolioId))}`, { method: "PATCH" });
+
+export const updateEdgeStatement = (ticker: string, edgeStatement: string, portfolioId?: number | null): Promise<Stock> =>
+  apiFetch(`/stocks/${ticker}/edge${joinParams(pq(portfolioId))}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edge_statement: edgeStatement }),
+  });
 
 export const reorderTheses = (
   ticker: string,
@@ -431,8 +439,8 @@ export interface ThesisPreview {
   weight: number;
 }
 
-export const previewThesis = (ticker: string, portfolioId?: number | null): Promise<ThesisPreview[]> =>
-  apiFetch(`/stocks/${ticker}/preview-thesis${joinParams(pq(portfolioId))}`, { method: "POST" });
+export const previewThesis = (ticker: string, portfolioId?: number | null, maxGroups?: number, maxPerGroup?: number): Promise<ThesisPreview[]> =>
+  apiFetch(`/stocks/${ticker}/preview-thesis${joinParams(pq(portfolioId), maxGroups != null ? `max_groups=${maxGroups}` : "", maxPerGroup != null ? `max_per_group=${maxPerGroup}` : "")}`, { method: "POST" });
 
 export const confirmPreview = (ticker: string, points: ThesisPreview[], portfolioId?: number | null): Promise<GenerateAndEvaluateResponse> =>
   apiFetch(`/stocks/${ticker}/confirm-preview${joinParams(pq(portfolioId))}`, {

@@ -23,6 +23,7 @@ class StockRead(BaseModel):
     name: str
     logo_url: str | None = None
     watchlist: str = "false"  # "true" | "false"
+    edge_statement: str | None = None
 
     model_config = {"from_attributes": True}
 
