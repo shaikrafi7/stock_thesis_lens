@@ -8,7 +8,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _HEADERS = {
-    "User-Agent": "Stock-Thesis-Lens/1.0 (thesis-lens@example.com)",
+    "User-Agent": "STARC/1.0 (starc@example.com)",
     "Accept": "application/json",
 }
 

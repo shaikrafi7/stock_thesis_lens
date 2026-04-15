@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./stock_thesis.db"
     CORS_ORIGINS: str = "http://localhost:3000"
     LANGCHAIN_TRACING_V2: str = "false"
-    LANGCHAIN_PROJECT: str = "stock-thesis-lens"
+    LANGCHAIN_PROJECT: str = "starc"
     LANGSMITH_API_KEY: str = ""
     # Set to "false" when running multiple uvicorn workers to avoid duplicate nightly evals
     SCHEDULER_ENABLED: str = "true"

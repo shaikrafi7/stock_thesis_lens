@@ -116,7 +116,7 @@ def seed_ticker(ticker: str, force_regenerate: bool = False):
 
 if __name__ == "__main__":
     force = "--force" in sys.argv  # pass --force to regenerate even if thesis exists
-    log("Stock Thesis Lens — Mag 7 Demo Seeder")
+    log("STARC: Stock Thesis Arc — Mag 7 Demo Seeder")
     log(f"Seeding: {', '.join(MAG7)}")
     if force:
         log("--force: will regenerate thesis for all tickers")
