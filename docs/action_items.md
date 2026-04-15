@@ -39,7 +39,9 @@ Last updated: 2026-04-13
 ## P2 — Silent Data / Architecture
 > Wrong results with no visible error. Performance and code quality.
 
-- [ ] **[T3] Surface data source availability on score card** — all agent files  
+- [ ] **[T3] Surface data source availability on score card** — all agent files
+- [ ] **[T4] Stock detail page (/stocks/{ticker}) hangs/timeout on load** — frontend or backend issue
+- [ ] **[T5] Settings page returns 404** — route not implemented despite sidebar link  
   Agent failures silently return `None`; eval runs on partial data with full confidence shown. Add `sources_available: {polygon: bool, serper: bool, ...}` to eval result and show indicator in score card UI.
 
 - [x] **[A1] Centralize investor profile extraction** — `backend/app/routers/thesis.py:29-43` vs `evaluate.py:18-22`  
