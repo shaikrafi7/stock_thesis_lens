@@ -691,6 +691,7 @@ export interface ScreenerCard {
   analyst_rating: string | null;
   in_portfolio: boolean;
   in_watchlist: boolean;
+  rationale: string;
 }
 
 export const getScreener = (portfolioId?: number | null): Promise<ScreenerCard[]> =>
@@ -709,3 +710,10 @@ export interface TickerSuggestion {
 
 export const searchTickers = (q: string): Promise<TickerSuggestion[]> =>
   apiFetch(`/stocks/search?q=${encodeURIComponent(q)}`);
+
+export interface PortfolioGuidance {
+  guidance: string[];
+}
+
+export const getPortfolioGuidance = (portfolioId?: number | null): Promise<PortfolioGuidance> =>
+  apiFetch(`/portfolio/guidance${joinParams(pq(portfolioId))}`);

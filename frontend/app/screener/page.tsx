@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 const RATING_LABEL: Record<string, string> = {
+  strong_buy: "Strong Buy",
   strongbuy: "Strong Buy",
   buy: "Buy",
   hold: "Hold",
@@ -18,6 +19,7 @@ const RATING_LABEL: Record<string, string> = {
 };
 
 const RATING_COLOR: Record<string, string> = {
+  strong_buy: "text-emerald-600 dark:text-emerald-400",
   strongbuy: "text-emerald-600 dark:text-emerald-400",
   buy: "text-green-600 dark:text-green-400",
   hold: "text-amber-500",
@@ -88,6 +90,10 @@ function CardItem({ card, onAdd, onWatchlist }: {
         {card.pe_ratio && <span>P/E <span className="text-gray-600 dark:text-zinc-300 font-mono">{card.pe_ratio}</span></span>}
         {card.market_cap && <span>MCap <span className="text-gray-600 dark:text-zinc-300 font-mono">${card.market_cap}B</span></span>}
       </div>
+
+      {card.rationale && (
+        <p className="text-[10px] text-gray-400 dark:text-zinc-500 italic leading-snug">Recommended: {card.rationale}</p>
+      )}
 
       <div className="flex gap-2 mt-auto">
         {added ? (
@@ -179,6 +185,9 @@ function SwipeCard({ card, onLike, onSkip, remaining }: {
             </div>
           )}
         </div>
+        {card.rationale && (
+          <p className="text-xs text-gray-400 dark:text-zinc-500 italic mt-3">Recommended: {card.rationale}</p>
+        )}
       </div>
 
       {/* Buttons */}

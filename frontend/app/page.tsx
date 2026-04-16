@@ -8,6 +8,7 @@ import {
   getPortfolioScoreHistories,
   getPortfolioSparklines,
   getPortfolioPrices,
+  getPortfolioGuidance,
   type Stock,
   type Evaluation,
   type StockTrend,
@@ -30,7 +31,7 @@ import EarningsCalendar from "./components/EarningsCalendar";
 import ConvictionVsReturns from "./components/ConvictionVsReturns";
 import QuizModal from "./components/QuizModal";
 import ThesisOverviewPanel from "./components/ThesisOverviewPanel";
-import { Loader2, GitCompare, Brain } from "lucide-react";
+import { Loader2, GitCompare, Brain, Lightbulb } from "lucide-react";
 
 export default function DashboardPage() {
   const { activePortfolioId, portfolioLoaded } = usePortfolio();
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [scoreHistories, setScoreHistories] = useState<Record<string, EvaluationSummary[]>>({});
   const [priceSparklines, setPriceSparklines] = useState<Record<string, number[]>>({});
   const [priceSnapshots, setPriceSnapshots] = useState<Record<string, PriceSnapshot>>({});
+  const [guidance, setGuidance] = useState<string[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -51,12 +53,13 @@ export default function DashboardPage() {
       const stockList = await fetchStocks(pid);
       setStocks(stockList);
 
-      const [evalMap, trends, histories, sparklines, prices] = await Promise.all([
+      const [evalMap, trends, histories, sparklines, prices, guidanceRes] = await Promise.all([
         getPortfolioEvaluations(pid).catch(() => ({}) as Record<string, Evaluation>),
         getPortfolioTrends(pid).catch(() => [] as StockTrend[]),
         getPortfolioScoreHistories(10, pid).catch(() => ({}) as Record<string, EvaluationSummary[]>),
         getPortfolioSparklines(pid).catch(() => ({}) as Record<string, number[]>),
         getPortfolioPrices(pid).catch(() => ({}) as Record<string, PriceSnapshot>),
+        getPortfolioGuidance(pid).catch(() => ({ guidance: [] })),
       ]);
 
       const evals = stockList.map((s) => evalMap[s.ticker] ?? null);
@@ -69,6 +72,7 @@ export default function DashboardPage() {
       setScoreHistories(histories);
       setPriceSparklines(sparklines);
       setPriceSnapshots(prices);
+      setGuidance(guidanceRes.guidance);
     } catch {
       // API errors handled per-call above
     } finally {
@@ -110,6 +114,18 @@ export default function DashboardPage() {
           </div>
 
           <div className="max-w-5xl mx-auto px-6">
+            {/* Guidance strip */}
+            {guidance.length > 0 && (
+              <div className="mb-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 flex flex-col gap-2">
+                {guidance.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-200">
+                    <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Two-column: left = news, right = returns + sector */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-6">
               <div className="min-w-0">

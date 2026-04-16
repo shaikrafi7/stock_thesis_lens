@@ -862,6 +862,55 @@ class ScreenerCard(BaseModel):
     analyst_rating: str | None
     in_portfolio: bool
     in_watchlist: bool
+    rationale: str
+
+
+_RATING_LABELS: dict[str, str] = {
+    "strong_buy": "Strong Buy consensus",
+    "strongbuy": "Strong Buy consensus",
+    "buy": "Buy consensus",
+    "hold": "Hold consensus",
+    "underperform": "Underperform consensus",
+    "sell": "Sell consensus",
+}
+
+
+def _build_rationale(analyst_rating: str | None, pe_ratio: float | None, market_cap: float | None, sector: str | None) -> str:
+    """Build a short, deterministic rationale string from available stock data."""
+    parts: list[str] = []
+
+    if analyst_rating:
+        label = _RATING_LABELS.get(analyst_rating.lower().replace(" ", "_"))
+        if label:
+            parts.append(label)
+
+    if pe_ratio and pe_ratio > 0:
+        if pe_ratio < 15:
+            parts.append(f"low P/E of {pe_ratio}")
+        elif pe_ratio < 30:
+            parts.append(f"reasonable P/E of {pe_ratio}")
+        else:
+            parts.append(f"high-growth P/E of {pe_ratio}")
+
+    if market_cap:
+        if market_cap >= 200:
+            parts.append("large-cap stability")
+        elif market_cap >= 10:
+            parts.append("mid-cap growth profile")
+        else:
+            parts.append("small-cap opportunity")
+
+    if sector:
+        parts.append(f"in {sector} sector")
+
+    if not parts:
+        return "Popular stock for research"
+
+    # Keep to 2-3 most relevant parts
+    selected = parts[:3]
+    if len(selected) == 1:
+        return selected[0].capitalize()
+    return f"{selected[0].capitalize()} with {' and '.join(selected[1:])}"
 
 
 def _fetch_screener_card(ticker: str, portfolio_tickers: set, watchlist_tickers: set) -> "ScreenerCard | None":
@@ -875,17 +924,21 @@ def _fetch_screener_card(ticker: str, portfolio_tickers: set, watchlist_tickers:
         change_pct = round((price - prev_close) / prev_close * 100, 2) if price and prev_close else None
         market_cap_raw = getattr(fast, "market_cap", None)
         market_cap = round(market_cap_raw / 1e9, 1) if market_cap_raw else None
+        analyst_rating = full.get("recommendationKey")
+        pe_ratio = round(full.get("trailingPE", 0), 1) if full.get("trailingPE") else None
+        sector = full.get("sector")
         return ScreenerCard(
             ticker=ticker,
             name=_clean_name(full.get("longName") or full.get("shortName") or ticker),
-            sector=full.get("sector"),
+            sector=sector,
             price=round(price, 2) if price else None,
             change_pct=change_pct,
-            pe_ratio=round(full.get("trailingPE", 0), 1) if full.get("trailingPE") else None,
+            pe_ratio=pe_ratio,
             market_cap=market_cap,
-            analyst_rating=full.get("recommendationKey"),
+            analyst_rating=analyst_rating,
             in_portfolio=ticker in portfolio_tickers,
             in_watchlist=ticker in watchlist_tickers,
+            rationale=_build_rationale(analyst_rating, pe_ratio, market_cap, sector),
         )
     except Exception:
         return None
@@ -995,6 +1048,71 @@ def dismiss_screener_stock(
         dismissed.append(body.ticker)
     current_user.screener_dismissed = json.dumps(dismissed)
     db.commit()
+
+
+@router.get("/guidance")
+def portfolio_guidance(
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return 1-3 actionable guidance strings based on current portfolio state."""
+    from datetime import datetime, timezone, timedelta
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).order_by(Stock.ticker).all()
+    if not stocks:
+        return {"guidance": []}
+
+    stock_ids = [s.id for s in stocks]
+    ticker_by_id = {s.id: s.ticker for s in stocks}
+
+    latest_eval_ids = (
+        db.query(func.max(Evaluation.id))
+        .filter(Evaluation.stock_id.in_(stock_ids))
+        .group_by(Evaluation.stock_id)
+        .subquery()
+    )
+    latest_evals = {
+        e.stock_id: e
+        for e in db.query(Evaluation).filter(Evaluation.id.in_(latest_eval_ids)).all()
+    }
+
+    scored = [(ticker_by_id[sid], e.score, e.timestamp) for sid, e in latest_evals.items()]
+    guidance: list[str] = []
+
+    # Rule 1: weakest holding
+    if scored:
+        weakest_ticker, weakest_score, _ = min(scored, key=lambda x: x[1])
+        guidance.append(
+            f"Your weakest holding is {weakest_ticker} ({weakest_score:.1f}) — consider reviewing its thesis."
+        )
+
+    # Rule 2: stale evaluation (>3 days)
+    now = datetime.now(tz=timezone.utc)
+    stale_threshold = now - timedelta(days=3)
+    stale = []
+    for ticker, _score, ts in scored:
+        if ts is not None:
+            ts_aware = ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+            if ts_aware < stale_threshold:
+                days_old = (now - ts_aware).days
+                stale.append((ticker, days_old))
+    if stale:
+        stale_ticker, days_old = max(stale, key=lambda x: x[1])
+        guidance.append(
+            f"{stale_ticker} hasn't been evaluated in {days_old} days — re-evaluate for fresh signals."
+        )
+
+    # Rule 3 / 4: avg score thresholds (only add if < 3 guidance items so far)
+    if len(guidance) < 3 and scored:
+        avg = sum(s for _, s, _ in scored) / len(scored)
+        if avg < 50:
+            guidance.append("Portfolio under pressure — consider whether your thesis points still hold.")
+        elif avg > 75:
+            guidance.append("Portfolio thesis is strong — stay the course.")
+
+    return {"guidance": guidance[:3]}
 
 
 @router.delete("/screener/dismissed", status_code=204)
