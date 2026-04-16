@@ -17,7 +17,7 @@ THESIS_TEMPLATES = [
     {
         "id": 2,
         "category": "growth_trajectory",
-        "statement": "Revenue and earnings are growing meaningfully",
+        "statement": "Revenue and earnings growth trajectory is strong",
         "importance": "standard",
         "frozen": False,
         "conviction": None,

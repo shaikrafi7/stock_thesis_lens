@@ -38,12 +38,15 @@ def _month_end_dates(start: date, end: date) -> list[date]:
 
 
 def _add_one_month(d: date) -> date:
-    """Add approximately one calendar month to a date."""
+    """Add one month to a date, landing on the last business day of that month.
+
+    Uses BMonthEnd so the formation date always falls on a trading day.
+    MonthEnd(0) can land on weekends/holidays, misaligning with price data.
+    """
     month = d.month + 1
     year = d.year + (month > 12)
     month = month if month <= 12 else month - 12
-    # Use last day of that month
-    next_month_end = pd.Timestamp(year=year, month=month, day=1) + pd.offsets.MonthEnd(0)
+    next_month_end = pd.Timestamp(year=year, month=month, day=1) + pd.offsets.BMonthEnd(0)
     return next_month_end.date()
 
 

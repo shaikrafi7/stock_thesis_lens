@@ -7,12 +7,15 @@ Computes:
 
 Note: Fama-French factor data downloaded from Ken French's data library.
 """
+import logging
 from datetime import date
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+logger = logging.getLogger(__name__)
 
 
 # ── Newey-West t-statistic ────────────────────────────────────────────────
@@ -38,6 +41,13 @@ def newey_west_tstat(returns: pd.Series, lags: int = 6) -> tuple[float, float]:
         weight = 1 - lag / (lags + 1)
         gamma_l = (resid.iloc[lag:].values * resid.iloc[:-lag].values).mean()
         nw_var += 2 * weight * gamma_l
+
+    # BUG 12 FIX: Large negative autocovariances can drive nw_var negative,
+    # yielding imaginary standard errors.  Clamp to zero (conservative: treats
+    # SE as zero -> t-stat is nan, signalling insufficient data).
+    if nw_var < 0.0:
+        logger.warning("Newey-West variance went negative (%g); clamping to 0", nw_var)
+        nw_var = 0.0
 
     se = np.sqrt(nw_var / n)
     t_stat = mean / se if se > 0 else float("nan")

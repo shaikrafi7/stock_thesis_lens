@@ -87,6 +87,14 @@ def fetch_fundamentals(ticker: str, client: FMPClient) -> pd.DataFrame:
     # Merge quarterly frames
     quarterly = _outer_join(frames)
 
+    # ── Revenue growth: computed from quarterly income statement ONLY ────────
+    # Must be done before the outer join with annual data because pct_change on
+    # a mixed quarterly+annual index produces meaningless results (irregular gaps).
+    revenue_growth_series: pd.Series | None = None
+    if not inc.empty and "revenue" in inc.columns:
+        q_rev = inc["revenue"].sort_index()
+        revenue_growth_series = q_rev.pct_change(periods=4)  # YoY (4 quarters)
+
     # ── Build annual signals DataFrame (ratios + key_metrics) ─────────────────
     ann_frames: list[pd.DataFrame] = []
 
@@ -102,6 +110,10 @@ def fetch_fundamentals(ticker: str, client: FMPClient) -> pd.DataFrame:
             "netProfitMargin":            "net_margin_rat",
             "freeCashFlowPerShare":       "fcf_per_share",
         })
+        # BUG 1 FIX: Annual ratio rows are indexed by fiscal year-end, not SEC
+        # filing date.  Shift forward 120 days (~4 months) to approximate when
+        # the 10-K is actually available to the public, preventing look-ahead bias.
+        rat_sel.index = rat_sel.index + pd.DateOffset(days=120)
         ann_frames.append(rat_sel)
 
     if not km.empty:
@@ -109,6 +121,8 @@ def fetch_fundamentals(ticker: str, client: FMPClient) -> pd.DataFrame:
             "evToEBITDA":      "ev_to_ebitda",
             "returnOnEquity":  "roe",
         })
+        # Same look-ahead fix for key-metrics annual data.
+        km_sel.index = km_sel.index + pd.DateOffset(days=120)
         ann_frames.append(km_sel)
 
     annual = _outer_join(ann_frames)
@@ -156,9 +170,11 @@ def fetch_fundamentals(ticker: str, client: FMPClient) -> pd.DataFrame:
     merged["gross_margin"]     = _coalesce(merged, ["gross_margin", "gross_margin_rat"])
     merged["operating_margin"] = _coalesce(merged, ["operating_margin", "operating_margin_rat"])
 
-    # Revenue growth: QoQ from revenue column
-    if "revenue" in merged.columns:
-        merged["revenue_growth"] = merged["revenue"].pct_change(periods=4)  # YoY (4 quarters)
+    # Revenue growth: merge back the quarterly-only series computed before the
+    # outer join.  Using pct_change on the mixed quarterly+annual index would
+    # produce wrong results because the index is irregular.
+    if revenue_growth_series is not None:
+        merged["revenue_growth"] = revenue_growth_series.reindex(merged.index)
 
     # FCF margin: approximate from income statement if available
     if "fcf_per_share" in merged.columns and "revenue" in merged.columns:

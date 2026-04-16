@@ -52,6 +52,17 @@ def available_tickers(data_dir: Path) -> list[str]:
     price_tickers = {p.stem.replace("_prices", "") for p in (data_dir / "prices").glob("*_prices.parquet")}
     fund_tickers = {p.stem.replace("_fundamentals", "") for p in (data_dir / "fundamentals").glob("*_fundamentals.parquet")}
     both = price_tickers & fund_tickers
+
+    # BUG 17 FIX: Warn about tickers dropped due to missing price or fundamentals.
+    price_only = price_tickers - fund_tickers
+    fund_only = fund_tickers - price_tickers
+    if price_only:
+        log.warning("Excluded %d tickers (price data only, no fundamentals): %s",
+                    len(price_only), sorted(price_only))
+    if fund_only:
+        log.warning("Excluded %d tickers (fundamentals only, no prices): %s",
+                    len(fund_only), sorted(fund_only))
+
     # Preserve SP500_TOP100 order for determinism
     ordered = [t for t in SP500_TOP100 if t in both]
     # Add any extras not in SP500_TOP100
@@ -93,14 +104,38 @@ def run_backtest(
     ls_by_horizon = build_longshort_series(quintile_returns)
     log.info("  %d return records computed", len(qr_df))
 
+    # ── Step 4: Build per-ticker 1-month forward return map for IC ───────
+    # For each score_date, map ticker -> 1m simple return so IC can be computed.
+    from simulation.analysis.return_calculator import ticker_forward_return, _add_months
+    monthly_returns_map: dict[date, dict[str, float]] = {}
+    for d, scores in all_scores.items():
+        end = _add_months(d, 1)
+        ret_map: dict[str, float] = {}
+        for s in scores:
+            r = ticker_forward_return(s.ticker, d, end)
+            if r is not None:
+                ret_map[s.ticker] = r
+        monthly_returns_map[d] = ret_map
+
+    # ── Step 5: Compute IC series ─────────────────────────────────────────
+    ic_ser = ic_series(monthly_scores_map, monthly_returns_map)
+    ic_ir = ic_information_ratio(ic_ser)
+    mean_ic = float(ic_ser.mean()) if not ic_ser.empty else None
+    log.info("IC: mean=%.4f  ICIR=%.4f  n_months=%d",
+             mean_ic or 0.0, ic_ir or 0.0, len(ic_ser))
+
     return {
         "score_dates": score_dates,
         "all_scores": all_scores,
         "monthly_scores_map": monthly_scores_map,
+        "monthly_returns_map": monthly_returns_map,
         "portfolios": portfolios,
         "quintile_returns": quintile_returns,
         "qr_df": qr_df,
         "ls_by_horizon": ls_by_horizon,
+        "ic_series": ic_ser,
+        "mean_ic": mean_ic,
+        "ic_ir": ic_ir,
     }
 
 
@@ -132,6 +167,19 @@ def print_results(results: dict) -> None:
         print(ls_df.to_string())
     else:
         print("  No long-short data (need more months of returns)")
+
+    print("\n" + "=" * 60)
+    print("INFORMATION COEFFICIENT (IC)")
+    print("=" * 60)
+    mean_ic = results.get("mean_ic")
+    ic_ir = results.get("ic_ir")
+    ic_ser = results.get("ic_series")
+    if mean_ic is not None:
+        print(f"  Mean IC:  {mean_ic:.4f}")
+        print(f"  IC IR:    {ic_ir:.4f}" if ic_ir is not None else "  IC IR:   n/a")
+        print(f"  Months:   {len(ic_ser) if ic_ser is not None else 0}")
+    else:
+        print("  No IC data (insufficient months)")
 
     print("\n" + "=" * 60)
     print("SCORE COVERAGE")

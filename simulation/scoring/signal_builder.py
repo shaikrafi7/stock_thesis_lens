@@ -125,14 +125,26 @@ def build_price_signal(ticker: str, as_of: date) -> PriceSignal | None:
     current_volume = float(row["volume"])
     volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
 
-    ma_20 = _nan_to_none(row.get("ma_20")) or current_price
-    ma_50 = _nan_to_none(row.get("ma_50")) or current_price
-    week_change_pct = _nan_to_none(row.get("week_change_pct")) or 0.0
-    month_change_pct = _nan_to_none(row.get("month_change_pct")) or 0.0
+    # BUG 7 FIX: `_nan_to_none(val) or default` treats 0.0 as falsy, replacing
+    # legitimate zero values with the default.  Use explicit None checks instead.
+    ma_20 = _nan_to_none(row.get("ma_20"))
+    if ma_20 is None:
+        ma_20 = current_price
+    ma_50 = _nan_to_none(row.get("ma_50"))
+    if ma_50 is None:
+        ma_50 = current_price
+    week_change_pct = _nan_to_none(row.get("week_change_pct"))
+    if week_change_pct is None:
+        week_change_pct = 0.0
+    month_change_pct = _nan_to_none(row.get("month_change_pct"))
+    if month_change_pct is None:
+        month_change_pct = 0.0
 
-    if ma_20 > ma_50 * 1.01:
+    # BUG 6 FIX: Use ±2% band to match production signal_collector.py exactly.
+    # Simulation previously used ±1%, causing trend label mismatches vs production.
+    if ma_20 > ma_50 * 1.02:
         trend = "up"
-    elif ma_20 < ma_50 * 0.99:
+    elif ma_20 < ma_50 * 0.98:
         trend = "down"
     else:
         trend = "flat"

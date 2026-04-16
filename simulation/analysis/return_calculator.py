@@ -3,6 +3,7 @@
 Computes equal-weight and value-weight portfolio returns at 1m, 3m, 6m, 12m
 horizons, plus long-short (Q5 - Q1) spread returns.
 """
+import logging
 from datetime import date
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,6 +13,8 @@ from pathlib import Path as _Path
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # Ensure project root is on path for simulation.* imports
 _PROJECT_ROOT = _Path(__file__).parent.parent.parent
@@ -40,15 +43,27 @@ def _load_prices(ticker: str) -> pd.DataFrame | None:
     return _price_cache[ticker]
 
 
+_DELIST_RETURN = -1.0  # -100% assigned when no price found within max window
+_MAX_FORWARD_DAYS = 5  # trading days to look ahead before treating as delisted
+
+
 def _price_on_or_after(ticker: str, as_of: date) -> float | None:
-    """Get closing price on or immediately after as_of."""
+    """Get closing price within _MAX_FORWARD_DAYS trading days of as_of.
+
+    Returns None only if the ticker has no price data at all (missing file).
+    If the ticker was delisted (no price within the window), returns the
+    sentinel value -1.0 so the caller can assign a -100% delisting return.
+    """
     df = _load_prices(ticker)
     if df is None or df.empty:
         return None
     cutoff = pd.Timestamp(as_of)
-    available = df[df.index >= cutoff]
+    max_cutoff = cutoff + pd.offsets.BDay(_MAX_FORWARD_DAYS)
+    available = df[(df.index >= cutoff) & (df.index <= max_cutoff)]
     if available.empty:
-        return None
+        logger.warning("No price for %s within %d trading days of %s — treating as delisted (-100%%)",
+                       ticker, _MAX_FORWARD_DAYS, as_of)
+        return _DELIST_RETURN
     return float(available.iloc[0]["close"])
 
 
@@ -65,21 +80,39 @@ def _price_on_or_before(ticker: str, as_of: date) -> float | None:
 
 
 def _add_months(d: date, months: int) -> date:
-    """Add N calendar months to a date, landing on month-end."""
+    """Add N months to a date, landing on the last business day of that month."""
     target_month = d.month + months
     target_year = d.year + (target_month - 1) // 12
     target_month = (target_month - 1) % 12 + 1
-    end = pd.Timestamp(year=target_year, month=target_month, day=1) + pd.offsets.MonthEnd(0)
+    # Use BMonthEnd so the return date aligns with a trading day, not a weekend
+    # or holiday (calendar MonthEnd can land on a non-trading day).
+    end = pd.Timestamp(year=target_year, month=target_month, day=1) + pd.offsets.BMonthEnd(0)
     return end.date()
 
 
 def ticker_forward_return(ticker: str, start: date, end: date) -> float | None:
-    """Compute log return for a ticker from start to end date."""
+    """Compute simple return for a ticker from start to end date.
+
+    Uses simple returns (p_end/p_start - 1) for cross-sectional averaging so
+    that the equal-weight portfolio return equals the arithmetic mean of
+    constituent returns.  Log returns are NOT additively correct cross-sectionally
+    (arithmetic mean of log returns != log return of equal-weight portfolio).
+
+    Returns -1.0 if the ticker was delisted before the end date (survivorship
+    bias correction).  Returns None only if price data is entirely missing.
+    """
     p_start = _price_on_or_after(ticker, start)
-    p_end = _price_on_or_before(ticker, end)
-    if p_start is None or p_end is None or p_start <= 0:
+    if p_start is None:
         return None
-    return np.log(p_end / p_start)
+    # Delisting: _price_on_or_after returns _DELIST_RETURN sentinel
+    if p_start == _DELIST_RETURN:
+        return -1.0
+    if p_start <= 0:
+        return None
+    p_end = _price_on_or_before(ticker, end)
+    if p_end is None or p_end <= 0:
+        return None
+    return p_end / p_start - 1
 
 
 @dataclass
@@ -127,10 +160,19 @@ def calculate_portfolio_returns(portfolios: list[Portfolio]) -> QuintileReturns:
             end = _add_months(start, h)
 
             returns = []
+            missing = 0
             for ticker in portfolio.tickers:
                 r = ticker_forward_return(ticker, start, end)
                 if r is not None:
                     returns.append(r)
+                else:
+                    missing += 1
+
+            if missing:
+                logger.warning(
+                    "Q%d %s h=%dm: %d/%d tickers excluded (no price data)",
+                    portfolio.quintile, start, h, missing, len(portfolio.tickers),
+                )
 
             ew_ret = float(np.mean(returns)) if returns else None
 
