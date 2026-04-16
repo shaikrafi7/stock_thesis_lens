@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass, field
 
 from app.core.config import settings
+from app.agents.quality_gate import check_thesis_point
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +256,10 @@ def _parse_bullets(data: dict, existing_statements: list[str] | None = None, max
                 continue
             if count >= max_per_group:
                 break
+            passes, reason = check_thesis_point(statement, category, seen_statements)
+            if not passes:
+                logger.info("quality_gate: rejected thesis_point — %s", reason)
+                continue
             if statement and not _is_duplicate(statement, seen_statements):
                 results.append(GeneratedThesis(
                     category=category,

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from app.core.config import settings
+from app.agents.quality_gate import check_briefing_item
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +220,8 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_
             summary = data.get("summary", "No summary available.")
             raw_items = data.get("items", [])
 
+            portfolio_tickers = [s.get("ticker", "") for s in portfolio_data]
+
             items: list[BriefingItemResult] = []
             for item in raw_items:
                 ticker = item.get("ticker", "").upper()
@@ -239,6 +242,15 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_
                 related_thesis = item.get("related_thesis") or None
                 if isinstance(related_thesis, str):
                     related_thesis = related_thesis.strip() or None
+
+                # Attach sector from portfolio data so quality gate can do cross-sector check
+                stock_meta = next((s for s in portfolio_data if s.get("ticker", "").upper() == ticker), {})
+                item_with_sector = {**item, "sector": stock_meta.get("sector", "")}
+
+                passes, reason = check_briefing_item(item_with_sector, portfolio_tickers)
+                if not passes:
+                    logger.info("quality_gate: rejected briefing_item — %s", reason)
+                    continue
 
                 if ticker and headline:
                     items.append(BriefingItemResult(
