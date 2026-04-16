@@ -180,3 +180,8 @@ cython_debug/
 
 # Claude Code internal files
 .claude/
+
+# simulation data (large binary files)
+simulation/data/raw/
+simulation/data/cache.db
+simulation/.venv/

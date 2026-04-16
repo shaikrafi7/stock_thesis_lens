@@ -116,8 +116,9 @@ export interface Evaluation {
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const authHeaders = getAuthHeaders();
-  const mergedHeaders = {
+  const mergedHeaders: Record<string, string> = {
     ...authHeaders,
+    ...(init?.body ? { "Content-Type": "application/json" } : {}),
     ...(init?.headers as Record<string, string> | undefined),
   };
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers: mergedHeaders });
@@ -290,6 +291,9 @@ export const runEvaluation = (ticker: string, portfolioId?: number | null): Prom
 
 export const getLatestEvaluation = (ticker: string, portfolioId?: number | null): Promise<Evaluation> =>
   apiFetch(`/stocks/${ticker}/evaluation${joinParams(pq(portfolioId))}`);
+
+export const getPortfolioEvaluations = (portfolioId?: number | null): Promise<Record<string, Evaluation>> =>
+  apiFetch(`/portfolio/evaluations${joinParams(pq(portfolioId))}`);
 
 export interface ScoreDelta {
   has_delta: boolean;

@@ -72,6 +72,92 @@ def get_snapshot(ticker: str, force_refresh: bool = False) -> MarketSnapshot:
         return MarketSnapshot(fetched_at=now)
 
 
+def get_snapshots_batch(tickers: list[str]) -> dict[str, MarketSnapshot]:
+    """Batch-fetch price snapshots for multiple tickers using yf.download().
+
+    Much faster than individual get_snapshot() calls (1 HTTP request vs N).
+    Populates the cache so subsequent get_snapshot() calls are instant.
+    """
+    tickers = [t.upper() for t in tickers]
+    now = time.time()
+
+    # Split into cached (still fresh) and uncached
+    result: dict[str, MarketSnapshot] = {}
+    need_fetch: list[str] = []
+    for t in tickers:
+        if t in _cache:
+            cached, ts = _cache[t]
+            if now - ts < CACHE_TTL_SECONDS:
+                result[t] = cached
+                continue
+        need_fetch.append(t)
+
+    if not need_fetch:
+        return result
+
+    try:
+        df = yf.download(
+            need_fetch,
+            period="2d",
+            interval="1d",
+            progress=False,
+            threads=True,
+        )
+        if df.empty:
+            for t in need_fetch:
+                result[t] = MarketSnapshot(fetched_at=now)
+            return result
+
+        # yf.download returns multi-level columns when >1 ticker
+        multi = len(need_fetch) > 1
+
+        for t in need_fetch:
+            try:
+                if multi:
+                    close_col = df[("Close", t)]
+                    vol_col = df[("Volume", t)]
+                    high_col = df[("High", t)]
+                    low_col = df[("Low", t)]
+                else:
+                    close_col = df["Close"]
+                    vol_col = df["Volume"]
+                    high_col = df["High"]
+                    low_col = df["Low"]
+
+                close_vals = close_col.dropna()
+                if len(close_vals) == 0:
+                    result[t] = MarketSnapshot(fetched_at=now)
+                    continue
+
+                price = float(close_vals.iloc[-1])
+                prev = float(close_vals.iloc[-2]) if len(close_vals) >= 2 else None
+                change_pct = round(((price - prev) / prev) * 100, 2) if prev else None
+                volume = int(vol_col.iloc[-1]) if not vol_col.empty else None
+                day_high = float(high_col.iloc[-1]) if not high_col.empty else None
+                day_low = float(low_col.iloc[-1]) if not low_col.empty else None
+
+                snap = MarketSnapshot(
+                    price=price,
+                    change_pct=change_pct,
+                    day_high=day_high,
+                    day_low=day_low,
+                    volume=volume,
+                    prev_close=prev,
+                    fetched_at=now,
+                )
+                _cache[t] = (snap, now)
+                result[t] = snap
+            except Exception as exc:
+                logger.warning("batch snapshot parse failed for %s: %s", t, exc)
+                result[t] = MarketSnapshot(fetched_at=now)
+    except Exception as exc:
+        logger.warning("batch snapshot download failed: %s", exc)
+        for t in need_fetch:
+            result[t] = MarketSnapshot(fetched_at=now)
+
+    return result
+
+
 def format_snapshot(snap: MarketSnapshot) -> str:
     """Format a snapshot into a concise text block for LLM context."""
     if snap.price is None:

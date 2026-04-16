@@ -37,80 +37,52 @@ def _price_rules(price: PriceSignal, theses: list[dict]) -> list[ThesisSignalMap
     for t in theses:
         category = t["category"]
         stmt_lower = t["statement"].lower()
-        sentiment = "neutral"
-        confidence = 0.3
-        signal_summary = ""
 
-        # Strong downward price trend
-        if price.month_change_pct < -15 and category in ("competitive_moat", "growth_trajectory"):
-            sentiment = "negative"
-            confidence = 0.7
-            signal_summary = f"Price down {price.month_change_pct:.1f}% over 30 days, suggesting thesis pressure"
-
-        elif price.month_change_pct > 15 and category == "competitive_moat":
-            sentiment = "positive"
-            confidence = 0.6
-            signal_summary = f"Price up {price.month_change_pct:.1f}% over 30 days — market recognizing moat"
-
-        elif price.volume_ratio > 2.0 and price.day_change_pct < -3 and category in ("competitive_moat", "ownership_conviction"):
-            sentiment = "negative"
-            confidence = 0.65
-            signal_summary = f"Heavy sell volume ({price.volume_ratio:.1f}x avg) with {price.day_change_pct:.1f}% drop"
-
-        elif price.current_price <= price.fifty_two_week_low * 1.05 and category in ("competitive_moat", "valuation"):
-            if category == "valuation":
-                sentiment = "positive"
-                confidence = 0.5
-                signal_summary = "Price near 52-week low — potential value entry point"
-            else:
-                sentiment = "negative"
-                confidence = 0.6
-                signal_summary = "Price near 52-week low, market losing confidence"
-
-        elif price.current_price >= price.fifty_two_week_high * 0.95 and category == "growth_trajectory":
-            sentiment = "positive"
-            confidence = 0.55
-            signal_summary = "Price near 52-week high, growth being recognized"
-
-        elif price.month_change_pct < -10 and category == "risks":
-            sentiment = "negative"
-            confidence = 0.5
-            signal_summary = f"Price down {price.month_change_pct:.1f}% over 30 days -- monitored risk may be materializing"
-
-        elif price.month_change_pct > 8 and category in ("competitive_moat", "growth_trajectory"):
-            sentiment = "positive"
-            confidence = 0.45
-            signal_summary = f"Solid monthly gain of {price.month_change_pct:.1f}%"
-
-        elif price.month_change_pct < -8 and category in ("competitive_moat", "growth_trajectory"):
-            sentiment = "negative"
-            confidence = 0.45
-            signal_summary = f"Notable monthly decline of {price.month_change_pct:.1f}%"
-
-        elif price.week_change_pct > 5 and price.month_change_pct > 3 and category == "growth_trajectory":
-            sentiment = "positive"
-            confidence = 0.40
-            signal_summary = f"Building momentum: +{price.week_change_pct:.1f}% week, +{price.month_change_pct:.1f}% month"
-
-        elif price.week_change_pct < -5 and price.month_change_pct < -3 and category in ("competitive_moat", "risks"):
-            sentiment = "negative"
-            confidence = 0.40
-            signal_summary = f"Accelerating decline: {price.week_change_pct:.1f}% week, {price.month_change_pct:.1f}% month"
-
-        elif price.trend == "down" and any(w in stmt_lower for w in ("growth", "expand", "increas", "momentum", "accelerat")):
-            sentiment = "negative"
-            confidence = 0.5
-            signal_summary = f"Downtrend detected (MA20 {price.ma_20:.2f} < MA50 {price.ma_50:.2f})"
-
-        if signal_summary:
+        def _add(sent: str, conf: float, summary: str):
             mappings.append(ThesisSignalMapping(
-                thesis_id=t["id"],
-                category=category,
-                statement=t["statement"],
-                sentiment=sentiment,
-                confidence=confidence,
-                signal_summary=signal_summary,
+                thesis_id=t["id"], category=category, statement=t["statement"],
+                sentiment=sent, confidence=conf, signal_summary=summary,
             ))
+
+        # Strong monthly moves
+        if price.month_change_pct < -15 and category in ("competitive_moat", "growth_trajectory"):
+            _add("negative", 0.7, f"Price down {price.month_change_pct:.1f}% over 30 days, suggesting thesis pressure")
+        elif price.month_change_pct < -8 and category in ("competitive_moat", "growth_trajectory"):
+            _add("negative", 0.45, f"Notable monthly decline of {price.month_change_pct:.1f}%")
+
+        if price.month_change_pct > 15 and category == "competitive_moat":
+            _add("positive", 0.6, f"Price up {price.month_change_pct:.1f}% over 30 days -- market recognizing moat")
+        elif price.month_change_pct > 8 and category in ("competitive_moat", "growth_trajectory"):
+            _add("positive", 0.45, f"Solid monthly gain of {price.month_change_pct:.1f}%")
+
+        # Risk-specific monthly drop
+        if price.month_change_pct < -10 and category == "risks":
+            _add("negative", 0.5, f"Price down {price.month_change_pct:.1f}% over 30 days -- monitored risk may be materializing")
+
+        # Heavy sell volume
+        if price.volume_ratio > 2.0 and price.day_change_pct < -3 and category in ("competitive_moat", "ownership_conviction"):
+            _add("negative", 0.65, f"Heavy sell volume ({price.volume_ratio:.1f}x avg) with {price.day_change_pct:.1f}% drop")
+
+        # 52-week extremes
+        if price.current_price <= price.fifty_two_week_low * 1.05:
+            if category == "valuation":
+                _add("positive", 0.5, "Price near 52-week low -- potential value entry point")
+            elif category == "competitive_moat":
+                _add("negative", 0.6, "Price near 52-week low, market losing confidence")
+
+        if price.current_price >= price.fifty_two_week_high * 0.95 and category == "growth_trajectory":
+            _add("positive", 0.55, "Price near 52-week high, growth being recognized")
+
+        # Weekly + monthly momentum
+        if price.week_change_pct > 5 and price.month_change_pct > 3 and category == "growth_trajectory":
+            _add("positive", 0.40, f"Building momentum: +{price.week_change_pct:.1f}% week, +{price.month_change_pct:.1f}% month")
+
+        if price.week_change_pct < -5 and price.month_change_pct < -3 and category in ("competitive_moat", "risks"):
+            _add("negative", 0.40, f"Accelerating decline: {price.week_change_pct:.1f}% week, {price.month_change_pct:.1f}% month")
+
+        # MA crossover on growth-related theses
+        if price.trend == "down" and any(w in stmt_lower for w in ("growth", "expand", "increas", "momentum", "accelerat")):
+            _add("negative", 0.5, f"Downtrend detected (MA20 {price.ma_20:.2f} < MA50 {price.ma_50:.2f})")
 
     return mappings
 
@@ -208,10 +180,15 @@ def _financial_health_rules(fin: FinancialHealthSignal, theses: list[dict]) -> l
             _add("positive", 0.40, f"Manageable leverage: D/E {fin.debt_to_equity:.0f}%")
 
         # Liquidity
-        if fin.current_ratio is not None and fin.current_ratio < 1.0:
-            _add("negative", 0.55, f"Liquidity concern: current ratio {fin.current_ratio:.2f}")
-        elif fin.current_ratio is not None and fin.current_ratio > 2.0:
-            _add("positive", 0.45, f"Strong liquidity: current ratio {fin.current_ratio:.2f}")
+        if fin.current_ratio is not None:
+            if fin.current_ratio < 1.0:
+                _add("negative", 0.55, f"Liquidity concern: current ratio {fin.current_ratio:.2f}")
+            elif fin.current_ratio < 1.3:
+                _add("negative", 0.35, f"Tight liquidity: current ratio {fin.current_ratio:.2f}")
+            elif fin.current_ratio > 2.0:
+                _add("positive", 0.45, f"Strong liquidity: current ratio {fin.current_ratio:.2f}")
+            elif fin.current_ratio > 1.5:
+                _add("positive", 0.35, f"Adequate liquidity: current ratio {fin.current_ratio:.2f}")
 
         # FCF
         if fin.fcf is not None:

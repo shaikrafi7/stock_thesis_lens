@@ -937,21 +937,40 @@ def portfolio_prices(
     current_user: User = Depends(get_current_user),
 ):
     """Return current price + day change% for all portfolio stocks."""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from app.utils.market_snapshot import get_snapshots_batch
     portfolio = get_active_portfolio(portfolio_id, current_user, db)
     stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
     tickers = [s.ticker for s in stocks]
 
-    def _fetch(ticker: str) -> tuple[str, PriceSnapshot]:
-        snap = get_snapshot(ticker)
-        return ticker, PriceSnapshot(price=snap.price, change_pct=snap.change_pct, fetched_at=snap.fetched_at)
+    snapshots = get_snapshots_batch(tickers)
+    return {
+        t: PriceSnapshot(price=s.price, change_pct=s.change_pct, fetched_at=s.fetched_at)
+        for t, s in snapshots.items()
+    }
 
-    result: dict[str, PriceSnapshot] = {}
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {executor.submit(_fetch, t): t for t in tickers}
-        for future in as_completed(futures):
-            ticker, snap = future.result()
-            result[ticker] = snap
+
+@router.get("/evaluations")
+def portfolio_evaluations(
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return latest evaluation for each stock in the portfolio (batch)."""
+    from app.schemas.evaluation import EvaluationRead
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+
+    result: dict[str, dict] = {}
+    for stock in stocks:
+        evaluation = (
+            db.query(Evaluation)
+            .filter(Evaluation.stock_id == stock.id)
+            .order_by(Evaluation.timestamp.desc())
+            .first()
+        )
+        if evaluation:
+            result[stock.ticker] = EvaluationRead.model_validate(evaluation).model_dump()
+
     return result
 
 

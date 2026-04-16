@@ -1,6 +1,6 @@
 # ThesisArc Feature Classification
 
-**Last updated:** 2026-04-16  
+**Last updated:** 2026-04-16 (post P0-fix session)  
 **Purpose:** Prioritize work. Focus on USPs + Must Haves. Pause Nice to Haves until alpha study provides data-driven direction.
 
 ---
@@ -23,7 +23,7 @@ These are our moat. If these don't work brilliantly, the product has no reason t
 | # | Gap | Priority | Impact |
 |---|---|---|---|
 | UG1 | No LLM output quality gate — thesis points, briefings, explanations have no reviewer | P1 | Users see irrelevant/low-quality AI content, undermines trust in the system |
-| UG2 | Revenue/price signal confusion — scoring conflates price momentum with fundamental signals | P1 | Sophisticated investors will immediately question methodology |
+| UG2 | ~~Revenue/price signal confusion~~ | Fixed | Price rules refactored to independent signals; moat rules added; all 6 categories now produce signals. Graduated thresholds close dead zones. |
 | UG3 | Alpha validation unknown — we don't know if the scoring methodology actually predicts returns | P0 | The entire product premise is unvalidated. Study is the #1 priority. |
 
 ---
@@ -34,10 +34,10 @@ Without these, no serious investor would use the app daily.
 
 | # | Feature | Status | Notes |
 |---|---|---|---|
-| M1 | **Accurate, timely prices** | Broken | Shows prices $4 off reality. yfinance caching/staleness. Need real-time feed or clear timestamps. |
-| M2 | **Auto-evaluation freshness** | Partial | Scheduler exists (daily 4:30 PM ET) but evaluations still going stale (AAPL 5d old). Verify scheduler is running on Fly.io. |
-| M3 | **Working briefing generation** | Partial | API returns 200 but content says "Unable to generate." Downstream LLM/news failure. |
-| M4 | **Reasonable load times** | Broken | 8-12s dashboard, 12s chat. Sequential yfinance calls, duplicate API requests. |
+| M1 | **Accurate, timely prices** | Fixed | 2-min TTL cache + `fetched_at` timestamp exposed in API. Batch `yf.download()` for portfolio view. |
+| M2 | **Auto-evaluation freshness** | Fixed | Root cause: Fly.io autostop killed machine before 21:30 UTC cron. Fix: `min_machines_running=1`. |
+| M3 | **Working briefing generation** | Fixed | Retry logic + sequential Polygon fetching with rate-limit delays. Verified end-to-end. |
+| M4 | **Reasonable load times** | Fixed | Batch price fetch (6.9s->0.9s), batch evaluations endpoint, N+5 calls reduced to 5. |
 | M5 | **Actionable dashboard guidance** | Missing | Score says "Under Pressure" but gives no next steps. Need "Review BE — your weakest holding." |
 | M6 | **LLM output quality gate** | Missing | Add evaluator agent that checks thesis relevance, briefing accuracy, explanation clarity before showing to user. |
 | M7 | **Screener rationale** | Missing | Shows random stocks with no explanation. Need "Recommended because: high analyst consensus + your preferred sector." |
@@ -96,14 +96,14 @@ These add value but won't make or break the product. Revisit after study results
 
 ## Current Priority Stack
 
-### Now (before alpha study)
-1. **Fix price staleness (M1)** — trust destroyer
-2. **Fix briefing content generation (M3)** — core USP broken
-3. **Verify auto-eval scheduler on Fly.io (M2)** — may already work
-4. **Separate price vs fundamental signals (UG2)** — methodology credibility
-5. **Dashboard performance (M4)** — 8-12s is unacceptable
+### Done (2026-04-16)
+1. ~~Fix price staleness (M1)~~ — 2-min TTL cache + batch fetch
+2. ~~Fix briefing content generation (M3)~~ — rate-limit-safe sequential fetching
+3. ~~Verify auto-eval scheduler on Fly.io (M2)~~ — min_machines_running=1
+4. ~~Separate price vs fundamental signals (UG2)~~ — independent price rules, moat rules, graduated thresholds
+5. ~~Dashboard performance (M4)~~ — batch prices (7.7x faster) + batch evaluations endpoint
 
-### Next (during alpha study)
+### Now (before alpha study)
 6. **LLM quality gate / evaluator agent (M6/UG1)** — design alongside study
 7. **Actionable dashboard guidance (M5)** — "Review your weakest holding"
 8. **Screener rationale (M7)** — "Why this stock"

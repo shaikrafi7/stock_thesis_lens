@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   fetchStocks,
-  getLatestEvaluation,
+  getPortfolioEvaluations,
   getPortfolioTrends,
   getPortfolioScoreHistories,
   getPortfolioSparklines,
@@ -51,18 +51,15 @@ export default function DashboardPage() {
       const stockList = await fetchStocks(pid);
       setStocks(stockList);
 
-      const [evals, trends, histories, sparklines, prices] = await Promise.all([
-        Promise.all(
-          stockList.map((s) =>
-            getLatestEvaluation(s.ticker, pid).catch(() => null)
-          )
-        ),
+      const [evalMap, trends, histories, sparklines, prices] = await Promise.all([
+        getPortfolioEvaluations(pid).catch(() => ({}) as Record<string, Evaluation>),
         getPortfolioTrends(pid).catch(() => [] as StockTrend[]),
         getPortfolioScoreHistories(10, pid).catch(() => ({}) as Record<string, EvaluationSummary[]>),
         getPortfolioSparklines(pid).catch(() => ({}) as Record<string, number[]>),
         getPortfolioPrices(pid).catch(() => ({}) as Record<string, PriceSnapshot>),
       ]);
 
+      const evals = stockList.map((s) => evalMap[s.ticker] ?? null);
       setEvaluations(evals);
 
       const tm: Record<string, StockTrend> = {};

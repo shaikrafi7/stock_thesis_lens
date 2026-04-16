@@ -537,3 +537,100 @@
 18. Position sizing / allocation tracking
 19. Watchlist functionality (separate from portfolio)
 20. Historical evaluation timeline (see how scores changed over months)
+
+---
+
+## Test Run 4 — 2026-04-16 (P0 Fix Verification, Local)
+
+**Context:** Targeted fixes for the 5 items in the Current Priority Stack from features.md. All tested locally against backend with production DB copy.
+
+**Tester:** Claude (Opus 4.6, CLI + curl)
+
+---
+
+### 1. M1 — Price Staleness Fix Verification
+
+- [x] `get_snapshot()` returns cached data within 2-min TTL (0.95s -> 0.0000s on second call)
+- [x] `fetched_at` timestamp exposed in `/portfolio/prices` response
+- [x] New `get_snapshots_batch()` uses `yf.download()` — single HTTP request for all tickers
+
+**Status: PREVIOUSLY VERIFIED (commit 913746a)**
+
+---
+
+### 2. M3 — Briefing Content Generation Fix
+
+- [x] `POST /portfolio/morning-briefing/refresh` returns 200 with full briefing content
+- [x] Summary generated: portfolio-level market context, thesis-aware
+- [x] 5 items returned with ticker, headline, impact, source_url, related_thesis, suggestion
+- [x] Suggestions properly categorized (growth_trajectory, competitive_moat)
+- [x] Related thesis matches exact text from user's thesis points
+- [x] Source URLs pass through correctly from Polygon
+- [x] Zero 429 rate-limit errors with sequential fetching (was 16 errors before fix)
+- [x] MACRO news fetch succeeds after per-ticker delay
+
+**Fix:** `news.py` — changed parallel `asyncio.gather` to sequential loop with 0.3s delay between tickers.
+
+**Status: FIX VERIFIED — PASS**
+
+---
+
+### 3. M2 — Auto-Eval Scheduler on Fly.io
+
+- [x] Root cause identified: Fly.io `auto_stop_machines=true` + `min_machines_running=0` kills machine before 21:30 UTC cron fires
+- [x] Fly logs confirm: "autostopping machine... 0 out of 1 machines left running"
+- [x] Fix: `fly.toml` changed to `min_machines_running=1`
+- [x] `SCHEDULER_ENABLED` defaults to `"true"` in config — no Fly secret needed
+- [x] Scheduler code confirmed: `start_scheduler()` runs in lifespan, cron at 21:30 UTC
+
+**Bonus fix:** Screener dismiss 422 — `apiFetch` now auto-adds `Content-Type: application/json` when body is present. Was causing repeated 422 errors in production logs.
+
+**Status: FIX APPLIED — needs deploy to verify in production**
+
+---
+
+### 4. UG2 — Scoring Engine Signal Fixes
+
+- [x] `_price_rules` refactored from if/elif chain to independent `_add()` pattern — multiple price signals now fire per thesis
+- [x] Current ratio dead zone closed: added 1.0-1.3 (tight liquidity) and 1.5-2.0 (adequate liquidity) tiers
+- [x] GOOG evaluation: 26 signals across all 6 categories (was ~3 signals across 3 categories)
+  - competitive_moat: 3 signals
+  - financial_health: 6 signals
+  - growth_trajectory: 9 signals
+  - ownership_conviction: 3 signals
+  - risks: 2 signals
+  - valuation: 3 signals
+- [x] Score: 98.1 (21 confirmed, 5 broken) — differentiated, not stuck near 50
+
+**Previously fixed (commit 0204335):** first-match truncation removed, graduated thresholds added, `_moat_rules` function added, diminishing returns decay in evaluator.
+
+**Status: FIX VERIFIED — PASS**
+
+---
+
+### 5. M4 — Dashboard Performance
+
+- [x] `/portfolio/prices` cold cache: 0.9s for 18 stocks (was 6.9s — **7.7x faster**)
+- [x] `/portfolio/prices` warm cache: 0.08s
+- [x] New `/portfolio/evaluations` batch endpoint: 0.095s for all stocks (was N individual calls)
+- [x] Frontend updated: uses batch evaluations, 5 parallel API calls regardless of portfolio size
+- [x] Frontend build passes with all changes
+
+**Fix:** `market_snapshot.py` added `get_snapshots_batch()` using `yf.download()`. Portfolio prices endpoint uses batch. New batch evaluations endpoint. Frontend `page.tsx` uses `getPortfolioEvaluations()`.
+
+**Status: FIX VERIFIED — PASS**
+
+---
+
+### Test Run 4 Summary
+
+| Fix | Status | Measurement |
+|---|---|---|
+| M1 Price staleness | PASS | 2-min TTL cache working |
+| M3 Briefing generation | PASS | Full content generated, 0 rate-limit errors |
+| M2 Auto-eval scheduler | APPLIED | Needs production deploy to verify |
+| UG2 Signal separation | PASS | 26 signals across 6/6 categories |
+| M4 Dashboard performance | PASS | 6.9s -> 0.9s prices, batch evals endpoint |
+
+**Passed:** 4/5
+**Applied (needs deploy):** 1/5

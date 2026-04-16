@@ -62,7 +62,7 @@ async def fetch_news(
 ) -> list[dict]:
     """Return a flat list of news dicts: {ticker, title, description, published_utc, url}.
 
-    Fetches all tickers in parallel via asyncio.gather + thread executor.
+    Fetches tickers sequentially with a small delay to respect Polygon rate limits.
     """
     from app.core.config import settings
 
@@ -70,17 +70,19 @@ async def fetch_news(
         return []
 
     loop = asyncio.get_running_loop()
-
-    async def fetch_one(ticker: str) -> list[dict]:
-        return await loop.run_in_executor(
-            None, _fetch_polygon_news, ticker, limit_per_ticker, days
-        )
-
-    results = await asyncio.gather(*[fetch_one(t) for t in tickers], return_exceptions=True)
-
     items: list[dict] = []
-    for r in results:
-        if isinstance(r, list):
-            items.extend(r)
+
+    for ticker in tickers:
+        try:
+            result = await loop.run_in_executor(
+                None, _fetch_polygon_news, ticker, limit_per_ticker, days
+            )
+            if isinstance(result, list):
+                items.extend(result)
+        except Exception as exc:
+            logger.warning("fetch_news: %s failed: %s", ticker, exc)
+        # Small delay between requests to avoid 429s on free-tier Polygon
+        if ticker != tickers[-1]:
+            await asyncio.sleep(0.3)
 
     return items
