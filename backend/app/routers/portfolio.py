@@ -625,7 +625,7 @@ def portfolio_streak(db: Session = Depends(get_db), current_user: User = Depends
     if not stock_ids:
         return StreakResponse(current_streak=0, longest_streak=0, last_activity_date=None)
 
-    eval_dates = db.query(Evaluation.evaluated_at).filter(Evaluation.stock_id.in_(stock_ids)).all()
+    eval_dates = db.query(Evaluation.timestamp).filter(Evaluation.stock_id.in_(stock_ids)).all()
     audit_dates = db.query(ThesisAudit.created_at).filter(ThesisAudit.user_id == current_user.id).all()
 
     active_days: set[str] = set()
@@ -765,7 +765,7 @@ def portfolio_thesis_overview(portfolio_id: int | None = Query(None), db: Sessio
         db.query(Evaluation.stock_id, Evaluation.score)
         .filter(Evaluation.stock_id.in_(stock_ids))
         .distinct(Evaluation.stock_id)
-        .order_by(Evaluation.stock_id, Evaluation.evaluated_at.desc())
+        .order_by(Evaluation.stock_id, Evaluation.timestamp.desc())
         .all()
     )
     score_map = {row.stock_id: row.score for row in latest_evals}
@@ -808,7 +808,7 @@ def export_portfolio_csv(portfolio_id: int | None = Query(None), db: Session = D
         db.query(Evaluation.stock_id, Evaluation.score, Evaluation.status)
         .filter(Evaluation.stock_id.in_(stock_ids))
         .distinct(Evaluation.stock_id)
-        .order_by(Evaluation.stock_id, Evaluation.evaluated_at.desc())
+        .order_by(Evaluation.stock_id, Evaluation.timestamp.desc())
         .all()
     ) if stock_ids else []
     score_map = {row.stock_id: (row.score, row.status) for row in latest_evals}

@@ -16,7 +16,7 @@ FALLBACK_THESIS: dict[str, list[dict]] = {
     "competitive_moat": [{"statement": "[Add a competitive advantage or moat observation]", "importance": "standard"}],
     "growth_trajectory": [{"statement": "[Add a growth trajectory observation]", "importance": "standard"}],
     "valuation": [{"statement": "[Add a valuation observation]", "importance": "standard"}],
-    "financial_health": [{"statement": "[Add a financial health observation]", "importance": "standard"}],
+    "financial_health": [{"statement": "[Add a financial health or balance sheet observation]", "importance": "standard"}],
     "ownership_conviction": [{"statement": "[Add an ownership or conviction signal]", "importance": "standard"}],
     "risks": [{"statement": "[Add a key risk to monitor]", "importance": "standard"}],
 }

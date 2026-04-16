@@ -29,13 +29,13 @@ PROFANITY = [
 ]
 
 BUY_SELL_PATTERNS = re.compile(
-    r"\b(buy|sell|short|go long|go short|purchase this stock|"
-    r"recommend buying|recommend selling|time to buy|time to sell)\b",
+    r"\b(buy|sell|go long|go short|short\s+(the\s+stock|selling|sell|position)|"
+    r"purchase this stock|recommend buying|recommend selling|time to buy|time to sell)\b",
     re.IGNORECASE,
 )
 
 FUTURE_DATE_PATTERN = re.compile(
-    r"\b(20[3-9]\d|2[1-9]\d{2})\b"  # years 2030+ or 2100+
+    r"(?<!\$)\b(20[3-9]\d|2[1-9]\d{2})\b(?![MBKk%])"  # years 2030+, not dollar amounts
 )
 
 # Unrealistically large dollar amounts (>$100 trillion)
@@ -45,11 +45,23 @@ HUGE_DOLLAR_PATTERN = re.compile(
 
 # Category keyword sets — used for cross-sector checks
 CATEGORY_KEYWORDS: dict[str, set[str]] = {
-    "competitive_moat": {"moat", "advantage", "competitor", "brand", "network", "switching", "scale", "ip", "patent", "market share"},
-    "growth_trajectory": {"growth", "revenue", "tam", "market", "expand", "rate", "trajectory", "catalyst", "acceleration"},
+    "competitive_moat": {
+        "moat", "advantage", "competitor", "brand", "network", "switching", "scale", "ip", "patent", "market share",
+        "dominat", "barrier", "lock-in", "proprietary", "ecosystem", "pricing power", "network effect",
+    },
+    "growth_trajectory": {
+        "growth", "revenue", "tam", "market", "expand", "rate", "trajectory", "catalyst", "acceleration",
+        "cagr", "compound", "user", "subscriber", "adoption", "retention", "arr",
+    },
     "valuation": {"p/e", "pe", "ev", "ebitda", "price", "multiple", "valuation", "margin of safety", "cheap", "expensive", "discount"},
-    "financial_health": {"cash", "debt", "balance sheet", "fcf", "free cash flow", "liquidity", "equity", "capital", "buyback", "dividend"},
-    "ownership_conviction": {"insider", "institutional", "analyst", "target", "short interest", "ownership", "conviction"},
+    "financial_health": {
+        "cash", "debt", "balance sheet", "fcf", "free cash flow", "liquidity", "equity", "capital", "buyback", "dividend",
+        "margin", "return", "roe", "roic", "roa", "operating", "profitability", "earnings", "revenue", "income", "profit",
+    },
+    "ownership_conviction": {
+        "insider", "institutional", "analyst", "target", "short interest", "ownership", "conviction",
+        "fund", "activist", "stake",
+    },
     "risks": {"risk", "threat", "regulatory", "macro", "competition", "execution", "disruption", "lawsuit", "uncertainty"},
 }
 
@@ -166,10 +178,15 @@ def check_thesis_point(
 # ---------------------------------------------------------------------------
 
 def _detect_sector(text: str) -> str | None:
-    """Return the first sector whose keywords appear in text, or None."""
+    """Return the first sector with at least 2 keyword hits in text, or None.
+
+    Requiring 2 hits avoids false positives from incidental word overlap
+    (e.g. "consumer demand" in an energy headline).
+    """
     lower = text.lower()
     for sector, kws in SECTOR_KEYWORDS.items():
-        if any(kw in lower for kw in kws):
+        hits = sum(1 for kw in kws if re.search(r"\b" + re.escape(kw) + r"\b", lower))
+        if hits >= 2:
             return sector
     return None
 
