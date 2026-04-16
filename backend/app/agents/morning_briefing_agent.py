@@ -1,11 +1,14 @@
 import json
 import logging
+import traceback
 from dataclasses import dataclass, field
 from typing import Optional
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 2
 
 CATEGORIES = [
     "competitive_moat", "growth_trajectory", "valuation",
@@ -192,56 +195,70 @@ def generate_briefing(portfolio_data: list[dict], news_items: list[dict], macro_
     profile_block = _build_investor_profile_block(investor_profile)
     system = SYSTEM_PROMPT.format(investor_profile_block=profile_block)
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": f"Generate today's briefing based on this data:\n\n{context}"},
-            ],
-            temperature=0.3,
-            max_tokens=900,
-        )
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            # Truncate context to avoid hitting token limits on gpt-4o-mini
+            if len(context) > 8000:
+                context = context[:8000] + "\n\n[Context truncated for length]"
 
-        raw = response.choices[0].message.content or "{}"
-        data = json.loads(raw)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": f"Generate today's briefing based on this data:\n\n{context}"},
+                ],
+                temperature=0.3,
+                max_tokens=1200,
+            )
 
-        summary = data.get("summary", "No summary available.")
-        raw_items = data.get("items", [])
+            raw = response.choices[0].message.content or "{}"
+            data = json.loads(raw)
 
-        items: list[BriefingItemResult] = []
-        for item in raw_items:
-            ticker = item.get("ticker", "").upper()
-            headline = item.get("headline", "")
-            impact = item.get("impact", "neutral")
-            if impact not in ("bullish", "bearish", "neutral"):
-                impact = "neutral"
+            summary = data.get("summary", "No summary available.")
+            raw_items = data.get("items", [])
 
-            suggestion = None
-            s = item.get("suggestion")
-            if isinstance(s, dict):
-                cat = s.get("category", "")
-                stmt = s.get("statement", "").strip()
-                if cat in CATEGORIES and len(stmt) >= 10:
-                    suggestion = {"category": cat, "statement": stmt}
+            items: list[BriefingItemResult] = []
+            for item in raw_items:
+                ticker = item.get("ticker", "").upper()
+                headline = item.get("headline", "")
+                impact = item.get("impact", "neutral")
+                if impact not in ("bullish", "bearish", "neutral"):
+                    impact = "neutral"
 
-            source_url = item.get("source_url", "") or ""
-            related_thesis = item.get("related_thesis") or None
-            if isinstance(related_thesis, str):
-                related_thesis = related_thesis.strip() or None
+                suggestion = None
+                s = item.get("suggestion")
+                if isinstance(s, dict):
+                    cat = s.get("category", "")
+                    stmt = s.get("statement", "").strip()
+                    if cat in CATEGORIES and len(stmt) >= 10:
+                        suggestion = {"category": cat, "statement": stmt}
 
-            if ticker and headline:
-                items.append(BriefingItemResult(
-                    ticker=ticker, headline=headline, impact=impact,
-                    suggestion=suggestion, source_url=source_url or None,
-                    related_thesis=related_thesis,
-                ))
+                source_url = item.get("source_url", "") or ""
+                related_thesis = item.get("related_thesis") or None
+                if isinstance(related_thesis, str):
+                    related_thesis = related_thesis.strip() or None
 
-        # Macro items first, then stock-specific
-        items.sort(key=lambda x: (0 if x.ticker == "MACRO" else 1))
-        return MorningBriefingResult(summary=summary, items=items[:8])
+                if ticker and headline:
+                    items.append(BriefingItemResult(
+                        ticker=ticker, headline=headline, impact=impact,
+                        suggestion=suggestion, source_url=source_url or None,
+                        related_thesis=related_thesis,
+                    ))
 
-    except Exception as exc:
-        logger.error("morning_briefing_agent: error (%s)", exc)
-        return MorningBriefingResult(summary="Unable to generate briefing — please try again later.")
+            # Macro items first, then stock-specific
+            items.sort(key=lambda x: (0 if x.ticker == "MACRO" else 1))
+            return MorningBriefingResult(summary=summary, items=items[:8])
+
+        except Exception as exc:
+            last_error = exc
+            logger.error(
+                "morning_briefing_agent: attempt %d/%d failed: %s\n%s",
+                attempt + 1, MAX_RETRIES, exc, traceback.format_exc(),
+            )
+
+    logger.error("morning_briefing_agent: all %d attempts failed", MAX_RETRIES)
+    return MorningBriefingResult(
+        summary=f"Briefing generation failed after {MAX_RETRIES} attempts: {type(last_error).__name__}. Try refreshing.",
+    )

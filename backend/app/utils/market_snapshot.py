@@ -1,11 +1,19 @@
-"""Fetch a quick market snapshot for a ticker (current price, change, volume)."""
+"""Fetch a quick market snapshot for a ticker (current price, change, volume).
+
+Includes a per-ticker TTL cache to avoid hammering yfinance on every request.
+"""
 
 import logging
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 
 import yfinance as yf
 
 logger = logging.getLogger(__name__)
+
+# In-memory cache: ticker -> (MarketSnapshot, timestamp)
+_cache: dict[str, tuple["MarketSnapshot", float]] = {}
+CACHE_TTL_SECONDS = 120  # 2 minutes — balances freshness vs rate limits
 
 
 @dataclass
@@ -19,10 +27,19 @@ class MarketSnapshot:
     fifty_two_week_high: float | None = None
     fifty_two_week_low: float | None = None
     prev_close: float | None = None
+    fetched_at: float = field(default_factory=time.time)
 
 
-def get_snapshot(ticker: str) -> MarketSnapshot:
-    """Return a quick market snapshot. Returns empty snapshot on any error."""
+def get_snapshot(ticker: str, force_refresh: bool = False) -> MarketSnapshot:
+    """Return a quick market snapshot with 2-minute TTL cache."""
+    ticker = ticker.upper()
+    now = time.time()
+
+    if not force_refresh and ticker in _cache:
+        cached, ts = _cache[ticker]
+        if now - ts < CACHE_TTL_SECONDS:
+            return cached
+
     try:
         t = yf.Ticker(ticker)
         info = t.info or {}
@@ -33,7 +50,7 @@ def get_snapshot(ticker: str) -> MarketSnapshot:
         if price and prev:
             change_pct = round(((price - prev) / prev) * 100, 2)
 
-        return MarketSnapshot(
+        snap = MarketSnapshot(
             price=price,
             change_pct=change_pct,
             day_high=info.get("dayHigh"),
@@ -43,10 +60,16 @@ def get_snapshot(ticker: str) -> MarketSnapshot:
             fifty_two_week_high=info.get("fiftyTwoWeekHigh"),
             fifty_two_week_low=info.get("fiftyTwoWeekLow"),
             prev_close=prev,
+            fetched_at=now,
         )
+        _cache[ticker] = (snap, now)
+        return snap
     except Exception as exc:
         logger.warning("market_snapshot failed for %s: %s", ticker, exc)
-        return MarketSnapshot()
+        # Return stale cache if available, otherwise empty
+        if ticker in _cache:
+            return _cache[ticker][0]
+        return MarketSnapshot(fetched_at=now)
 
 
 def format_snapshot(snap: MarketSnapshot) -> str:

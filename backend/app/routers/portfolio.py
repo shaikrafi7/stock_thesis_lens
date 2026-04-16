@@ -927,6 +927,7 @@ def screener(portfolio_id: int | None = Query(None), db: Session = Depends(get_d
 class PriceSnapshot(BaseModel):
     price: float | None
     change_pct: float | None
+    fetched_at: float | None = None
 
 
 @router.get("/prices", response_model=dict[str, PriceSnapshot])
@@ -943,7 +944,7 @@ def portfolio_prices(
 
     def _fetch(ticker: str) -> tuple[str, PriceSnapshot]:
         snap = get_snapshot(ticker)
-        return ticker, PriceSnapshot(price=snap.price, change_pct=snap.change_pct)
+        return ticker, PriceSnapshot(price=snap.price, change_pct=snap.change_pct, fetched_at=snap.fetched_at)
 
     result: dict[str, PriceSnapshot] = {}
     with ThreadPoolExecutor(max_workers=8) as executor:
