@@ -75,7 +75,27 @@ def _price_rules(price: PriceSignal, theses: list[dict]) -> list[ThesisSignalMap
         elif price.month_change_pct < -10 and category == "risks":
             sentiment = "negative"
             confidence = 0.5
-            signal_summary = f"Price down {price.month_change_pct:.1f}% over 30 days — monitored risk may be materializing"
+            signal_summary = f"Price down {price.month_change_pct:.1f}% over 30 days -- monitored risk may be materializing"
+
+        elif price.month_change_pct > 8 and category in ("competitive_moat", "growth_trajectory"):
+            sentiment = "positive"
+            confidence = 0.45
+            signal_summary = f"Solid monthly gain of {price.month_change_pct:.1f}%"
+
+        elif price.month_change_pct < -8 and category in ("competitive_moat", "growth_trajectory"):
+            sentiment = "negative"
+            confidence = 0.45
+            signal_summary = f"Notable monthly decline of {price.month_change_pct:.1f}%"
+
+        elif price.week_change_pct > 5 and price.month_change_pct > 3 and category == "growth_trajectory":
+            sentiment = "positive"
+            confidence = 0.40
+            signal_summary = f"Building momentum: +{price.week_change_pct:.1f}% week, +{price.month_change_pct:.1f}% month"
+
+        elif price.week_change_pct < -5 and price.month_change_pct < -3 and category in ("competitive_moat", "risks"):
+            sentiment = "negative"
+            confidence = 0.40
+            signal_summary = f"Accelerating decline: {price.week_change_pct:.1f}% week, {price.month_change_pct:.1f}% month"
 
         elif price.trend == "down" and any(w in stmt_lower for w in ("growth", "expand", "increas", "momentum", "accelerat")):
             sentiment = "negative"
@@ -105,45 +125,53 @@ def _valuation_rules(val: ValuationSignal, theses: list[dict]) -> list[ThesisSig
         if t["category"] != "valuation":
             continue
 
-        sentiment = "neutral"
-        confidence = 0.3
-        signal_summary = ""
-
-        # High PE + high PEG = expensive
-        if val.trailing_pe and val.trailing_pe > 40 and val.peg_ratio and val.peg_ratio > 2.5:
-            sentiment = "negative"
-            confidence = 0.65
-            signal_summary = f"Expensive: P/E {val.trailing_pe:.1f}, PEG {val.peg_ratio:.1f} — growth may not justify price"
-        elif val.peg_ratio and val.peg_ratio < 1.0:
-            sentiment = "positive"
-            confidence = 0.6
-            signal_summary = f"PEG ratio {val.peg_ratio:.1f} suggests stock is undervalued relative to growth"
-        elif val.trailing_pe and val.trailing_pe < 15:
-            sentiment = "positive"
-            confidence = 0.55
-            signal_summary = f"P/E of {val.trailing_pe:.1f} — trading at a discount"
-
-        # Trading vs analyst target
-        if not signal_summary and val.current_price and val.analyst_target:
-            pct_diff = (val.current_price - val.analyst_target) / val.analyst_target * 100
-            if pct_diff > 20:
-                sentiment = "negative"
-                confidence = 0.55
-                signal_summary = f"Trading {pct_diff:.0f}% above analyst target ${val.analyst_target:.0f}"
-            elif pct_diff < -20:
-                sentiment = "positive"
-                confidence = 0.55
-                signal_summary = f"Trading {abs(pct_diff):.0f}% below analyst target ${val.analyst_target:.0f}"
-
-        if signal_summary:
+        def _add(sentiment: str, confidence: float, summary: str) -> None:
             mappings.append(ThesisSignalMapping(
                 thesis_id=t["id"],
                 category=t["category"],
                 statement=t["statement"],
                 sentiment=sentiment,
                 confidence=confidence,
-                signal_summary=signal_summary,
+                signal_summary=summary,
             ))
+
+        # High PE + high PEG = expensive (extreme)
+        if val.trailing_pe and val.trailing_pe > 40 and val.peg_ratio and val.peg_ratio > 2.5:
+            _add("negative", 0.65, f"Expensive: P/E {val.trailing_pe:.1f}, PEG {val.peg_ratio:.1f} -- growth may not justify price")
+
+        # Moderately expensive
+        if val.trailing_pe and val.trailing_pe > 30 and val.peg_ratio and val.peg_ratio > 2.0:
+            _add("negative", 0.50, f"Moderately expensive: P/E {val.trailing_pe:.1f}, PEG {val.peg_ratio:.1f}")
+
+        if val.peg_ratio and val.peg_ratio < 1.0:
+            _add("positive", 0.60, f"PEG ratio {val.peg_ratio:.1f} suggests stock is undervalued relative to growth")
+
+        if val.trailing_pe and val.trailing_pe < 15:
+            _add("positive", 0.55, f"P/E of {val.trailing_pe:.1f} -- trading at a discount")
+
+        if val.trailing_pe and 15 <= val.trailing_pe <= 20 and val.peg_ratio and val.peg_ratio < 1.5:
+            _add("positive", 0.50, f"Reasonable value: P/E {val.trailing_pe:.1f}, PEG {val.peg_ratio:.1f}")
+
+        # EV/EBITDA
+        if val.ev_ebitda and val.ev_ebitda > 25:
+            _add("negative", 0.50, f"High enterprise valuation: EV/EBITDA {val.ev_ebitda:.1f}")
+        elif val.ev_ebitda and val.ev_ebitda < 10:
+            _add("positive", 0.50, f"Attractive enterprise value: EV/EBITDA {val.ev_ebitda:.1f}")
+
+        # Price-to-book
+        if val.pb_ratio and val.pb_ratio > 10:
+            _add("negative", 0.45, f"Trading at {val.pb_ratio:.1f}x book value")
+        elif val.pb_ratio and val.pb_ratio < 1.5:
+            _add("positive", 0.50, f"Near book value: P/B {val.pb_ratio:.1f}")
+
+        # Trading vs analyst target
+        if val.current_price and val.analyst_target:
+            pct_diff = (val.current_price - val.analyst_target) / val.analyst_target * 100
+            if pct_diff > 20:
+                _add("negative", 0.55, f"Trading {pct_diff:.0f}% above analyst target ${val.analyst_target:.0f}")
+            elif pct_diff < -20:
+                _add("positive", 0.55, f"Trading {abs(pct_diff):.0f}% below analyst target ${val.analyst_target:.0f}")
+
     return mappings
 
 
@@ -157,63 +185,56 @@ def _financial_health_rules(fin: FinancialHealthSignal, theses: list[dict]) -> l
         if t["category"] != "financial_health":
             continue
 
-        sentiment = "neutral"
-        confidence = 0.3
-        signal_summary = ""
-
-        # Debt concerns
-        if fin.debt_to_equity and fin.debt_to_equity > 200:
-            sentiment = "negative"
-            confidence = 0.65
-            signal_summary = f"Debt-to-equity ratio {fin.debt_to_equity:.0f}% — high leverage"
-        elif fin.debt_to_equity is not None and fin.debt_to_equity < 50:
-            sentiment = "positive"
-            confidence = 0.55
-            signal_summary = f"Conservative balance sheet: debt/equity {fin.debt_to_equity:.0f}%"
-
-        # FCF
-        if not signal_summary and fin.fcf is not None:
-            if fin.fcf < 0:
-                sentiment = "negative"
-                confidence = 0.6
-                signal_summary = "Negative free cash flow — burning cash"
-            elif fin.fcf > 0 and fin.revenue and fin.fcf / fin.revenue > 0.15:
-                sentiment = "positive"
-                confidence = 0.6
-                fcf_margin = fin.fcf / fin.revenue * 100
-                signal_summary = f"Strong FCF margin of {fcf_margin:.1f}% — cash generative business"
-
-        # ROE
-        if not signal_summary and fin.roe is not None:
-            if fin.roe > 0.20:
-                sentiment = "positive"
-                confidence = 0.55
-                signal_summary = f"ROE of {fin.roe * 100:.1f}% — strong returns on capital"
-            elif fin.roe < 0:
-                sentiment = "negative"
-                confidence = 0.55
-                signal_summary = f"Negative ROE ({fin.roe * 100:.1f}%) — unprofitable"
-
-        # Margins
-        if not signal_summary and fin.gross_margin is not None:
-            if fin.gross_margin > 0.60:
-                sentiment = "positive"
-                confidence = 0.5
-                signal_summary = f"Gross margin {fin.gross_margin * 100:.1f}% — strong pricing power"
-            elif fin.gross_margin < 0.20:
-                sentiment = "negative"
-                confidence = 0.5
-                signal_summary = f"Low gross margin {fin.gross_margin * 100:.1f}% — limited pricing power"
-
-        if signal_summary:
+        def _add(sentiment: str, confidence: float, summary: str) -> None:
             mappings.append(ThesisSignalMapping(
                 thesis_id=t["id"],
                 category=t["category"],
                 statement=t["statement"],
                 sentiment=sentiment,
                 confidence=confidence,
-                signal_summary=signal_summary,
+                signal_summary=summary,
             ))
+
+        # Debt concerns
+        if fin.debt_to_equity and fin.debt_to_equity > 200:
+            _add("negative", 0.65, f"Debt-to-equity ratio {fin.debt_to_equity:.0f}% -- high leverage")
+        elif fin.debt_to_equity is not None and fin.debt_to_equity < 50:
+            _add("positive", 0.55, f"Conservative balance sheet: debt/equity {fin.debt_to_equity:.0f}%")
+
+        # Moderate leverage (graduated)
+        if fin.debt_to_equity and 100 < fin.debt_to_equity <= 200:
+            _add("negative", 0.40, f"Moderate leverage: D/E {fin.debt_to_equity:.0f}%")
+        elif fin.debt_to_equity and 50 <= fin.debt_to_equity <= 100:
+            _add("positive", 0.40, f"Manageable leverage: D/E {fin.debt_to_equity:.0f}%")
+
+        # Liquidity
+        if fin.current_ratio is not None and fin.current_ratio < 1.0:
+            _add("negative", 0.55, f"Liquidity concern: current ratio {fin.current_ratio:.2f}")
+        elif fin.current_ratio is not None and fin.current_ratio > 2.0:
+            _add("positive", 0.45, f"Strong liquidity: current ratio {fin.current_ratio:.2f}")
+
+        # FCF
+        if fin.fcf is not None:
+            if fin.fcf < 0:
+                _add("negative", 0.60, "Negative free cash flow -- burning cash")
+            elif fin.fcf > 0 and fin.revenue and fin.fcf / fin.revenue > 0.15:
+                fcf_margin = fin.fcf / fin.revenue * 100
+                _add("positive", 0.60, f"Strong FCF margin of {fcf_margin:.1f}% -- cash generative business")
+
+        # ROE
+        if fin.roe is not None:
+            if fin.roe > 0.20:
+                _add("positive", 0.55, f"ROE of {fin.roe * 100:.1f}% -- strong returns on capital")
+            elif fin.roe < 0:
+                _add("negative", 0.55, f"Negative ROE ({fin.roe * 100:.1f}%) -- unprofitable")
+
+        # Margins
+        if fin.gross_margin is not None:
+            if fin.gross_margin > 0.60:
+                _add("positive", 0.50, f"Gross margin {fin.gross_margin * 100:.1f}% -- strong pricing power")
+            elif fin.gross_margin < 0.20:
+                _add("negative", 0.50, f"Low gross margin {fin.gross_margin * 100:.1f}% -- limited pricing power")
+
     return mappings
 
 
@@ -225,9 +246,15 @@ def _growth_rules(fin: FinancialHealthSignal, fund: FundamentalSignal | None, th
         if t["category"] != "growth_trajectory":
             continue
 
-        sentiment = "neutral"
-        confidence = 0.3
-        signal_summary = ""
+        def _add(sentiment: str, confidence: float, summary: str) -> None:
+            mappings.append(ThesisSignalMapping(
+                thesis_id=t["id"],
+                category=t["category"],
+                statement=t["statement"],
+                sentiment=sentiment,
+                confidence=confidence,
+                signal_summary=summary,
+            ))
 
         rev_growth = fin.revenue_growth if fin else None
         if rev_growth is None and fund:
@@ -235,50 +262,38 @@ def _growth_rules(fin: FinancialHealthSignal, fund: FundamentalSignal | None, th
 
         if rev_growth is not None:
             if rev_growth > 0.20:
-                sentiment = "positive"
-                confidence = 0.65
-                signal_summary = f"Revenue growing {rev_growth * 100:.1f}% YoY — strong trajectory"
+                _add("positive", 0.65, f"Revenue growing {rev_growth * 100:.1f}% YoY -- strong trajectory")
+            elif 0.10 <= rev_growth <= 0.20:
+                _add("positive", 0.50, f"Solid revenue growth at {rev_growth * 100:.1f}% YoY")
+            elif 0.05 <= rev_growth < 0.10:
+                pass  # 5-10%: neutral, no signal
+            elif 0 < rev_growth < 0.05:
+                _add("negative", 0.50, f"Revenue growth stalling at {rev_growth * 100:.1f}% YoY")
             elif rev_growth < 0:
-                sentiment = "negative"
-                confidence = 0.65
-                signal_summary = f"Revenue declining {rev_growth * 100:.1f}% YoY"
-            elif rev_growth < 0.05:
-                sentiment = "negative"
-                confidence = 0.5
-                signal_summary = f"Revenue growth stalling at {rev_growth * 100:.1f}% YoY"
+                _add("negative", 0.65, f"Revenue declining {rev_growth * 100:.1f}% YoY")
 
-        # Rule of 40 (if we have both growth and margin)
-        if not signal_summary and rev_growth is not None and fin and fin.operating_margin is not None:
+        # Rule of 40
+        if rev_growth is not None and fin and fin.operating_margin is not None:
             rule_of_40 = (rev_growth * 100) + (fin.operating_margin * 100)
             if rule_of_40 > 40:
-                sentiment = "positive"
-                confidence = 0.6
-                signal_summary = f"Rule of 40 score: {rule_of_40:.0f} (growth {rev_growth * 100:.0f}% + margin {fin.operating_margin * 100:.0f}%)"
+                _add("positive", 0.60, f"Rule of 40 score: {rule_of_40:.0f} (growth {rev_growth * 100:.0f}% + margin {fin.operating_margin * 100:.0f}%)")
             elif rule_of_40 < 20:
-                sentiment = "negative"
-                confidence = 0.55
-                signal_summary = f"Rule of 40 score: {rule_of_40:.0f} — below threshold"
+                _add("negative", 0.55, f"Rule of 40 score: {rule_of_40:.0f} -- below threshold")
 
-        # EPS beat/miss
-        if not signal_summary and fund and fund.eps_beat is not None:
+        # EPS beat/miss (extreme)
+        if fund and fund.eps_beat is not None:
             if fund.eps_beat and fund.surprise_pct and fund.surprise_pct > 10:
-                sentiment = "positive"
-                confidence = 0.55
-                signal_summary = f"EPS beat by {fund.surprise_pct:.1f}% — execution on track"
+                _add("positive", 0.55, f"EPS beat by {fund.surprise_pct:.1f}% -- execution on track")
             elif not fund.eps_beat and fund.surprise_pct and fund.surprise_pct < -10:
-                sentiment = "negative"
-                confidence = 0.55
-                signal_summary = f"EPS missed by {abs(fund.surprise_pct):.1f}% — growth execution concern"
+                _add("negative", 0.55, f"EPS missed by {abs(fund.surprise_pct):.1f}% -- growth execution concern")
 
-        if signal_summary:
-            mappings.append(ThesisSignalMapping(
-                thesis_id=t["id"],
-                category=t["category"],
-                statement=t["statement"],
-                sentiment=sentiment,
-                confidence=confidence,
-                signal_summary=signal_summary,
-            ))
+        # EPS beat/miss (modest)
+        if fund and fund.eps_beat is not None:
+            if fund.eps_beat and fund.surprise_pct and 5 < fund.surprise_pct <= 10:
+                _add("positive", 0.45, f"Modest EPS beat of {fund.surprise_pct:.1f}%")
+            elif not fund.eps_beat and fund.surprise_pct and -10 <= fund.surprise_pct < -5:
+                _add("negative", 0.45, f"Modest EPS miss of {abs(fund.surprise_pct):.1f}%")
+
     return mappings
 
 
@@ -290,61 +305,96 @@ def _ownership_rules(own: OwnershipSignal, insider: list[InsiderSignal], theses:
         if t["category"] != "ownership_conviction":
             continue
 
-        sentiment = "neutral"
-        confidence = 0.3
-        signal_summary = ""
-
-        # Short interest
-        if own and own.short_pct_float is not None:
-            if own.short_pct_float > 0.10:
-                sentiment = "negative"
-                confidence = 0.6
-                signal_summary = f"Short interest {own.short_pct_float * 100:.1f}% of float — significant bearish bets"
-            elif own.short_pct_float < 0.02:
-                sentiment = "positive"
-                confidence = 0.5
-                signal_summary = f"Low short interest ({own.short_pct_float * 100:.1f}%) — minimal bearish sentiment"
-
-        # Analyst consensus
-        if not signal_summary and own and own.recommendation:
-            if own.recommendation in ("strong_buy", "buy"):
-                sentiment = "positive"
-                confidence = 0.55
-                count = f" ({own.analyst_count} analysts)" if own.analyst_count else ""
-                signal_summary = f"Analyst consensus: {own.recommendation.replace('_', ' ')}{count}"
-            elif own.recommendation in ("sell", "strong_sell"):
-                sentiment = "negative"
-                confidence = 0.55
-                signal_summary = f"Analyst consensus: {own.recommendation.replace('_', ' ')}"
-
-        # Institutional ownership
-        if not signal_summary and own and own.institutional_pct is not None:
-            if own.institutional_pct > 0.80:
-                sentiment = "positive"
-                confidence = 0.5
-                signal_summary = f"High institutional ownership ({own.institutional_pct * 100:.1f}%) — smart money conviction"
-            elif own.institutional_pct < 0.20:
-                sentiment = "negative"
-                confidence = 0.45
-                signal_summary = f"Low institutional ownership ({own.institutional_pct * 100:.1f}%) — limited institutional interest"
-
-        # Insider activity
-        if not signal_summary and insider:
-            filing_count = len(insider)
-            if filing_count >= 5:
-                sentiment = "neutral"
-                confidence = 0.5
-                signal_summary = f"{filing_count} insider transactions in 90 days — elevated activity"
-
-        if signal_summary:
+        def _add(sentiment: str, confidence: float, summary: str) -> None:
             mappings.append(ThesisSignalMapping(
                 thesis_id=t["id"],
                 category=t["category"],
                 statement=t["statement"],
                 sentiment=sentiment,
                 confidence=confidence,
-                signal_summary=signal_summary,
+                signal_summary=summary,
             ))
+
+        # Short interest
+        if own and own.short_pct_float is not None:
+            if own.short_pct_float > 0.10:
+                _add("negative", 0.60, f"Short interest {own.short_pct_float * 100:.1f}% of float -- significant bearish bets")
+            elif own.short_pct_float < 0.02:
+                _add("positive", 0.50, f"Low short interest ({own.short_pct_float * 100:.1f}%) -- minimal bearish sentiment")
+
+        # Analyst consensus
+        if own and own.recommendation:
+            if own.recommendation in ("strong_buy", "buy"):
+                count = f" ({own.analyst_count} analysts)" if own.analyst_count else ""
+                _add("positive", 0.55, f"Analyst consensus: {own.recommendation.replace('_', ' ')}{count}")
+            elif own.recommendation in ("sell", "strong_sell"):
+                _add("negative", 0.55, f"Analyst consensus: {own.recommendation.replace('_', ' ')}")
+
+        # Institutional ownership
+        if own and own.institutional_pct is not None:
+            if own.institutional_pct > 0.80:
+                _add("positive", 0.50, f"High institutional ownership ({own.institutional_pct * 100:.1f}%) -- smart money conviction")
+            elif own.institutional_pct < 0.20:
+                _add("negative", 0.45, f"Low institutional ownership ({own.institutional_pct * 100:.1f}%) -- limited institutional interest")
+
+        # Insider activity
+        if insider:
+            filing_count = len(insider)
+            if filing_count >= 5:
+                _add("neutral", 0.50, f"{filing_count} insider transactions in 90 days -- elevated activity")
+
+    return mappings
+
+
+# ── Competitive moat rules ────────────────────────────────────────────────
+
+def _moat_rules(fin: FinancialHealthSignal, own: OwnershipSignal | None, theses: list[dict]) -> list[ThesisSignalMapping]:
+    """Quantitative proxies for competitive moat strength."""
+    mappings = []
+    for t in theses:
+        if t["category"] != "competitive_moat":
+            continue
+
+        def _add(sentiment: str, confidence: float, summary: str) -> None:
+            mappings.append(ThesisSignalMapping(
+                thesis_id=t["id"],
+                category=t["category"],
+                statement=t["statement"],
+                sentiment=sentiment,
+                confidence=confidence,
+                signal_summary=summary,
+            ))
+
+        # Gross margin as pricing power proxy
+        if fin and fin.gross_margin is not None:
+            if fin.gross_margin > 0.60:
+                _add("positive", 0.60, f"Gross margin {fin.gross_margin * 100:.1f}% -- strong pricing power")
+            elif fin.gross_margin > 0.40:
+                _add("positive", 0.40, f"Healthy gross margin of {fin.gross_margin * 100:.1f}%")
+            elif fin.gross_margin < 0.25:
+                _add("negative", 0.55, f"Low gross margin {fin.gross_margin * 100:.1f}% -- limited pricing power")
+
+        # ROE as capital efficiency proxy
+        if fin and fin.roe is not None:
+            if fin.roe > 0.25:
+                _add("positive", 0.50, f"ROE of {fin.roe * 100:.1f}% -- efficient capital deployment")
+            elif fin.roe < 0:
+                _add("negative", 0.50, f"Negative ROE ({fin.roe * 100:.1f}%) -- no economic moat visible")
+
+        # Institutional conviction as moat recognition
+        if own and own.institutional_pct is not None:
+            if own.institutional_pct > 0.75:
+                _add("positive", 0.45, f"{own.institutional_pct * 100:.1f}% institutional ownership -- moat recognized")
+            elif own.institutional_pct < 0.15:
+                _add("negative", 0.40, f"Low institutional interest at {own.institutional_pct * 100:.1f}%")
+
+        # Operating margin as durable advantage indicator
+        if fin and fin.operating_margin is not None:
+            if fin.operating_margin > 0.25:
+                _add("positive", 0.45, f"Operating margin {fin.operating_margin * 100:.1f}% -- durable advantage")
+            elif fin.operating_margin < 0.05:
+                _add("negative", 0.45, f"Thin operating margin of {fin.operating_margin * 100:.1f}%")
+
     return mappings
 
 
@@ -473,41 +523,21 @@ def _llm_news_mapping(
 # ── Merge & interpret ──────────────────────────────────────────────────────
 
 def _merge_mappings(*mapping_lists: list[ThesisSignalMapping]) -> list[ThesisSignalMapping]:
-    """Merge all mapping lists.
+    """Merge all mapping lists, deduplicating only on identical signal text.
 
-    Two-stage dedup:
-    1. Per thesis_id: keep highest-confidence negative, or highest-confidence overall.
-    2. Per signal_summary: if the same signal text maps to multiple thesis points,
-       keep only the single best match (highest confidence) to avoid score inflation.
+    Multiple signals per thesis_id are preserved for diminishing-returns scoring
+    in thesis_evaluator. Dedup only removes exact duplicate signal_summary strings
+    to avoid inflation from the same fact hitting multiple rule functions.
     """
-    # Stage 1: dedup by thesis_id
-    by_thesis: dict[int, ThesisSignalMapping] = {}
+    seen: dict[str, ThesisSignalMapping] = {}
+    all_mappings: list[ThesisSignalMapping] = []
     for maps in mapping_lists:
         for m in maps:
-            existing = by_thesis.get(m.thesis_id)
-            if not existing:
-                by_thesis[m.thesis_id] = m
-            else:
-                if m.sentiment == "negative" and existing.sentiment != "negative":
-                    by_thesis[m.thesis_id] = m
-                elif m.sentiment == existing.sentiment and m.confidence > existing.confidence:
-                    by_thesis[m.thesis_id] = m
-
-    # Stage 2: dedup by signal_summary — one signal should only credit/deduct once
-    by_signal: dict[str, ThesisSignalMapping] = {}
-    for m in by_thesis.values():
-        key = m.signal_summary.strip().lower()
-        existing = by_signal.get(key)
-        if not existing:
-            by_signal[key] = m
-        else:
-            # Prefer negative signals, then higher confidence
-            if m.sentiment == "negative" and existing.sentiment != "negative":
-                by_signal[key] = m
-            elif m.sentiment == existing.sentiment and m.confidence > existing.confidence:
-                by_signal[key] = m
-
-    return list(by_signal.values())
+            key = (m.thesis_id, m.signal_summary.strip().lower())
+            if key not in seen:
+                seen[key] = m
+                all_mappings.append(m)
+    return all_mappings
 
 
 def interpret_signals(signals: CollectedSignals, selected_theses: list[dict]) -> list[ThesisSignalMapping]:
@@ -536,14 +566,15 @@ def interpret_signals(signals: CollectedSignals, selected_theses: list[dict]) ->
 
     news_maps = _llm_news_mapping(selected_theses, headlines, signals.fundamentals)
 
-    # Deterministic rules for new categories
+    # Deterministic rules for all categories
     valuation_maps = _valuation_rules(signals.valuation, selected_theses)
     financial_maps = _financial_health_rules(signals.financial_health, selected_theses)
     growth_maps = _growth_rules(signals.financial_health, signals.fundamentals, selected_theses)
     ownership_maps = _ownership_rules(signals.ownership, signals.insider_transactions, selected_theses)
+    moat_maps = _moat_rules(signals.financial_health, signals.ownership, selected_theses)
     filing_maps = _filing_rules(signals.recent_filings, selected_theses)
 
     return _merge_mappings(
         price_maps, news_maps, valuation_maps, financial_maps,
-        growth_maps, ownership_maps, filing_maps,
+        growth_maps, ownership_maps, moat_maps, filing_maps,
     )

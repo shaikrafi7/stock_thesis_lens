@@ -43,6 +43,9 @@ FROZEN_MULTIPLIER = 1.5
 # Confidence threshold — only apply if signal is confident enough
 CONFIDENCE_THRESHOLD = 0.50
 
+# Diminishing returns when multiple signals fire for the same thesis point
+DECAY_FACTORS = [1.0, 0.6, 0.35, 0.2]
+
 
 @dataclass
 class EvaluationResult:
@@ -90,12 +93,17 @@ def evaluate_thesis(
     confirmed_points = []
     frozen_breaks = []
 
+    # Group by thesis_id, sort each group by confidence desc for decay ordering
+    from collections import defaultdict
+    by_thesis: dict[int, list] = defaultdict(list)
     for m in mappings:
-        if m.confidence < CONFIDENCE_THRESHOLD:
-            continue
+        if m.confidence >= CONFIDENCE_THRESHOLD:
+            by_thesis[m.thesis_id].append(m)
+    for group in by_thesis.values():
+        group.sort(key=lambda m: m.confidence, reverse=True)
 
-        # Look up importance, frozen status, and user conviction for this thesis point
-        point_meta = meta.get(m.thesis_id, {})
+    for thesis_id, group in by_thesis.items():
+        point_meta = meta.get(thesis_id, {})
         importance = point_meta.get("importance", "standard")
         is_frozen = point_meta.get("frozen", False)
         conviction = point_meta.get("conviction", None)
@@ -110,34 +118,37 @@ def evaluate_thesis(
         liked_multiplier = 1.3 if conviction == "liked" else 1.0
         disliked_multiplier = 1.3 if conviction == "disliked" else 1.0
 
-        if m.sentiment == "negative":
-            deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier * disliked_multiplier
-            total_deduction += deduction
-            point_data = {
-                "thesis_id": m.thesis_id,
-                "category": m.category,
-                "statement": m.statement,
-                "signal": m.signal_summary,
-                "sentiment": m.sentiment,
-                "deduction": round(deduction, 2),
-            }
-            broken_points.append(point_data)
+        for idx, m in enumerate(group):
+            decay = DECAY_FACTORS[idx] if idx < len(DECAY_FACTORS) else DECAY_FACTORS[-1]
 
-            # Track frozen breaks separately for alert banner
-            if is_frozen:
-                frozen_breaks.append(point_data)
+            if m.sentiment == "negative":
+                deduction = cat_deductions.get(m.category, 3.0) * m.confidence * multiplier * disliked_multiplier * decay
+                total_deduction += deduction
+                point_data = {
+                    "thesis_id": m.thesis_id,
+                    "category": m.category,
+                    "statement": m.statement,
+                    "signal": m.signal_summary,
+                    "sentiment": m.sentiment,
+                    "deduction": round(deduction, 2),
+                }
+                broken_points.append(point_data)
 
-        elif m.sentiment == "positive":
-            credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier * liked_multiplier
-            total_credit += credit
-            confirmed_points.append({
-                "thesis_id": m.thesis_id,
-                "category": m.category,
-                "statement": m.statement,
-                "signal": m.signal_summary,
-                "sentiment": m.sentiment,
-                "credit": round(credit, 2),
-            })
+                # Track frozen breaks separately for alert banner
+                if is_frozen:
+                    frozen_breaks.append(point_data)
+
+            elif m.sentiment == "positive":
+                credit = cat_credits.get(m.category, 3.0) * m.confidence * multiplier * liked_multiplier * decay
+                total_credit += credit
+                confirmed_points.append({
+                    "thesis_id": m.thesis_id,
+                    "category": m.category,
+                    "statement": m.statement,
+                    "signal": m.signal_summary,
+                    "sentiment": m.sentiment,
+                    "credit": round(credit, 2),
+                })
 
     score = max(0.0, min(100.0, round(base + total_credit - total_deduction, 1)))
 

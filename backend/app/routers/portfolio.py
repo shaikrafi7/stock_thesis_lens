@@ -27,6 +27,7 @@ from app.models.chat import ChatMessage as ChatMessageModel
 from app.core.auth import get_current_user
 from app.core.utils import get_investor_profile
 from app.routers.portfolios import get_active_portfolio
+from app.routers.stocks import _clean_name
 
 from app.agents import portfolio_chat_agent, morning_briefing_agent
 from app.utils.news import fetch_news, _fetch_polygon_news
@@ -272,7 +273,7 @@ async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: in
     except Exception:
         macro_news = []
 
-    briefing = morning_briefing_agent.generate_briefing(portfolio_data, news_items, macro_news=macro_news, investor_profile=_get_investor_profile(user))
+    briefing = morning_briefing_agent.generate_briefing(portfolio_data, news_items, macro_news=macro_news, investor_profile=get_investor_profile(user))
 
     items_for_db = []
     for item in briefing.items:
