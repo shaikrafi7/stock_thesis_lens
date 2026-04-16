@@ -62,7 +62,7 @@ function SidebarStockList({ activePortfolioId, pathname, collapsed, stocksVersio
       fetchStocks(activePortfolioId).catch(() => [] as Stock[]),
       getPortfolioScoreHistories(5, activePortfolioId).catch(() => ({}) as Record<string, EvaluationSummary[]>),
     ]).then(([s, h]) => { setStocks(s); setHistories(h); setLoading(false); });
-  }, [activePortfolioId, pathname, stocksVersion]);
+  }, [activePortfolioId, stocksVersion]);
 
   if (collapsed) return null;
   if (loading) return <div className="px-3 py-2"><Loader2 className="w-3 h-3 animate-spin text-gray-400 dark:text-zinc-600" /></div>;

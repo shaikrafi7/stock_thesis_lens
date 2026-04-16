@@ -239,3 +239,301 @@
 ### P3 — Feature Gaps (not bugs)
 6. Forgot password / reset password — not implemented
 7. Email notifications — not implemented
+
+---
+
+## Test Run 3 — 2026-04-16 (Post Scoring-Engine + Bug-Fix Deploy)
+
+**Context:** Scoring engine overhaul + screener/briefing NameError fixes deployed via commit 0204335. Testing deployed production at https://thesisarc-web.fly.dev.
+
+**Tester:** Claude (Opus 4.6, Chrome browser automation)  
+**Persona:** Serious investor staking reputation on STARC signals.
+
+---
+
+### 1. Bug Fix Verification
+
+#### 1a. Screener Fix (NameError: _clean_name)
+- [x] `/screener` loads successfully — **no longer returns empty results**
+- [x] Grid shows 8+ stock candidates: ARM, BABA, BIDU, COST, GOOGL, HD, HOOD, JD, ...
+- [x] Each card: ticker, analyst rating, price, day change, sector, P/E, MCap
+- [x] Sector filter tabs: All, Communication Services, Consumer Cyclical, Consumer Defensive, Financial Services, Healthcare, Industrials, Technology
+- [x] "+ Add to portfolio" button on each card
+- [x] Watchlist star icon on each card
+- [x] Swipe and Refresh buttons visible
+
+**Status: FIX VERIFIED — PASS**
+
+#### 1b. Briefing Fix (NameError: _get_investor_profile)
+- [x] `/briefing` loads — no more 503 error
+- [x] Page shows "Morning Briefing" with Today section and Past Briefings
+- [x] Refresh button now works — shows "Refreshing..." spinner
+- [x] POST to `/portfolio/morning-briefing/refresh?portfolio_id=7` returns **200** (was 503)
+- [x] Past briefings (6 items, 7 items) visible and expandable
+- [ ] Today's briefing shows "Unable to generate briefing — please try again later" despite 200 response
+
+**Bug:** The refresh API returns 200 but the generated briefing content itself contains an error message. The NameError is fixed, but a downstream issue (likely news fetching or LLM generation) is producing an error-state briefing record.
+
+**Status: FIX PARTIALLY VERIFIED — API works, content generation has secondary issue**
+
+---
+
+### 2. Dashboard (Investor Perspective)
+
+#### 2a. Portfolio Health Gauge
+- [x] Gauge renders: 53.6/100 "Under Pressure"
+- [x] Color zones: At Risk (red), Under Pressure (yellow), Holding (gold), Thesis Strong (green)
+- [x] Score is simple average of stock scores — matches: (66.2 + 52 + 49.8 + 46.5) / 4 = 53.6
+
+**Investor concern:** 53.6 means my portfolio is "Under Pressure" but there's no actionable guidance. What should I DO? Which stock is dragging the score? A serious investor wants: "BE is your weakest holding — review or trim."
+
+#### 2b. Portfolio Returns
+- [x] Shows +11.0% with "Outperforming" label
+- [x] Alpha: +9.3% vs S&P 500 +1.7%
+- [x] Period tabs: 1M, 3M, 6M, 1Y
+- [x] "Show returns by stock" expandable
+
+**Investor concern:** +11% and +9.3% alpha sound great, but there's no attribution. Is this FLY carrying the whole portfolio? A serious investor wants to see which stocks contribute to and drag on alpha.
+
+#### 2c. Score Trends Chart
+- [x] Shows AAPL and FLY score lines over time (Apr 10-15)
+- [ ] Only 2 of 4 stocks have visible trend lines
+- [ ] Date range is very narrow (5 days)
+
+**Investor concern:** Where are IREN and BE? Only showing stocks with multiple evaluations. With so few data points, the chart is barely useful.
+
+#### 2d. Portfolio Digest
+- [x] Shows 54/100 avg
+
+#### 2e. Conviction vs Returns
+- [x] All 4 stocks shown with score bars and return percentages
+- [x] FLY 66.2 (+21.1%), AAPL 52 (+2.9%), IREN 49.8 (-20.3%), BE 46.5 (data cut off by floating button)
+- [x] "Conviction not yet predictive" label — honest signal
+- [x] Period tabs: 1mo, 3mo, 6mo, 1y
+
+#### 2f. Stock Table
+- [x] 4 stocks with logo, name, price, day change, sparkline, score, status badge, delete button
+- [x] Sort by Score/Ticker works
+- [x] "+ Add" input, "Evaluate All", "Quiz", "Compare" buttons
+
+#### 2g. Data Freshness
+- [x] FLY: evaluated 1d ago
+- [ ] AAPL: evaluated **5d ago** — stale for a serious investor
+- [x] IREN: evaluated 1d ago  
+- [ ] BE: evaluated **2d ago**
+
+**Investor concern:** Why hasn't AAPL been evaluated in 5 days? There's no auto-evaluation. A serious investor checking daily would expect scores to refresh at least daily.
+
+#### 2h. Load Performance
+- [ ] Dashboard still takes ~8-12 seconds to fully render all widgets
+- [ ] Multiple API calls still firing (sidebar + dashboard duplicates)
+
+**Status: PARTIAL PASS — functional but data freshness, performance, and actionable guidance are weak**
+
+---
+
+### 3. Stock Detail Page (AAPL)
+
+#### 3a. Header & Info
+- [x] AAPL logo, Apple Inc., Technology · Consumer Electronics
+- [x] Price: $262.62, -1.43% today
+- [x] Analyst consensus: "Buy (+12.9% upside)"
+- [x] Earnings countdown: "Earnings in 14d"
+
+#### 3b. Data Accuracy — CRITICAL FINDING
+- [ ] **App shows AAPL at $262.62, -1.43%**
+- [ ] **Actual AAPL price: ~$266.43, +2.55% today (verified via web search)**
+- [ ] Price is ~$4 off and showing the WRONG DIRECTION of daily change
+
+**ROOT CAUSE:** The app uses yfinance which may cache/delay data, and the price snapshot was likely fetched hours ago or from a stale cache. For a serious investor, showing yesterday's price as today's price is a deal-breaker.
+
+#### 3c. Price Chart
+- [x] 3M chart shows Jan 15 - Apr 14 range ($243-$279)
+- [x] Chart is interactive with 1W/1M/3M/6M/1Y/5Y tabs
+
+#### 3d. Thesis Health
+- [x] Gauge: 52/100 "Under Pressure"
+- [x] Evaluation date: 4/11/2026 (5 days old)
+
+#### 3e. Your Edge
+- [x] Editable text field with placeholder "What do you see that the market is missing?"
+- [ ] Currently empty — no prompt or example to guide the user
+
+#### 3f. News & Impact Panel
+- [x] Multiple news items with BULLISH/NEUTRAL/BEARISH tags
+- [x] Category tags (Conviction, Valuation, Moat)
+- [x] External links to articles with open-in-new-tab icons
+- [x] AI-generated thesis mapping quotes in italics
+- [x] "+ Add to AAPL" button on news items
+
+**Investor concern:** News items say "Apple added to Berkshire Hathaway's indefinite holding list" tagged BULLISH + Conviction. But the thesis score is still 52. A serious investor asks: "If Buffett is buying, why is my thesis only 52?"
+
+#### 3g. Thesis Points
+- [x] Points organized by category: Competitive Moat, Growth Trajectory, Valuation
+- [x] Each point has like/dislike/lock controls
+- [x] Confirmed Points (green) with credit values (+4.5 pts, +2 pts)
+- [x] Flagged Points (red) with deduction values (-4.5 pts)
+- [x] Flagged: "Apple's revenue growing at 15.7% annually" flagged with -4.5 — downtrend detected despite positive headline
+
+**Investor concern:** The revenue growth point says "growing at 15.7% annually" but is flagged as negative. The signal summary says "downtrend detected (MA20 < MA50)." A serious investor would argue: 15.7% revenue growth is NOT a negative — the moving average crossover is a price signal, not a revenue signal. The scoring engine is conflating price momentum with fundamental growth.
+
+#### 3h. Score History & Evaluation
+- [x] "2 evals 0.0" delta shown
+- [x] Score History section with expand/collapse
+- [x] Conviction vs Returns section
+
+**Status: PARTIAL PASS — functional but data accuracy (stale prices) and signal interpretation issues**
+
+---
+
+### 4. Screener (Deep Test)
+
+- [x] Shows diverse candidates across 7 sectors
+- [x] Each card has actionable data: P/E, MCap, analyst rating, price
+- [x] Sector filters work
+- [ ] No way to sort/filter by P/E, MCap, or rating within a sector
+- [ ] No indication of WHY a stock was recommended — no thesis preview
+- [ ] "strong_buy" label is raw API text — should be "Strong Buy" (formatted)
+- [ ] No pagination visible — unclear how many candidates exist beyond the initial grid
+
+**Investor concern:** As a serious investor, I see a grid of random stocks. Why ARM and not NVDA? Why BABA and not AMZN? There's no explanation of the screener's selection criteria. I'd want to know: "Recommended because high analyst consensus + strong growth in your preferred sectors."
+
+**Status: PARTIAL PASS — works now, but lacks sorting, explanations, and polish**
+
+---
+
+### 5. Research AI Chat
+
+- [x] Loads with previous conversation preserved
+- [x] Context selector: "Portfolio — All stocks"
+- [x] Chat input at bottom: "Ask about your portfolio..."
+- [x] Previous answer is portfolio-aware (correctly identifies BE and IREN as weakest)
+- [ ] Chat page took ~12 seconds to load (long spinner)
+- [ ] "Portfolio AI" floating button visible on /chat page (redundant, overlaps)
+
+**Status: PASS (with load time and overlap issues noted — both have pending fixes)**
+
+---
+
+### 6. Investor Profile
+
+- [x] Archetype: "Anchored Growth Visionary"
+- [x] Behavioral summary displayed
+- [x] Attributes: Growth, Long, High risk capacity, Low loss aversion, Advanced
+- [x] Edit button visible
+- [x] "How You'll Likely Behave" section below
+
+**Status: PASS**
+
+---
+
+### 7. Settings
+
+- [x] Account: username and email displayed
+- [x] Appearance: Dark/Light mode toggle works
+- [x] Thesis Generation: Max groups slider (set to 5)
+- [ ] No change password option
+- [ ] No delete account option  
+- [ ] No notification preferences
+- [ ] No data export/import option
+
+**Status: PASS (minimal but functional)**
+
+---
+
+### 8. User Guide
+
+- [x] Table of contents with 18+ sections
+- [x] Comprehensive content: Demo, Getting Started, Portfolio, Scoring, etc.
+- [ ] Dark-themed tables in demo section clash with light mode (fix pending deploy)
+- [ ] Guide is an iframe — no search, no deep-linking from app
+
+**Status: PARTIAL PASS (dark tables fix pending deploy)**
+
+---
+
+### 9. Sidebar Navigation & Cross-Feature Consistency
+
+- [x] All nav items present and clickable
+- [x] Active page highlighted correctly
+- [x] Sidebar stocks show score, age, and status dot
+- [x] Portfolio switcher works ("Default" active)
+- [x] Score in sidebar (AAPL: 52) matches dashboard (52) and detail page (52/100) — **consistent**
+- [ ] Sidebar stock list only shows AAPL and BE in viewport — need to scroll to see FLY and IREN
+
+**Status: PASS**
+
+---
+
+### 10. Floating Chat Button
+
+- [x] Shows on dashboard, stock detail, briefing, screener, profile, settings, guide, FAQ
+- [x] Correctly switches label: "Portfolio AI" on dashboard, "Research AI" on stock detail
+- [ ] Still showing on /chat page (redundant) — fix pending deploy
+- [ ] Overlaps content on dashboard (BE row in Conviction vs Returns)
+- [ ] Icon-only shrink pending deploy
+
+**Status: FAIL (fixes pending deploy)**
+
+---
+
+## Test Run 3 Summary
+
+| Area | Status | Key Issues |
+|---|---|---|
+| Screener Fix | PASS | Fixed — now shows candidates |
+| Briefing Fix | PARTIAL | API 200 but content generation fails |
+| Dashboard | PARTIAL | Stale data, slow load, no actionable guidance |
+| Stock Detail (AAPL) | PARTIAL | Price $4 off reality, revenue/price signal confusion |
+| Screener (deep) | PARTIAL | No sorting, no recommendation rationale |
+| Research AI | PASS | Works, slow load |
+| Investor Profile | PASS | |
+| Settings | PASS | Minimal options |
+| User Guide | PARTIAL | Dark tables fix pending |
+| Sidebar Nav | PASS | Consistent scores |
+| Floating Button | FAIL | Fixes pending deploy |
+
+**Passed:** 5/11  
+**Partial:** 5/11  
+**Failed:** 1/11
+
+---
+
+## Critical Findings — Investor Perspective
+
+### P0 — Trust Destroyers (fix immediately)
+
+1. **STALE PRICES**: AAPL shows $262.62 (-1.43%) when actual is ~$266.43 (+2.55%). A $4 discrepancy and wrong direction of change. Any investor checking against their brokerage will immediately lose trust. Root cause: yfinance data fetched on page load is cached/stale. Need: real-time or near-real-time price feed, or at minimum clear "as of X:XX AM" timestamps.
+
+2. **BRIEFING CONTENT GENERATION BROKEN**: API returns 200 but today's briefing shows "Unable to generate briefing." The NameError is fixed, but a downstream issue produces an error-state record. Need: investigate the actual LLM/news-fetch failure, add retry logic, show error details to user.
+
+3. **EVALUATION STALENESS**: AAPL last evaluated 5d ago, BE 2d ago. No auto-evaluation. A daily-check investor expects fresh scores every day. Need: scheduled daily auto-evaluation, or at minimum prominent "Stale — re-evaluate now" prompts.
+
+### P1 — Credibility Gaps (fix before showing to investors)
+
+4. **REVENUE/PRICE SIGNAL CONFUSION**: The growth thesis point "revenue growing at 15.7%" is flagged as negative because of a price moving average crossover. This conflates price momentum with fundamental growth. A sophisticated investor will immediately question the methodology. Need: separate price-based signals from fundamental signals in the scoring interpretation.
+
+5. **NO ACTIONABLE DASHBOARD GUIDANCE**: Portfolio health says 53.6 "Under Pressure" with no recommendation. Need: "Your weakest holding is BE (46.5) — consider reviewing thesis" type insights.
+
+6. **SCREENER HAS NO RATIONALE**: Shows stocks without explaining why. Need: "Recommended because: High analyst consensus + growing revenue in your preferred sector."
+
+7. **SLOW LOAD TIMES**: Dashboard 8-12s, chat 12s, stock detail 8s. Unacceptable for a production app. Root cause: sequential yfinance calls, duplicate API requests, no caching.
+
+### P2 — Polish Issues (fix before public launch)
+
+8. **FLOATING BUTTON OVERLAP** — fixes pending deploy (icon-only, hide on /chat)
+9. **USER GUIDE DARK TABLES** — fix pending deploy
+10. **SCREENER FORMATTING**: "strong_buy" should be "Strong Buy"
+11. **SCORE TRENDS CHART**: Only shows 2/4 stocks, 5-day window too narrow
+12. **NO SORTING IN SCREENER**: Can't sort by P/E, MCap, or rating
+13. **"YOUR EDGE" FIELD**: Empty with no guidance — add example text or tooltip
+
+### P3 — Feature Gaps (important for serious investors)
+
+14. Change password / forgot password
+15. Data export (CSV/PDF of portfolio, thesis points, evaluations)
+16. Email/push notifications for score changes, broken thesis points
+17. Portfolio comparison (benchmark against indices)
+18. Position sizing / allocation tracking
+19. Watchlist functionality (separate from portfolio)
+20. Historical evaluation timeline (see how scores changed over months)

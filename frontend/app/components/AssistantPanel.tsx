@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   addManualThesis, addStock, deleteStock,
   getChatHistory, getPortfolioChatHistory,
@@ -46,9 +46,11 @@ async function fetchHistory(ticker: string | null, portfolioId?: number | null):
 
 export default function AssistantPanel() {
   const router = useRouter();
+  const pathname = usePathname();
   const { isOpen, togglePanel, ticker, fireThesisAdded, fireEvaluationTriggered, registerExplainThesisPoint } = useAssistant();
   const { activePortfolioId } = usePortfolio();
   const isPortfolioMode = ticker === null;
+  const hideFab = pathname === "/chat";
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -182,14 +184,14 @@ export default function AssistantPanel() {
 
   return (
     <>
-      {/* Floating trigger */}
-      {!isOpen && (
+      {/* Floating trigger — hidden on /chat (redundant there) */}
+      {!isOpen && !hideFab && (
         <button
           onClick={togglePanel}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white font-semibold text-sm rounded-full shadow-lg shadow-accent/20 transition-all hover:shadow-accent/30"
+          title={isPortfolioMode ? "Portfolio AI" : "Research AI"}
+          className="fixed bottom-6 right-6 z-50 p-3 bg-accent hover:bg-accent-hover text-white rounded-full shadow-lg shadow-accent/20 transition-all hover:shadow-accent/30"
         >
-          <MessageSquare className="w-4 h-4" />
-          {isPortfolioMode ? "Portfolio AI" : "Research AI"}
+          <MessageSquare className="w-5 h-5" />
         </button>
       )}
 

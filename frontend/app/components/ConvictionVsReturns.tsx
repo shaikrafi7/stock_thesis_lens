@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getPortfolioReturns, getPortfolioScoreHistories, type EvaluationSummary } from "@/lib/api";
+import { getPortfolioReturns, type EvaluationSummary } from "@/lib/api";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -12,7 +12,11 @@ interface DataPoint {
   returnPct: number;
 }
 
-export default function ConvictionVsReturns() {
+interface Props {
+  scoreHistories?: Record<string, EvaluationSummary[]>;
+}
+
+export default function ConvictionVsReturns({ scoreHistories: externalHistories }: Props) {
   const { activePortfolioId } = usePortfolio();
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,10 +25,8 @@ export default function ConvictionVsReturns() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      getPortfolioReturns(period, activePortfolioId),
-      getPortfolioScoreHistories(10, activePortfolioId),
-    ]).then(([returns, histories]) => {
+    getPortfolioReturns(period, activePortfolioId).then((returns) => {
+      const histories = externalHistories || {};
       const returnMap: Record<string, number> = {};
       for (const s of returns.stocks) returnMap[s.ticker] = s.return_pct;
 
@@ -41,7 +43,7 @@ export default function ConvictionVsReturns() {
       setData(points);
     }).catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, [activePortfolioId, period]);
+  }, [activePortfolioId, period, externalHistories]);
 
   if (!loading && data.length === 0) return null;
 

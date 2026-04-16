@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 <PortfolioScoreTrend scoreHistories={scoreHistories} />
                 <WeeklyDigestCard portfolioId={activePortfolioId} />
                 <EarningsCalendar />
-                <ConvictionVsReturns />
+                <ConvictionVsReturns scoreHistories={scoreHistories} />
                 <ThesisOverviewPanel portfolioId={activePortfolioId} />
               </div>
             </div>
