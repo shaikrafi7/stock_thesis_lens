@@ -14,3 +14,15 @@
 > - having a way to move stocks move from screener to watchlist to portfolio would be useful?
 > - if you are willing to pay 5$/month for this app, what would you like to see? if 20$/month what would like to see?
 > - 
+
+
+## Rafi_testing and thoughts 4/15/26
+> faq, userguide, why thesisarc not matching light mode color palatter, fonts/styling not consistant with rest of app or between them.
+> clicking on investor profile or archetype in banner takes you to same place. click on thesisarc or dashbaord takes you to main page. can we do somthing here (not priority)
+> dashboard/main page taking long to load. but loading eventually
+> need forgot password, reset password and email notifications support
+> today's briefings not working?
+> on most pages ai chat icon overlapping with stuff beneath it, add some padding at page end, change it to just a robot icon. also dont need it on research ai page 
+> screener doesnt show anything, it is broken looks like. it says "All stocks already in your portfolio or watchlist." what does it mean? review what we planned for screener and what is implemented to me once to confirm. i see user guide, why thesisarc, faq are updated with info. but i never got to test it properly. 
+
+
