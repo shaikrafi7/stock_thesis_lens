@@ -109,3 +109,81 @@ def resolve_weights(
                 deductions[cat] *= mult
 
     return credits, deductions
+
+
+# ---- v2 presets (informed by 2020-2024 backtest Run 5-6) ----
+
+# Regime keys are "<trend>_<vol>": e.g. bear_high, bull_low, flat_high.
+# Rationale: in bear+high-vol periods the v1 score was worst (L/S -13%).
+# Growth signals mislead during stress rallies; financial_health + risks
+# + ownership_conviction hold more information in those windows. Bull
+# regimes retain v1 growth tilt; flat is near-neutral.
+V2_REGIME_ADJUSTMENTS: RegimeAdjustments = {
+    "bear_high": {
+        "growth_trajectory": 0.5,
+        "valuation": 0.7,
+        "financial_health": 1.4,
+        "risks": 1.3,
+        "ownership_conviction": 1.2,
+    },
+    "bear_low": {
+        "growth_trajectory": 0.7,
+        "financial_health": 1.3,
+        "risks": 1.2,
+    },
+    "flat_high": {
+        "growth_trajectory": 0.8,
+        "financial_health": 1.2,
+        "risks": 1.15,
+    },
+    "flat_low": {},
+    "bull_high": {
+        "financial_health": 1.1,
+    },
+    "bull_low": {
+        "growth_trajectory": 1.15,
+        "competitive_moat": 1.1,
+    },
+}
+
+# Sector keys are GICS sector names from sp500_sectors.json.
+# Rationale: Consumer Staples showed IC -0.129 in Run 6 — uniform weights
+# clearly wrong. Utilities/Real Estate are interest-rate-sensitive, not
+# growth stories. Communication Services had the only positive IC.
+V2_SECTOR_ADJUSTMENTS: SectorAdjustments = {
+    "Consumer Staples": {
+        "growth_trajectory": 0.4,
+        "valuation": 0.6,
+        "financial_health": 1.4,
+        "ownership_conviction": 1.2,
+    },
+    "Utilities": {
+        "growth_trajectory": 0.5,
+        "valuation": 0.7,
+        "financial_health": 1.3,
+    },
+    "Real Estate": {
+        "growth_trajectory": 0.6,
+        "financial_health": 1.3,
+    },
+    "Information Technology": {
+        "competitive_moat": 1.1,
+    },
+    "Communication Services": {
+        "growth_trajectory": 1.15,
+        "competitive_moat": 1.15,
+    },
+}
+
+
+def v2_config() -> ScoringConfig:
+    """Return the v2 preset: regime- and sector-aware weight adjustments."""
+    return ScoringConfig(
+        regime_adjustments=dict(V2_REGIME_ADJUSTMENTS),
+        sector_adjustments=dict(V2_SECTOR_ADJUSTMENTS),
+    )
+
+
+def regime_key_from(trend: str, vol: str) -> str:
+    """Build the regime key matching V2_REGIME_ADJUSTMENTS keys."""
+    return f"{trend}_{vol}"
