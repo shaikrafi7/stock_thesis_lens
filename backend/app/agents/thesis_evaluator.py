@@ -76,6 +76,8 @@ def evaluate_thesis(
     mappings: list[ThesisSignalMapping],
     thesis_meta: dict[int, dict] | None = None,
     investor_profile: dict | None = None,
+    category_credits: dict[str, float] | None = None,
+    category_deductions: dict[str, float] | None = None,
 ) -> EvaluationResult:
     """Score the thesis based on signal mappings. Deterministic.
 
@@ -83,12 +85,20 @@ def evaluate_thesis(
         mappings: Signal-to-thesis mappings from the interpreter.
         thesis_meta: Optional dict mapping thesis_id to metadata:
             {"importance": "standard"|"important"|"critical", "frozen": bool}
+        category_credits: Override base credit weights. If None, uses defaults
+            (optionally adjusted by investor_profile). Used by backtesting
+            to thread regime/sector-aware weight variants through the engine.
+        category_deductions: Override base deduction weights. Same semantics.
     """
     meta = thesis_meta or {}
     base = 50.0
     total_credit = 0.0
     total_deduction = 0.0
-    cat_deductions, cat_credits = _adjust_weights(investor_profile)
+    if category_credits is not None and category_deductions is not None:
+        cat_deductions = category_deductions
+        cat_credits = category_credits
+    else:
+        cat_deductions, cat_credits = _adjust_weights(investor_profile)
     broken_points = []
     confirmed_points = []
     frozen_breaks = []

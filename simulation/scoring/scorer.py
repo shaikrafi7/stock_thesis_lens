@@ -24,6 +24,7 @@ from app.agents.thesis_evaluator import (
 
 from simulation.scoring.signal_builder import build_signals
 from simulation.scoring.thesis_templates import THESIS_TEMPLATES, THESIS_META
+from simulation.scoring.config import ScoringConfig, resolve_weights, sector_of
 
 CATEGORIES = [
     "competitive_moat", "growth_trajectory", "valuation",
@@ -40,10 +41,18 @@ class ScoredStock:
     signal_count: int
 
 
-def score_ticker(ticker: str, as_of: date) -> ScoredStock | None:
+def score_ticker(
+    ticker: str,
+    as_of: date,
+    config: ScoringConfig | None = None,
+    regime_key: str | None = None,
+) -> ScoredStock | None:
     """Score a ticker as of a historical date using the production engine.
 
     Returns None if insufficient data is available.
+
+    When config is provided, regime_key and ticker's sector are used to
+    compute adjusted category weights before calling evaluate_thesis.
     """
     signals = build_signals(ticker, as_of)
 
@@ -54,7 +63,17 @@ def score_ticker(ticker: str, as_of: date) -> ScoredStock | None:
     selected = [t for t in THESIS_TEMPLATES if t.get("selected", True)]
     mappings = interpret_signals(signals, selected)
 
-    result: EvaluationResult = evaluate_thesis(mappings, thesis_meta=THESIS_META)
+    if config is not None and not config.is_noop:
+        sector = sector_of(ticker)
+        credits, deductions = resolve_weights(config, regime_key, sector)
+        result: EvaluationResult = evaluate_thesis(
+            mappings,
+            thesis_meta=THESIS_META,
+            category_credits=credits,
+            category_deductions=deductions,
+        )
+    else:
+        result = evaluate_thesis(mappings, thesis_meta=THESIS_META)
 
     return ScoredStock(
         ticker=ticker,
@@ -65,11 +84,16 @@ def score_ticker(ticker: str, as_of: date) -> ScoredStock | None:
     )
 
 
-def score_universe(tickers: list[str], as_of: date) -> list[ScoredStock]:
+def score_universe(
+    tickers: list[str],
+    as_of: date,
+    config: ScoringConfig | None = None,
+    regime_key: str | None = None,
+) -> list[ScoredStock]:
     """Score all tickers at a given date. Skips tickers with no data."""
     results = []
     for ticker in tickers:
-        scored = score_ticker(ticker, as_of)
+        scored = score_ticker(ticker, as_of, config=config, regime_key=regime_key)
         if scored is not None:
             results.append(scored)
     return results
