@@ -22,7 +22,11 @@ def run_evaluation(ticker: str, portfolio_id: int | None = Query(None), db: Sess
 
     selected_count = (
         db.query(Thesis)
-        .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
+        .filter(
+            Thesis.stock_id == stock.id,
+            Thesis.selected == True,  # noqa: E712
+            Thesis.closed_at.is_(None),
+        )
         .count()
     )
     if selected_count < 3:

@@ -23,6 +23,45 @@ class ThesisRead(BaseModel):
     sort_order: int = 0
     created_at: datetime
     last_confirmed: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+    outcome: Optional[str] = None  # played_out | partial | failed | invalidated
+    lessons: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+ThesisOutcome = Literal["played_out", "partial", "failed", "invalidated"]
+
+
+class ThesisCloseRequest(BaseModel):
+    """Close a thesis with a post-mortem record."""
+    outcome: ThesisOutcome
+    lessons: str
+
+    @field_validator("lessons")
+    @classmethod
+    def validate_lessons(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 10:
+            raise ValueError("Lessons must be at least 10 characters.")
+        return v
+
+
+class ClosedThesisEntry(BaseModel):
+    """One row of the cross-stock post-mortem journal."""
+    thesis_id: int
+    ticker: str
+    stock_name: Optional[str] = None
+    category: str
+    statement: str
+    outcome: str
+    lessons: Optional[str] = None
+    closed_at: datetime
+    created_at: datetime
+    duration_days: int
+    importance: str = "standard"
+    frozen: bool = False
+    conviction: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

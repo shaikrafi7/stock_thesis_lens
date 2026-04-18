@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.user import User
-from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview, ConfirmPreviewRequest, ThesisAuditRead, BacktestPoint
+from app.schemas.thesis import ThesisRead, ThesisUpdate, ThesisCreate, ChatRequest, ChatResponse, ThesisSuggestionSchema, GenerateAndEvaluateResponse, NewsItemSchema, ChatHistoryMessage, ThesisPreview, ConfirmPreviewRequest, ThesisAuditRead, BacktestPoint, ThesisCloseRequest, ClosedThesisEntry
 from app.schemas.evaluation import EvaluationRead
 from app.agents.thesis_generator import generate_thesis
 from app.agents.thesis_chat_agent import chat as thesis_chat, chat_stream as thesis_chat_stream
@@ -174,9 +174,18 @@ def add_manual_thesis(ticker: str, payload: ThesisCreate, portfolio_id: int | No
 
 
 @router.get("/{ticker}/theses", response_model=list[ThesisRead])
-def get_theses(ticker: str, portfolio_id: int | None = Query(None), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_theses(
+    ticker: str,
+    portfolio_id: int | None = Query(None),
+    include_closed: bool = Query(False, description="Include closed/post-mortem theses."),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
-    return db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
+    q = db.query(Thesis).filter(Thesis.stock_id == stock.id)
+    if not include_closed:
+        q = q.filter(Thesis.closed_at.is_(None))
+    return q.all()
 
 
 @router.post("/{ticker}/chat", response_model=ChatResponse)
@@ -379,6 +388,87 @@ def get_thesis_audit(ticker: str, portfolio_id: int | None = Query(None), db: Se
         .all()
     )
     return audits
+
+
+@router.post("/{ticker}/theses/{thesis_id}/close", response_model=ThesisRead)
+def close_thesis(
+    ticker: str,
+    thesis_id: int,
+    payload: ThesisCloseRequest,
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Close a thesis with a post-mortem record.
+
+    Sets closed_at, outcome, and lessons on the thesis, and logs an audit
+    entry with action='closed'. Closed theses are hidden from the active
+    list but retained for the journal view.
+    """
+    from datetime import datetime
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    thesis = db.query(Thesis).filter(Thesis.id == thesis_id, Thesis.stock_id == stock.id).first()
+    if not thesis:
+        raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {stock.ticker}")
+    if thesis.closed_at is not None:
+        raise HTTPException(status_code=400, detail="Thesis is already closed.")
+
+    now = datetime.utcnow()
+    thesis.closed_at = now
+    thesis.outcome = payload.outcome
+    thesis.lessons = payload.lessons
+
+    db.add(ThesisAudit(
+        thesis_id=thesis.id,
+        stock_id=thesis.stock_id,
+        user_id=current_user.id,
+        action="closed",
+        field_changed="outcome",
+        old_value=None,
+        new_value=payload.outcome,
+        statement_snapshot=thesis.statement,
+        category=thesis.category,
+        note=payload.lessons,
+    ))
+    db.commit()
+    db.refresh(thesis)
+    return thesis
+
+
+@router.post("/{ticker}/theses/{thesis_id}/reopen", response_model=ThesisRead)
+def reopen_thesis(
+    ticker: str,
+    thesis_id: int,
+    portfolio_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reopen a closed thesis. Clears closure fields; keeps the audit entry."""
+    stock = get_user_stock(ticker, current_user, db, portfolio_id)
+    thesis = db.query(Thesis).filter(Thesis.id == thesis_id, Thesis.stock_id == stock.id).first()
+    if not thesis:
+        raise HTTPException(status_code=404, detail=f"Thesis {thesis_id} not found for {stock.ticker}")
+    if thesis.closed_at is None:
+        raise HTTPException(status_code=400, detail="Thesis is not closed.")
+
+    prior_outcome = thesis.outcome
+    thesis.closed_at = None
+    thesis.outcome = None
+    thesis.lessons = None
+    db.add(ThesisAudit(
+        thesis_id=thesis.id,
+        stock_id=thesis.stock_id,
+        user_id=current_user.id,
+        action="reopened",
+        field_changed="outcome",
+        old_value=prior_outcome,
+        new_value=None,
+        statement_snapshot=thesis.statement,
+        category=thesis.category,
+    ))
+    db.commit()
+    db.refresh(thesis)
+    return thesis
 
 
 @router.get("/{ticker}/backtest", response_model=list[BacktestPoint])

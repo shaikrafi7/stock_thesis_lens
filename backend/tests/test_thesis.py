@@ -103,3 +103,108 @@ def test_update_thesis_wrong_stock_returns_404(client):
     # Try to update AAPL thesis via NVDA route
     r2 = client.patch(f"/stocks/NVDA/theses/{thesis_id}", json={"selected": True})
     assert r2.status_code == 404
+
+
+def _seed_thesis(client, ticker="AAPL"):
+    _add_stock(client, ticker)
+    with patch("app.routers.thesis.generate_thesis") as mock_gen:
+        from app.agents.thesis_generator import GeneratedThesis
+        mock_gen.return_value = [GeneratedThesis(
+            category="competitive_moat",
+            statement="Durable ecosystem moat.",
+        )]
+        r = client.post(f"/stocks/{ticker}/generate-thesis")
+    return r.json()[0]["id"]
+
+
+def test_close_thesis_records_outcome_and_lessons(client):
+    thesis_id = _seed_thesis(client)
+
+    r = client.post(
+        f"/stocks/AAPL/theses/{thesis_id}/close",
+        json={"outcome": "played_out", "lessons": "Watching margin expansion paid off."},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["outcome"] == "played_out"
+    assert body["lessons"].startswith("Watching")
+    assert body["closed_at"] is not None
+
+    # Closed theses hidden from default list; visible with include_closed
+    active = client.get("/stocks/AAPL/theses").json()
+    assert all(t["id"] != thesis_id for t in active)
+    all_theses = client.get("/stocks/AAPL/theses?include_closed=true").json()
+    assert any(t["id"] == thesis_id for t in all_theses)
+
+
+def test_close_requires_lessons(client):
+    thesis_id = _seed_thesis(client)
+    r = client.post(
+        f"/stocks/AAPL/theses/{thesis_id}/close",
+        json={"outcome": "failed", "lessons": "short"},
+    )
+    assert r.status_code == 422
+
+
+def test_close_twice_is_rejected(client):
+    thesis_id = _seed_thesis(client)
+    client.post(
+        f"/stocks/AAPL/theses/{thesis_id}/close",
+        json={"outcome": "partial", "lessons": "Mid-cycle exit worked partially."},
+    )
+    r2 = client.post(
+        f"/stocks/AAPL/theses/{thesis_id}/close",
+        json={"outcome": "failed", "lessons": "Another close attempt here."},
+    )
+    assert r2.status_code == 400
+
+
+def test_reopen_thesis_clears_closure(client):
+    thesis_id = _seed_thesis(client)
+    client.post(
+        f"/stocks/AAPL/theses/{thesis_id}/close",
+        json={"outcome": "failed", "lessons": "Thesis broke on earnings miss."},
+    )
+    r = client.post(f"/stocks/AAPL/theses/{thesis_id}/reopen")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["closed_at"] is None
+    assert body["outcome"] is None
+
+
+def test_audit_log_lists_closed_theses_across_stocks(client):
+    id1 = _seed_thesis(client, "AAPL")
+    id2 = _seed_thesis(client, "NVDA")
+    client.post(
+        f"/stocks/AAPL/theses/{id1}/close",
+        json={"outcome": "played_out", "lessons": "Moat held up in earnings."},
+    )
+    client.post(
+        f"/stocks/NVDA/theses/{id2}/close",
+        json={"outcome": "failed", "lessons": "Datacenter growth overestimated."},
+    )
+    r = client.get("/audit-log")
+    assert r.status_code == 200
+    rows = r.json()
+    tickers = {row["ticker"] for row in rows}
+    assert {"AAPL", "NVDA"} <= tickers
+    assert all("outcome" in row and "lessons" in row for row in rows)
+
+
+def test_audit_log_filters_by_outcome_and_search(client):
+    aapl = _seed_thesis(client, "AAPL")
+    nvda = _seed_thesis(client, "NVDA")
+    client.post(
+        f"/stocks/AAPL/theses/{aapl}/close",
+        json={"outcome": "played_out", "lessons": "Moat durability confirmed."},
+    )
+    client.post(
+        f"/stocks/NVDA/theses/{nvda}/close",
+        json={"outcome": "failed", "lessons": "Growth rate proved unsustainable."},
+    )
+
+    played = client.get("/audit-log?outcome=played_out").json()
+    assert len(played) == 1 and played[0]["ticker"] == "AAPL"
+
+    search = client.get("/audit-log?q=unsustainable").json()
+    assert len(search) == 1 and search[0]["ticker"] == "NVDA"

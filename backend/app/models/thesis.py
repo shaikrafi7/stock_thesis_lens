@@ -20,5 +20,9 @@ class Thesis(Base):
     sort_order = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_confirmed = Column(DateTime, nullable=True)
+    # Post-mortem / closure fields (Phase 5 Thesis Audit)
+    closed_at = Column(DateTime, nullable=True)
+    outcome = Column(String(20), nullable=True)  # played_out | partial | failed | invalidated
+    lessons = Column(Text, nullable=True)
 
     stock = relationship("Stock", back_populates="theses")

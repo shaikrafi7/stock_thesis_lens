@@ -28,7 +28,11 @@ def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict |
     try:
         selected_theses = (
             db.query(Thesis)
-            .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
+            .filter(
+                Thesis.stock_id == stock.id,
+                Thesis.selected == True,  # noqa: E712
+                Thesis.closed_at.is_(None),
+            )
             .all()
         )
         if len(selected_theses) < MIN_SELECTED:
@@ -102,7 +106,11 @@ def evaluate_all_stocks(db: Session, user_id: int | None = None, portfolio_id: i
             # Auto-generate theses for stocks that don't have enough
             selected_count = (
                 db.query(Thesis)
-                .filter(Thesis.stock_id == stock.id, Thesis.selected == True)  # noqa: E712
+                .filter(
+                    Thesis.stock_id == stock.id,
+                    Thesis.selected == True,  # noqa: E712
+                    Thesis.closed_at.is_(None),
+                )
                 .count()
             )
             if selected_count < MIN_SELECTED:

@@ -54,6 +54,11 @@ def _run_migrations():
             if col not in thesis_columns:
                 conn.execute(text(f"ALTER TABLE theses ADD COLUMN {col} TEXT DEFAULT {default}"))
                 conn.commit()
+        # Phase 5 audit/closure columns
+        for col in ("closed_at", "outcome", "lessons"):
+            if col not in thesis_columns:
+                conn.execute(text(f"ALTER TABLE theses ADD COLUMN {col} TEXT DEFAULT NULL"))
+                conn.commit()
 
         # --- Stocks watchlist + edge_statement columns ---
         result = conn.execute(text("PRAGMA table_info(stocks)"))

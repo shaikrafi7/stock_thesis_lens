@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
+from app.core.auth import get_current_user
 from app.main import app
 
 # StaticPool ensures all connections share the same in-memory database,
@@ -38,9 +39,25 @@ def setup_db():
 
 
 @pytest.fixture
-def client(setup_db):  # explicit dep ensures setup_db runs first
-    """FastAPI test client with in-memory DB."""
+def test_user(setup_db):
+    """Create a test user so auth-protected routes have a principal."""
+    from app.models.user import User
+    db = TestSessionLocal()
+    user = User(email="test@example.com", username="tester", hashed_password="x")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    try:
+        yield user
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def client(test_user):
+    """FastAPI test client with in-memory DB + stub auth returning test_user."""
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: test_user
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
