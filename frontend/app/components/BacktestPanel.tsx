@@ -67,9 +67,16 @@ export default function BacktestPanel({ ticker, portfolioId }: { ticker: string;
       pairs.reduce((s, p) => s + (p.ret - meanR) ** 2, 0)
     );
     const r = den === 0 ? 0 : num / den;
-    if (r > 0.3) insightText = `High conviction scores correlated with stronger returns (r = ${r.toFixed(2)}).`;
-    else if (r < -0.3) insightText = `Lower conviction scores correlated with better returns (r = ${r.toFixed(2)}) — consider why.`;
-    else insightText = `Conviction scores not yet strongly correlated with returns (r = ${r.toFixed(2)}).`;
+    const sample = `n=${n} evaluation${n === 1 ? "" : "s"}`;
+    if (n < 4) {
+      insightText = `Too few evaluations for a reliable correlation (${sample}).`;
+    } else if (r > 0.3) {
+      insightText = `Score trend tracks with returns for this stock (r=${r.toFixed(2)}, ${sample}). Small sample — interpret loosely.`;
+    } else if (r < -0.3) {
+      insightText = `Score trend inverse to returns for this stock (r=${r.toFixed(2)}, ${sample}). Small sample — could be noise.`;
+    } else {
+      insightText = `No clear relationship between score and returns for this stock (r=${r.toFixed(2)}, ${sample}).`;
+    }
   }
 
   return (

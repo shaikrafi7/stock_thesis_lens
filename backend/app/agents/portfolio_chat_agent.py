@@ -124,7 +124,7 @@ def _build_context(portfolio_data: list[dict]) -> str:
         change_pct = s.get("change_pct")
 
         if score is not None:
-            status_label = {"green": "Strong", "yellow": "Pressure", "red": "At Risk"}.get(status, status)
+            status_label = {"green": "Intact", "yellow": "Pressure", "red": "Breaking"}.get(status, status)
             score_str = f"Score: {score:.0f} ({status_label})"
         else:
             score_str = "Not evaluated"

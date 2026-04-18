@@ -1,7 +1,25 @@
 # ThesisArc Feature Classification
 
-**Last updated:** 2026-04-16 (post P0-fix session)  
-**Purpose:** Prioritize work. Focus on USPs + Must Haves. Pause Nice to Haves until alpha study provides data-driven direction.
+**Last updated:** 2026-04-18 (post alpha-validation null result, post v2 reframe)  
+**Purpose:** Prioritize work. v2 is a behavioral-accountability tool, not a stock picker. Features are evaluated against that positioning.
+
+---
+
+## Product Positioning (v2)
+
+**ThesisArc is a thesis accountability tool.** It helps retail investors write down why they own each stock, then tracks whether those reasons still hold against new evidence. It does not predict prices and does not generate alpha — our 2020-2024 backtest confirmed that. The value is behavioral: reducing disposition effect, exposing broken theses early, and journaling decision changes so users can learn from them.
+
+**What we do NOT claim:**
+- That following the conviction score produces excess returns
+- That "green zone" stocks outperform "red zone" stocks
+- That the product is a robo-advisor or stock picker
+
+**What we DO claim:**
+- The score measures thesis coherence (how well the reasons hold together against evidence)
+- Users make better decisions when they see their thesis break in writing instead of burying it
+- Journaling conviction changes creates a searchable record of decision quality over time
+
+Copy and UI must reflect this framing everywhere. See `docs/test_results.md` Run 5-6 for the data behind the null result.
 
 ---
 

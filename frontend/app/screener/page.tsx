@@ -92,7 +92,7 @@ function CardItem({ card, onAdd, onWatchlist }: {
       </div>
 
       {card.rationale && (
-        <p className="text-[10px] text-gray-400 dark:text-zinc-500 italic leading-snug">Recommended: {card.rationale}</p>
+        <p className="text-[10px] text-gray-400 dark:text-zinc-500 italic leading-snug">Why surfaced: {card.rationale}</p>
       )}
 
       <div className="flex gap-2 mt-auto">
@@ -186,7 +186,7 @@ function SwipeCard({ card, onLike, onSkip, remaining }: {
           )}
         </div>
         {card.rationale && (
-          <p className="text-xs text-gray-400 dark:text-zinc-500 italic mt-3">Recommended: {card.rationale}</p>
+          <p className="text-xs text-gray-400 dark:text-zinc-500 italic mt-3">Why surfaced: {card.rationale}</p>
         )}
       </div>
 

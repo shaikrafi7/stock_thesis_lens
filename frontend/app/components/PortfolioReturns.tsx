@@ -26,10 +26,10 @@ const TOOLTIP_STYLE = {
 };
 
 function returnLabel(r: number): string {
-  if (r >= 10) return "Outperforming";
-  if (r >= 0) return "Positive";
-  if (r >= -10) return "Underperforming";
-  return "At Risk";
+  if (r >= 10) return "Strong gain";
+  if (r >= 0) return "Modest gain";
+  if (r >= -10) return "Modest loss";
+  return "Material loss";
 }
 
 function returnColor(r: number): string {
@@ -132,10 +132,10 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
               maxValue={100}
               arc={{
                 subArcs: [
-                  { limit: 25, color: "#ef4444", tooltip: { text: `At Risk (${rangeMin}% to ${q1}%)`, style: TOOLTIP_STYLE } },
-                  { limit: 50, color: "#eab308", tooltip: { text: `Underperforming (${q1}% to ${q2}%)`, style: TOOLTIP_STYLE } },
-                  { limit: 75, color: "#a3e635", tooltip: { text: `Positive (${q2}% to ${q3}%)`, style: TOOLTIP_STYLE } },
-                  { limit: 100, color: "#22c55e", tooltip: { text: `Outperforming (${q3}% to ${rangeMax}%)`, style: TOOLTIP_STYLE } },
+                  { limit: 25, color: "#ef4444", tooltip: { text: `Material loss (${rangeMin}% to ${q1}%)`, style: TOOLTIP_STYLE } },
+                  { limit: 50, color: "#eab308", tooltip: { text: `Modest loss (${q1}% to ${q2}%)`, style: TOOLTIP_STYLE } },
+                  { limit: 75, color: "#a3e635", tooltip: { text: `Modest gain (${q2}% to ${q3}%)`, style: TOOLTIP_STYLE } },
+                  { limit: 100, color: "#22c55e", tooltip: { text: `Strong gain (${q3}% to ${rangeMax}%)`, style: TOOLTIP_STYLE } },
                 ],
                 padding: 0.02,
                 width: 0.25,
@@ -165,8 +165,11 @@ export default function PortfolioReturns({ portfolioId }: { portfolioId?: number
             <span className="text-gray-400 dark:text-zinc-500">
               vs S&P 500: <span className="text-gray-700 dark:text-zinc-300 font-mono">{data.benchmark_return >= 0 ? "+" : ""}{data.benchmark_return.toFixed(1)}%</span>
             </span>
-            <span className={`font-mono font-bold ${data.alpha >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
-              Alpha: {data.alpha >= 0 ? "+" : ""}{data.alpha.toFixed(1)}%
+            <span
+              className={`font-mono font-bold ${data.alpha >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}
+              title="Difference vs SPY over this period. Post-hoc observation, not a forecast. Short windows are noisy."
+            >
+              vs SPY: {data.alpha >= 0 ? "+" : ""}{data.alpha.toFixed(1)}%
             </span>
             <span className="text-gray-400 dark:text-zinc-600 text-[11px]">
               $10K &rarr; {dollarEquivalent(r)}

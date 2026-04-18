@@ -60,7 +60,14 @@ export default function ConvictionVsReturns({ scoreHistories: externalHistories 
     return den === 0 ? 0 : num / den;
   })() : 0;
 
-  const corrLabel = corr > 0.3 ? "Conviction is predicting returns" : corr < -0.3 ? "Lower-conviction picks outperforming" : "Conviction not yet predictive";
+  const corrLabel =
+    data.length < 5
+      ? `Sample too small (n=${data.length})`
+      : corr > 0.3
+      ? `Tracking with returns (r=${corr.toFixed(2)}, n=${data.length})`
+      : corr < -0.3
+      ? `Inverse pattern (r=${corr.toFixed(2)}, n=${data.length})`
+      : `Weak relationship (r=${corr.toFixed(2)}, n=${data.length})`;
 
   return (
     <div className="border border-gray-100 dark:border-zinc-800 rounded-2xl overflow-hidden">

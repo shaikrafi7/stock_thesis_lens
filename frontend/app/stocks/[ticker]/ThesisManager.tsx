@@ -271,7 +271,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     lines.push(`_Exported ${new Date().toLocaleDateString()}_\n`);
 
     if (evaluation) {
-      const statusLabel = evaluation.score >= 75 ? "Strong" : evaluation.score >= 50 ? "Under Pressure" : "At Risk";
+      const statusLabel = evaluation.score >= 75 ? "Intact" : evaluation.score >= 50 ? "Under Pressure" : "Breaking";
       lines.push(`## Thesis Health: ${evaluation.score}/100 — ${statusLabel}\n`);
       if (evaluation.explanation) lines.push(`> ${evaluation.explanation}\n`);
     }
@@ -336,7 +336,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   }
 
   const scoreColor = (s: number) => s >= 75 ? "#22c55e" : s >= 50 ? "#eab308" : "#ef4444";
-  const scoreLabel = (s: number) => s >= 75 ? "Thesis Strong" : s >= 50 ? "Under Pressure" : "At Risk";
+  const scoreLabel = (s: number) => s >= 75 ? "Thesis Intact" : s >= 50 ? "Under Pressure" : "Breaking";
 
   return (
     <div className="flex flex-col gap-6">

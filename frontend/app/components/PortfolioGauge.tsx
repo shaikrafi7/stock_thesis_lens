@@ -18,13 +18,13 @@ const scoreColor = (score: number) =>
   score >= 80 ? "#22c55e" : score >= 60 ? "#a3e635" : score >= 40 ? "#eab308" : "#ef4444";
 
 const scoreLabel = (score: number) =>
-  score >= 80 ? "Thesis Strong" : score >= 60 ? "Holding" : score >= 40 ? "Under Pressure" : "At Risk";
+  score >= 80 ? "Thesis Intact" : score >= 60 ? "Mostly Intact" : score >= 40 ? "Under Pressure" : "Breaking";
 
 const ZONES = [
-  { color: "#ef4444", label: "At Risk", range: "0\u201340" },
+  { color: "#ef4444", label: "Breaking", range: "0\u201340" },
   { color: "#eab308", label: "Under Pressure", range: "40\u201360" },
-  { color: "#a3e635", label: "Holding", range: "60\u201380" },
-  { color: "#22c55e", label: "Thesis Strong", range: "80\u2013100" },
+  { color: "#a3e635", label: "Mostly Intact", range: "60\u201380" },
+  { color: "#22c55e", label: "Thesis Intact", range: "80\u2013100" },
 ];
 
 export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { avgScore: number; hasEvaluations?: boolean }) {
@@ -33,7 +33,7 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
 
   return (
     <div className="relative flex flex-col items-center py-4 mb-4 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-lg">
-      <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 mb-1 relative z-10">
+      <p className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 mb-1 relative z-10" title="Measures how well your current theses hold together against evidence. Not a price forecast.">
         Portfolio Thesis Health
       </p>
       <div className="relative z-10 w-full flex justify-center mb-0">
@@ -44,10 +44,10 @@ export default function PortfolioGauge({ avgScore, hasEvaluations = true }: { av
           maxValue={100}
           arc={{
             subArcs: [
-              { limit: 40, color: "#ef4444", tooltip: { text: "At Risk (0\u201340)", style: TOOLTIP_STYLE } },
+              { limit: 40, color: "#ef4444", tooltip: { text: "Breaking (0\u201340)", style: TOOLTIP_STYLE } },
               { limit: 60, color: "#eab308", tooltip: { text: "Under Pressure (40\u201360)", style: TOOLTIP_STYLE } },
-              { limit: 80, color: "#a3e635", tooltip: { text: "Holding (60\u201380)", style: TOOLTIP_STYLE } },
-              { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Strong (80\u2013100)", style: TOOLTIP_STYLE } },
+              { limit: 80, color: "#a3e635", tooltip: { text: "Mostly Intact (60\u201380)", style: TOOLTIP_STYLE } },
+              { limit: 100, color: "#22c55e", tooltip: { text: "Thesis Intact (80\u2013100)", style: TOOLTIP_STYLE } },
             ],
             padding: 0.02,
             width: 0.25,
