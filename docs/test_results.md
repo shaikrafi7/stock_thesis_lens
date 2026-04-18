@@ -634,3 +634,149 @@
 
 **Passed:** 4/5
 **Applied (needs deploy):** 1/5
+
+---
+
+## Test Run 5: Expanded Long-Term Holder Backtest (2020-2024)
+
+**Setup**: 99 tickers (SP500 Top 100 minus FI), 60 month-end scoring dates, horizons [3, 6, 12, 18, 24] months. Dropped 1-month horizon (irrelevant for long-term holders). Fixed overlapping-returns Sharpe annualization (now reports raw mean/std, not naive sqrt(12/h)).
+
+**Changes from Run 4**:
+- HORIZONS expanded: [1, 3, 6, 12] -> [3, 6, 12, 18, 24]
+- Date range expanded: 2023-01-31 to 2024-12-31 -> 2020-01-31 to 2024-12-31
+- AAPL fundamentals re-fetched (stale cache had only 3 years)
+- Sharpe ratio: removed naive annualization for overlapping returns
+
+### Full Period Results (2020-2024)
+
+Long-short spread (Q5-Q1) is NEGATIVE at all horizons:
+
+| Horizon | L/S Return | t-stat | Sharpe |
+|---------|-----------|--------|--------|
+| 3m | -1.03% | -1.79 | -0.21 |
+| 6m | -2.38% | -1.22 | -0.27 |
+| 12m | -3.30% | -0.99 | -0.23 |
+| 18m | -2.10% | -0.46 | -0.11 |
+| 24m | -3.20% | -0.54 | -0.13 |
+
+IC: -0.005 (ICIR: -0.042). Score has no predictive power over full period.
+
+### Sub-Period Analysis: Regime Dependence
+
+| Period | 6m L/S | 6m t-stat | 12m L/S | 12m t-stat | IC |
+|--------|--------|-----------|---------|------------|-----|
+| 2020-2022 | -6.85% | -3.52 | -11.42% | -4.79 | -0.019 |
+| 2023-2024 | +4.32% | +5.27 | +8.87% | +3.76 | +0.016 |
+| Full 2020-2024 | -2.38% | -1.22 | -3.30% | -0.99 | -0.005 |
+
+### Interpretation
+
+The STARC score is regime-dependent:
+- During 2020-2022 (COVID recovery + growth dominance), the score was significantly WRONG — low-score stocks massively outperformed high-score stocks. The value/quality tilt was punished by the speculative growth rally.
+- During 2023-2024 (quality rotation), the score worked well — consistent with quality/value factors becoming rewarded.
+- Full period effects roughly cancel, yielding a null result.
+
+This is a classic regime-dependent factor finding. The STARC score essentially repackages value + quality factors. It works when those factors are in favor and fails when they're not.
+
+---
+
+## Test Run 6: Regime / Sector / Market Cap Breakdown (2020-2024)
+
+**Setup**: Same 99 tickers, 60 months. Added three analysis dimensions.
+
+### Regime Definitions
+
+Non-mutually-exclusive labels applied per month-end date:
+
+| Dimension | Label | Condition |
+|-----------|-------|-----------|
+| Trend | bull | SPY trailing 6-month return > +10% |
+| Trend | bear | SPY trailing 6-month return < -10% |
+| Trend | flat | SPY trailing 6m return between -10% and +10% |
+| Vol | high | 30-day realized volatility (annualized) > 25% |
+| Vol | low | Realized vol <= 25% |
+| Style | growth | IWF (Russell 1000 Growth) 6m return > IWD (Russell 1000 Value) |
+| Style | value | IWD >= IWF |
+
+### Regime Distribution (60 months)
+
+| Dimension | Labels |
+|-----------|--------|
+| Trend | bull: 29, flat: 28, bear: 3 |
+| Vol | low: 53, high: 7 |
+| Style | growth: 38, value: 22 |
+
+### Regime-Conditional L/S Spread (6-month horizon)
+
+| Regime | L/S Mean | t-stat | N |
+|--------|----------|--------|---|
+| **bear** | **-12.83%** | **-4.91** | 3 |
+| bull | -2.38% | -0.94 | 29 |
+| flat | -1.27% | -0.55 | 28 |
+| **high vol** | **-9.34%** | **-16.75** | 7 |
+| low vol | -1.46% | -0.75 | 53 |
+| growth | -1.40% | -0.63 | 38 |
+| **value** | **-4.08%** | **-1.88** | 22 |
+
+Key finding: Score performs worst in bear markets and high-vol regimes. In low-vol + bull + growth environments (the "normal" market), the L/S spread is small and insignificant. Surprisingly, the score also underperforms during value-led markets — meaning it is not even a clean value factor proxy.
+
+### Regime-Conditional IC (1-month forward)
+
+| Regime | Mean IC | ICIR | N |
+|--------|---------|------|---|
+| bear | -0.090 | -0.49 | 3 |
+| bull | -0.011 | -0.09 | 29 |
+| flat | +0.010 | +0.09 | 28 |
+| high vol | -0.037 | -0.25 | 7 |
+| low vol | -0.001 | -0.01 | 53 |
+| growth | -0.004 | -0.03 | 38 |
+| value | -0.008 | -0.06 | 22 |
+
+Score is only slightly positive in flat markets (IC +0.010). In all other regimes it is zero or negative.
+
+### Sector Analysis (1-month IC)
+
+| Sector | Mean IC | ICIR | N months | Tickers |
+|--------|---------|------|----------|---------|
+| **Communication Services** | **+0.059** | **+0.12** | 60 | 5 |
+| Consumer Discretionary | +0.000 | +0.00 | 60 | 9 |
+| **Consumer Staples** | **-0.129** | **-0.27** | 60 | 6 |
+| Financials | +0.007 | +0.03 | 60 | 16 |
+| Healthcare | -0.006 | -0.02 | 60 | 20 |
+| Industrials | -0.007 | -0.02 | 60 | 10 |
+| Technology | -0.017 | -0.09 | 60 | 26 |
+| Energy | -- | -- | -- | 3 (too few) |
+| Utilities | -- | -- | -- | 2 (too few) |
+| Materials | -- | -- | -- | 1 (too few) |
+| Real Estate | -- | -- | -- | 1 (too few) |
+
+Score has slight positive IC in Communication Services only. Consumer Staples is the worst sector (strongly negative IC = score is wrong for staples).
+
+### Market Cap Group Analysis (1-month IC)
+
+| Group | Mean IC | ICIR | N months | Tickers |
+|-------|---------|------|----------|---------|
+| mega (>$200B) | -0.031 | -0.13 | 60 | 30 |
+| large ($50-200B) | +0.005 | +0.04 | 60 | 67 |
+| mid (<$50B) | -- | -- | -- | 2 (too few) |
+
+Score is slightly positive for large-caps, negative for mega-caps. This suggests mega-cap stocks are priced too efficiently for the STARC rules to add value — the fundamentals are already reflected in price.
+
+### Summary of Findings
+
+1. **No unconditional alpha**: The STARC score produces no statistically significant L/S alpha over 2020-2024 at any horizon.
+2. **Regime dependent**: The score worked during 2023-2024 quality rotation but failed during 2020-2022 growth rally. It is not a standalone timing tool.
+3. **Worst in stress**: Bear markets and high-vol periods produce the largest negative spreads. The score's value/quality tilt gets crushed during risk-off selling.
+4. **Sector narrow**: Only Communication Services shows positive IC. Consumer Staples is actively harmful. Technology (26 tickers, biggest sector) has negative IC.
+5. **Mega-cap blind spot**: The score is negative for mega-caps. Mega-cap stocks are too efficiently priced for rules-based fundamental scoring to add edge.
+6. **Not a clean value factor**: The score underperforms even during value-led markets (IWD > IWF), suggesting the combination of signals introduces noise rather than amplifying a factor.
+
+### Implications for Product
+
+| Finding | Action |
+|---------|--------|
+| Regime dependence | Add regime indicator to dashboard; warn users during growth-led/high-vol markets |
+| Mega-cap negative IC | Consider excluding or de-weighting mega-caps, or adjusting thresholds |
+| Consumer Staples negative | Investigate why — staples have different valuation norms (always high P/E) |
+| No unconditional alpha | Cannot market "stocks scoring green outperform" without heavy caveats |
+| Works in 2023-2024 | May be period-specific; need more out-of-sample data to confirm |

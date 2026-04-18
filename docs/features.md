@@ -103,12 +103,26 @@ These add value but won't make or break the product. Revisit after study results
 4. ~~Separate price vs fundamental signals (UG2)~~ — independent price rules, moat rules, graduated thresholds
 5. ~~Dashboard performance (M4)~~ — batch prices (7.7x faster) + batch evaluations endpoint
 
-### Now (before alpha study)
-6. **LLM quality gate / evaluator agent (M6/UG1)** — design alongside study
-7. **Actionable dashboard guidance (M5)** — "Review your weakest holding"
-8. **Screener rationale (M7)** — "Why this stock"
+6. ~~LLM quality gate / evaluator agent (M6/UG1)~~ — quality_gate.py with keyword + pattern checks
+7. ~~Actionable dashboard guidance (M5)~~ — deterministic rules for weakest holding, stale evals
+8. ~~Screener rationale (M7)~~ — "Why this stock" with rating labels
 
-### After study results
-9. Revisit Nice to Haves based on what the study reveals
-10. If alpha is real: double down on USPs, add position tracking
-11. If alpha is weak: redesign scoring based on study findings
+### Alpha Validation Study (completed)
+9. ~~Simulation harness built~~ — scorer, portfolio builder, return calculator, statistics
+10. ~~Data pipeline~~ — FMP fundamentals (100 tickers, 2006-2026) + yfinance prices (2020-2025)
+11. ~~Expanded backtest (Run 5-6)~~ — 99 tickers, 60 months, 5 horizons, regime/sector/cap breakdowns
+
+### Study Results (honest null — see docs/test_results.md Run 5-6)
+- **No unconditional alpha**: L/S spread negative at all horizons over 2020-2024
+- **Regime dependent**: Works in 2023-2024 quality rotation, fails in 2020-2022 growth rally
+- **Worst in stress**: Bear + high-vol months show -9% to -13% L/S (score is actively wrong)
+- **Mega-cap blind spot**: Negative IC for mega-caps; slightly positive for large-caps
+- **Sector narrow**: Only Communication Services shows positive IC; Consumer Staples strongly negative
+- **Conclusion**: Score repackages value/quality factors with no novel combination alpha
+
+### Next Steps (study-informed)
+12. **Redesign scoring for regime awareness** — add market regime indicator, dynamic weight adjustment
+13. **Diversify signals** — momentum and growth signals with real teeth (not just value/quality tilt)
+14. **Sector-specific thresholds** — Consumer Staples, Technology need different valuation norms
+15. **Honest product positioning** — cannot claim unconditional alpha; position as thesis accountability tool, not stock picker
+16. Revisit Nice to Haves informed by findings above

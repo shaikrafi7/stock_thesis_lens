@@ -41,15 +41,15 @@ SP500_TOP100 = [
     "HCA", "SNPS", "APH", "WM", "MSI", "NOC", "AON", "MCO", "MAR", "CDNS",
 ]
 
-# Full S&P 500 ticker list (fetched dynamically) — populated by get_sp500_tickers()
+# Full S&P 500 ticker list
 def get_sp500_tickers() -> list[str]:
-    """Return S&P 500 tickers, fetched from Wikipedia or falling back to top 100."""
-    try:
-        import pandas as pd
-        df = pd.read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")[0]
-        return df["Symbol"].str.replace(".", "-", regex=False).tolist()
-    except Exception:
-        return SP500_TOP100
+    """Return S&P 500 tickers from local file, or fall back to top 100."""
+    ticker_file = Path(__file__).parent / "data" / "sp500_tickers.txt"
+    if ticker_file.exists():
+        tickers = [t.strip() for t in ticker_file.read_text().splitlines() if t.strip()]
+        if tickers:
+            return tickers
+    return SP500_TOP100
 
 
 UNIVERSE_PRESETS = {

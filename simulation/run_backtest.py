@@ -3,12 +3,14 @@
 Orchestrates: load data -> score all tickers monthly -> build quintile
 portfolios -> calculate returns -> compute statistics -> output results.
 
+Includes regime-conditional, sector, and market-cap group breakdowns.
+
 Usage:
     uv run python run_backtest.py [--tickers N] [--start YYYY-MM-DD] [--end YYYY-MM-DD]
 
 Options:
     --tickers N    Use first N tickers from universe (default: all available)
-    --start        Start date for scoring (default: 2023-01-31)
+    --start        Start date for scoring (default: 2020-01-31)
     --end          End date for scoring (default: 2024-12-31)
     --quick        Quick test: 5 tickers, 3 months
 """
@@ -34,14 +36,18 @@ if str(_BACKEND) not in sys.path:
 from simulation.config import SP500_TOP100
 from simulation.scoring.scorer import score_universe, ScoredStock
 from simulation.analysis.portfolio_builder import build_portfolios, _month_end_dates
-from simulation.analysis.return_calculator import calculate_portfolio_returns, build_longshort_series
+from simulation.analysis.return_calculator import calculate_portfolio_returns, build_longshort_series, HORIZONS
 from simulation.analysis.statistics import (
     quintile_summary,
     longshort_summary,
     ic_series,
     ic_information_ratio,
     fama_macbeth,
+    newey_west_tstat,
+    information_coefficient,
 )
+from simulation.analysis.regime import classify_regimes, Regime
+from simulation.analysis.sector_cap import get_sector, get_cap_group
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -148,7 +154,7 @@ def print_results(results: dict) -> None:
     print("QUINTILE RETURNS SUMMARY")
     print("=" * 60)
 
-    for h in [1, 3, 6, 12]:
+    for h in HORIZONS:
         sub = qr_df[qr_df["horizon_months"] == h]
         if sub.empty:
             continue
@@ -202,10 +208,209 @@ def print_results(results: dict) -> None:
             print(f"    Min:  {min(sc):.1f}  Max: {max(sc):.1f}")
 
 
+def print_regime_analysis(results: dict) -> None:
+    """Break down L/S spread by market regime."""
+    score_dates = results["score_dates"]
+    regimes = classify_regimes(score_dates)
+    qr_df = results["qr_df"]
+
+    print("\n" + "=" * 60)
+    print("REGIME CLASSIFICATION")
+    print("=" * 60)
+
+    # Show regime counts
+    trend_counts: dict[str, int] = {}
+    vol_counts: dict[str, int] = {}
+    style_counts: dict[str, int] = {}
+    for r in regimes.values():
+        trend_counts[r.trend] = trend_counts.get(r.trend, 0) + 1
+        vol_counts[r.vol] = vol_counts.get(r.vol, 0) + 1
+        style_counts[r.style] = style_counts.get(r.style, 0) + 1
+
+    print(f"  Trend:  {trend_counts}")
+    print(f"  Vol:    {vol_counts}")
+    print(f"  Style:  {style_counts}")
+
+    # For each regime dimension, compute L/S spread conditional on regime
+    regime_dims = [
+        ("trend", lambda r: r.trend),
+        ("vol", lambda r: r.vol),
+        ("style", lambda r: r.style),
+    ]
+
+    for dim_name, dim_fn in regime_dims:
+        print(f"\n  --- L/S by {dim_name} regime (6m horizon) ---")
+        print(f"  {'Regime':>10} {'L/S Mean':>10} {'t-stat':>8} {'N':>6}")
+        print("  " + "-" * 38)
+
+        # Group score_dates by regime label
+        label_dates: dict[str, list[date]] = {}
+        for d, r in regimes.items():
+            label = dim_fn(r)
+            label_dates.setdefault(label, []).append(d)
+
+        sub = qr_df[qr_df["horizon_months"] == 6]
+        for label, dates_in_regime in sorted(label_dates.items()):
+            # Formation dates are 1 month after score dates
+            from simulation.analysis.portfolio_builder import _add_one_month
+            formation_dates = {_add_one_month(d) for d in dates_in_regime}
+
+            q5 = sub[(sub["quintile"] == 5) & (sub["formation_date"].isin(formation_dates))].set_index("formation_date")["ew_return"]
+            q1 = sub[(sub["quintile"] == 1) & (sub["formation_date"].isin(formation_dates))].set_index("formation_date")["ew_return"]
+            common = q5.index.intersection(q1.index)
+            if common.empty:
+                continue
+            ls_series = (q5.loc[common] - q1.loc[common]).dropna()
+            mean_ret, t = newey_west_tstat(ls_series, lags=max(1, min(6, len(ls_series) - 2)))
+            print(f"  {label:>10} {mean_ret:>10.4f} {t:>8.2f} {len(ls_series):>6}")
+
+
+def print_sector_analysis(results: dict) -> None:
+    """Break down IC and L/S by GICS sector."""
+    monthly_scores = results["monthly_scores_map"]
+    monthly_returns = results["monthly_returns_map"]
+
+    print("\n" + "=" * 60)
+    print("SECTOR ANALYSIS (1m IC by sector)")
+    print("=" * 60)
+
+    # Collect all tickers across all months
+    all_tickers = set()
+    for scores in monthly_scores.values():
+        all_tickers.update(scores.keys())
+
+    # Group tickers by sector
+    sector_tickers: dict[str, set[str]] = {}
+    for t in all_tickers:
+        s = get_sector(t)
+        sector_tickers.setdefault(s, set()).add(t)
+
+    print(f"  {'Sector':<28} {'Mean IC':>8} {'ICIR':>8} {'N_mo':>6} {'Tickers':>8}")
+    print("  " + "-" * 62)
+
+    sector_results = []
+    for sector, tickers in sorted(sector_tickers.items()):
+        # Compute IC using only tickers in this sector
+        ic_vals = {}
+        for d, scores in monthly_scores.items():
+            if d not in monthly_returns:
+                continue
+            sec_scores = {t: s for t, s in scores.items() if t in tickers}
+            sec_returns = {t: r for t, r in monthly_returns[d].items() if t in tickers}
+            if len(sec_scores) < 5:
+                continue
+            s_ser = pd.Series(sec_scores)
+            r_ser = pd.Series(sec_returns)
+            ic = information_coefficient(s_ser, r_ser)
+            if ic is not None:
+                ic_vals[d] = ic
+
+        if not ic_vals:
+            continue
+        ic_ser = pd.Series(ic_vals)
+        mean_ic = float(ic_ser.mean())
+        icir = float(ic_ser.mean() / ic_ser.std()) if ic_ser.std() > 0 else 0.0
+        print(f"  {sector:<28} {mean_ic:>8.4f} {icir:>8.4f} {len(ic_ser):>6} {len(tickers):>8}")
+        sector_results.append((sector, mean_ic, icir, len(ic_ser), len(tickers)))
+
+
+def print_cap_analysis(results: dict) -> None:
+    """Break down IC and L/S by market cap group."""
+    monthly_scores = results["monthly_scores_map"]
+    monthly_returns = results["monthly_returns_map"]
+
+    print("\n" + "=" * 60)
+    print("MARKET CAP GROUP ANALYSIS (1m IC by cap group)")
+    print("=" * 60)
+
+    all_tickers = set()
+    for scores in monthly_scores.values():
+        all_tickers.update(scores.keys())
+
+    cap_tickers: dict[str, set[str]] = {}
+    for t in all_tickers:
+        g = get_cap_group(t)
+        cap_tickers.setdefault(g, set()).add(t)
+
+    print(f"  {'Group':<10} {'Mean IC':>8} {'ICIR':>8} {'N_mo':>6} {'Tickers':>8}")
+    print("  " + "-" * 44)
+
+    for group in ["mega", "large", "mid"]:
+        tickers = cap_tickers.get(group, set())
+        if not tickers:
+            continue
+
+        ic_vals = {}
+        for d, scores in monthly_scores.items():
+            if d not in monthly_returns:
+                continue
+            grp_scores = {t: s for t, s in scores.items() if t in tickers}
+            grp_returns = {t: r for t, r in monthly_returns[d].items() if t in tickers}
+            if len(grp_scores) < 5:
+                continue
+            s_ser = pd.Series(grp_scores)
+            r_ser = pd.Series(grp_returns)
+            ic = information_coefficient(s_ser, r_ser)
+            if ic is not None:
+                ic_vals[d] = ic
+
+        if not ic_vals:
+            continue
+        ic_ser = pd.Series(ic_vals)
+        mean_ic = float(ic_ser.mean())
+        icir = float(ic_ser.mean() / ic_ser.std()) if ic_ser.std() > 0 else 0.0
+        print(f"  {group:<10} {mean_ic:>8.4f} {icir:>8.4f} {len(ic_ser):>6} {len(tickers):>8}")
+
+
+def print_regime_ic(results: dict) -> None:
+    """Break down IC by market regime."""
+    score_dates = results["score_dates"]
+    regimes = classify_regimes(score_dates)
+    monthly_scores = results["monthly_scores_map"]
+    monthly_returns = results["monthly_returns_map"]
+
+    print("\n" + "=" * 60)
+    print("REGIME-CONDITIONAL IC (1m forward)")
+    print("=" * 60)
+
+    regime_dims = [
+        ("trend", lambda r: r.trend),
+        ("vol", lambda r: r.vol),
+        ("style", lambda r: r.style),
+    ]
+
+    for dim_name, dim_fn in regime_dims:
+        print(f"\n  --- IC by {dim_name} ---")
+        print(f"  {'Regime':>10} {'Mean IC':>8} {'ICIR':>8} {'N_mo':>6}")
+        print("  " + "-" * 36)
+
+        label_dates: dict[str, list[date]] = {}
+        for d, r in regimes.items():
+            label = dim_fn(r)
+            label_dates.setdefault(label, []).append(d)
+
+        for label, dates in sorted(label_dates.items()):
+            ic_vals = {}
+            for d in dates:
+                if d not in monthly_scores or d not in monthly_returns:
+                    continue
+                s = pd.Series(monthly_scores[d])
+                r = pd.Series(monthly_returns[d])
+                ic = information_coefficient(s, r)
+                if ic is not None:
+                    ic_vals[d] = ic
+            if not ic_vals:
+                continue
+            ic_ser = pd.Series(ic_vals)
+            mean_ic = float(ic_ser.mean())
+            icir = float(ic_ser.mean() / ic_ser.std()) if ic_ser.std() > 0 else 0.0
+            print(f"  {label:>10} {mean_ic:>8.4f} {icir:>8.4f} {len(ic_ser):>6}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="STARC alpha validation backtest")
     parser.add_argument("--tickers", type=int, default=None, help="Use first N tickers")
-    parser.add_argument("--start", type=str, default="2023-01-31")
+    parser.add_argument("--start", type=str, default="2020-01-31")
     parser.add_argument("--end", type=str, default="2024-12-31")
     parser.add_argument("--quick", action="store_true", help="Quick test: 5 tickers, 3 months")
     args = parser.parse_args()
@@ -228,6 +433,10 @@ def main():
 
     results = run_backtest(tickers, start, end)
     print_results(results)
+    print_regime_analysis(results)
+    print_regime_ic(results)
+    print_sector_analysis(results)
+    print_cap_analysis(results)
 
 
 if __name__ == "__main__":

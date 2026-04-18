@@ -28,7 +28,7 @@ _PRICE_DIR = Path(__file__).parent.parent / "data" / "raw" / "prices"
 # Cache
 _price_cache: dict[str, pd.DataFrame] = {}
 
-HORIZONS = [1, 3, 6, 12]  # months
+HORIZONS = [3, 6, 12, 18, 24]  # months — long-term holder focus
 
 
 def _load_prices(ticker: str) -> pd.DataFrame | None:
@@ -112,6 +112,16 @@ def ticker_forward_return(ticker: str, start: date, end: date) -> float | None:
     p_end = _price_on_or_before(ticker, end)
     if p_end is None or p_end <= 0:
         return None
+    # Mid-period delisting: if the last available price is far before the
+    # target end date, the stock likely delisted during the holding period.
+    df = _load_prices(ticker)
+    if df is not None:
+        last_price_date = df.index.max().date()
+        target_end = end
+        # If the last price in the file is >30 days before the target end,
+        # treat as delisted (the _price_on_or_before found a stale price).
+        if (target_end - last_price_date).days > 30:
+            return _DELIST_RETURN
     return p_end / p_start - 1
 
 

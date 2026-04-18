@@ -11,9 +11,12 @@ import logging
 from datetime import date
 from pathlib import Path
 
+import warnings
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+warnings.filterwarnings("ignore", category=stats.ConstantInputWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +77,10 @@ def information_coefficient(
         return None
     s = scores.loc[common]
     r = forward_returns.loc[common]
+    mask = s.notna() & r.notna()
+    s, r = s[mask], r[mask]
+    if len(s) < 5:
+        return None
     corr, _ = stats.spearmanr(s.values, r.values)
     return float(corr)
 
@@ -105,7 +112,7 @@ def ic_series(
 
 def ic_information_ratio(ic_ser: pd.Series) -> float | None:
     """IC Information Ratio = mean(IC) / std(IC). Values > 0.5 are strong."""
-    if ic_ser.empty or ic_ser.std() == 0:
+    if ic_ser.empty or len(ic_ser) < 2 or ic_ser.std() < 1e-10:
         return None
     return float(ic_ser.mean() / ic_ser.std())
 
@@ -201,7 +208,7 @@ def quintile_summary(qr_df: pd.DataFrame, horizon: int = 1) -> pd.DataFrame:
             "mean_return": mean,
             "t_stat": t,
             "n_obs": len(q_returns),
-            "sharpe": mean / q_returns.std() * np.sqrt(12) if q_returns.std() > 0 else None,
+            "sharpe": mean / q_returns.std() if q_returns.std() > 0 else None,
         })
 
     return pd.DataFrame(rows).set_index("quintile")
@@ -215,7 +222,9 @@ def longshort_summary(ls_by_horizon: dict[int, pd.Series]) -> pd.DataFrame:
         if series.empty:
             continue
         mean, t = newey_west_tstat(series)
-        sharpe = mean / series.std() * np.sqrt(12 / h) if series.std() > 0 else None
+        # For overlapping returns (h > 1 with monthly formation), naive sqrt(12/h)
+        # annualization is biased.  Report raw mean/std ratio only.
+        sharpe = mean / series.std() if series.std() > 0 else None
         rows.append({
             "horizon_months": h,
             "ls_mean_return": mean,

@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "STARC alpha validation simulation — data collection pipeline"
 requires-python = ">=3.13"
 dependencies = [
+    "html5lib>=1.1",
     "httpx>=0.28.1",
+    "lxml>=6.0.4",
     "openai>=2.32.0",
     "pandas>=3.0.2",
     "pyarrow>=23.0.1",
