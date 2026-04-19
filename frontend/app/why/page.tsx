@@ -1,10 +1,10 @@
-export default function WhyThesisArc() {
+export default function WhySTARC() {
   return (
     <iframe
-      src="/why-thesisarc.html"
+      src="/why-starc.html"
       className="w-full h-full border-0"
       style={{ minHeight: "calc(100vh - 3rem)" }}
-      title="Why ThesisArc"
+      title="Why STARC"
     />
   );
 }

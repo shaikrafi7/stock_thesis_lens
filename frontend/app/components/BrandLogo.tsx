@@ -1,50 +1,58 @@
+type Variant = "compact" | "standard" | "hero";
+
 interface Props {
   size?: "sm" | "md" | "lg";
+  variant?: Variant;
+  /** @deprecated use variant="hero" */
   showTagline?: boolean;
 }
 
 const sizes = {
-  sm: { icon: 20, thesis: "text-sm", arc: "text-sm" },
-  md: { icon: 28, thesis: "text-xl", arc: "text-xl" },
-  lg: { icon: 40, thesis: "text-3xl", arc: "text-3xl" },
+  sm: { icon: 20, word: "text-sm", subtitle: "text-[11px]" },
+  md: { icon: 28, word: "text-xl", subtitle: "text-sm" },
+  lg: { icon: 40, word: "text-3xl", subtitle: "text-base" },
 };
 
-/** SVG arc mark — upward arc with a dot at the peak */
+const SERIF_FAMILY = { fontFamily: '"Instrument Serif", Georgia, serif' };
+
 function ArcMark({ size }: { size: number }) {
   const s = size;
   return (
     <svg width={s} height={s} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Arc path: rises from bottom-left, peaks at top-center, descends to bottom-right */}
-      <path
-        d="M4 34 Q20 6 36 34"
-        stroke="#6366f1"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Dot at the peak */}
+      <path d="M4 34 Q20 6 36 34" stroke="#6366f1" strokeWidth="2.8" strokeLinecap="round" fill="none" />
       <circle cx="20" cy="8" r="2.8" fill="#6366f1" />
     </svg>
   );
 }
 
-export default function BrandLogo({ size = "md", showTagline = false }: Props) {
+export default function BrandLogo({ size = "md", variant, showTagline }: Props) {
+  const resolved: Variant = variant ?? (showTagline ? "hero" : "compact");
   const s = sizes[size];
+  const showSubtitle = resolved === "standard" || resolved === "hero";
+  const showHeroTagline = resolved === "hero";
+
   return (
     <div className="flex flex-col items-center gap-0">
       <div className="flex items-center gap-2.5">
         <ArcMark size={s.icon} />
-        <span className={`font-semibold tracking-tight leading-none ${s.thesis}`}>
-          <span className="text-gray-900 dark:text-white">Thesis</span>
-          <span className="font-serif italic text-accent"
-            style={{ fontFamily: '"Instrument Serif", Georgia, serif' }}>Arc</span>
+        <span className={`font-semibold tracking-tight leading-none ${s.word}`}>
+          <span className="text-gray-700 dark:text-zinc-300">St</span>
+          <span className="font-serif italic text-accent" style={SERIF_FAMILY}>ARC</span>
+          {showSubtitle && (
+            <span
+              className={`ml-1.5 font-normal text-gray-500 dark:text-zinc-500 ${s.subtitle}`}
+            >
+              : Stock Thesis Arc
+            </span>
+          )}
         </span>
       </div>
-      {showTagline && (
+      {showHeroTagline && (
         <p className="text-zinc-500 text-xs mt-1.5 tracking-wide">
-          The arc of{" "}
-          <span className="text-accent/80 font-serif italic"
-            style={{ fontFamily: '"Instrument Serif", Georgia, serif' }}>conviction</span>
+          The{" "}
+          <span className="text-accent/80 font-serif italic" style={SERIF_FAMILY}>Arc</span>
+          {" "}of{" "}
+          <span className="text-accent/80 font-serif italic" style={SERIF_FAMILY}>conviction</span>
           , stress-tested daily
         </p>
       )}

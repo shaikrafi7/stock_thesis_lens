@@ -165,7 +165,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <NavLink href="/settings" label="Settings" Icon={Settings} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
         {/* Docs */}
-        <NavLink href="/why" label="Why ThesisArc" Icon={Sparkles} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/why" label="Why STARC" Icon={Sparkles} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/guide" label="User Guide" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/faq" label="FAQ" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
 

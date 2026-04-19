@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ThesisArc",
-  description: "The arc of conviction, stress-tested daily",
+  title: "STARC — Stock Thesis Arc",
+  description: "The Arc of conviction, stress-tested daily.",
   icons: {
     icon: "/thesisarc-logo.png",
   },

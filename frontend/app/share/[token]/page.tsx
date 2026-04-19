@@ -121,7 +121,7 @@ export default function SharePage({ params }: Props) {
       </div>
 
       <p className="text-[11px] text-gray-300 dark:text-zinc-600 text-center pt-2">
-        Shared via ThesisArc · Not financial advice
+        Shared via STARC · Not financial advice
       </p>
     </div>
   );

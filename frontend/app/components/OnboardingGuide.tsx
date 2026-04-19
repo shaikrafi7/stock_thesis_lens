@@ -13,7 +13,7 @@ const STEPS = [
   {
     icon: Zap,
     title: "Review the thesis",
-    description: "ThesisArc drafts thesis points across 6 categories. Uncheck anything generic — you own this thesis.",
+    description: "STARC drafts thesis points across 6 categories. Uncheck anything generic — you own this thesis.",
   },
   {
     icon: Activity,
@@ -49,7 +49,7 @@ export default function OnboardingGuide({ onAdded, portfolioId }: Props) {
   return (
     <div className="max-w-2xl mx-auto px-6 py-16 flex flex-col items-center gap-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to ThesisArc</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to STARC</h2>
         <p className="text-gray-400 dark:text-zinc-500 text-sm max-w-md">
           Build and stress-test your investment convictions with AI-assisted thesis tracking.
         </p>
@@ -125,7 +125,7 @@ export default function OnboardingGuide({ onAdded, portfolioId }: Props) {
             </div>
 
             <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-snug bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 rounded-lg px-3 py-2">
-              ThesisArc generates a starting draft — but <strong>you should edit it</strong> to reflect your actual reasoning. The AI doesn&apos;t know your time horizon, risk tolerance, or why you believe in this stock.
+              STARC generates a starting draft — but <strong>you should edit it</strong> to reflect your actual reasoning. The AI doesn&apos;t know your time horizon, risk tolerance, or why you believe in this stock.
             </p>
           </div>
         )}
