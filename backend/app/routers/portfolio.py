@@ -731,6 +731,220 @@ def portfolio_quiz(portfolio_id: int | None = Query(None), db: Session = Depends
     )
 
 
+THESIS_CATEGORIES = [
+    "competitive_moat",
+    "growth_trajectory",
+    "valuation",
+    "financial_health",
+    "ownership_conviction",
+    "risks",
+]
+
+
+CATEGORY_DISPLAY = {
+    "competitive_moat": "Competitive Moat",
+    "growth_trajectory": "Growth Trajectory",
+    "valuation": "Valuation",
+    "financial_health": "Financial Health",
+    "ownership_conviction": "Ownership & Conviction",
+    "risks": "Risks & Bear Case",
+}
+
+
+OUTCOME_DISPLAY = {
+    "played_out": "Played out",
+    "partial": "Partial",
+    "failed": "Broke",
+    "invalidated": "Invalidated",
+}
+
+
+class QuizRoundQuestion(BaseModel):
+    id: str
+    type: str  # thesis_to_stock | point_to_category | signal_impact | closed_outcome
+    stem: str
+    choices: list[str]
+    correct_index: int
+    reveal: str
+
+
+class QuizRound(BaseModel):
+    questions: list[QuizRoundQuestion]
+
+
+@router.get("/quiz/round", response_model=QuizRound)
+def portfolio_quiz_round(
+    portfolio_id: int | None = Query(None),
+    size: int = Query(10, ge=3, le=20),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return a mixed round of quiz questions without leaking tickers in stems or options."""
+    import random
+    from fastapi import HTTPException
+    from app.models.thesis import Thesis
+
+    portfolio = get_active_portfolio(portfolio_id, current_user, db)
+    stocks = db.query(Stock).filter(Stock.portfolio_id == portfolio.id).all()
+    if len(stocks) < 2:
+        raise HTTPException(status_code=422, detail="Need at least 2 stocks with thesis points to play.")
+
+    stock_by_id = {s.id: s for s in stocks}
+    all_theses: list[Thesis] = (
+        db.query(Thesis)
+        .filter(Thesis.stock_id.in_(stock_by_id.keys()), Thesis.selected == True)  # noqa: E712
+        .all()
+    )
+    if len(all_theses) < 3:
+        raise HTTPException(status_code=422, detail="Need at least 3 thesis points across your stocks.")
+
+    open_theses = [t for t in all_theses if t.closed_at is None]
+    closed_theses = [t for t in all_theses if t.closed_at is not None and t.outcome]
+
+    # Latest evaluation per stock — used for signal_impact questions
+    latest_eval_by_stock: dict[int, Evaluation] = {}
+    for ev in db.query(Evaluation).filter(Evaluation.stock_id.in_(stock_by_id.keys())).all():
+        prev = latest_eval_by_stock.get(ev.stock_id)
+        if prev is None or ev.timestamp > prev.timestamp:
+            latest_eval_by_stock[ev.stock_id] = ev
+
+    def build_thesis_to_stock(thesis: Thesis) -> QuizRoundQuestion | None:
+        stock = stock_by_id.get(thesis.stock_id)
+        if stock is None:
+            return None
+        others = [s for s in stocks if s.id != stock.id]
+        if len(others) < 1:
+            return None
+        wrong_sample = random.sample(others, min(3, len(others)))
+        correct_label = _anon_stock_label(stock)
+        options = [_anon_stock_label(s) for s in wrong_sample] + [correct_label]
+        random.shuffle(options)
+        return QuizRoundQuestion(
+            id=f"t2s-{thesis.id}",
+            type="thesis_to_stock",
+            stem=f"Which holding is this thesis point from?\n\n\u201c{thesis.statement}\u201d",
+            choices=options,
+            correct_index=options.index(correct_label),
+            reveal=f"From {stock.ticker} ({stock.name}).",
+        )
+
+    def build_point_to_category(thesis: Thesis) -> QuizRoundQuestion:
+        options = [CATEGORY_DISPLAY[c] for c in THESIS_CATEGORIES]
+        correct = CATEGORY_DISPLAY.get(thesis.category, thesis.category)
+        return QuizRoundQuestion(
+            id=f"p2c-{thesis.id}",
+            type="point_to_category",
+            stem=f"What category is this thesis point?\n\n\u201c{thesis.statement}\u201d",
+            choices=options,
+            correct_index=options.index(correct) if correct in options else 0,
+            reveal=f"Category: {correct}.",
+        )
+
+    def build_signal_impact() -> QuizRoundQuestion | None:
+        candidates = []
+        for sid, ev in latest_eval_by_stock.items():
+            for cp in (ev.confirmed_points or []):
+                candidates.append(("confirmed", sid, cp))
+            for bp in (ev.broken_points or []):
+                candidates.append(("flagged", sid, bp))
+        if not candidates:
+            return None
+        kind, sid, pt = random.choice(candidates)
+        stock = stock_by_id.get(sid)
+        if stock is None:
+            return None
+        statement = pt.get("statement") if isinstance(pt, dict) else getattr(pt, "statement", None)
+        signal = pt.get("signal") if isinstance(pt, dict) else getattr(pt, "signal", None)
+        if not statement or not signal:
+            return None
+        options = ["Confirmed", "Flagged"]
+        correct_index = 0 if kind == "confirmed" else 1
+        return QuizRoundQuestion(
+            id=f"si-{stock.id}-{random.randint(1000, 9999)}",
+            type="signal_impact",
+            stem=(
+                "Given this signal, did it confirm or flag the thesis?\n\n"
+                f"Thesis: \u201c{statement}\u201d\nSignal: {signal}"
+            ),
+            choices=options,
+            correct_index=correct_index,
+            reveal=f"{options[correct_index]} — on {stock.ticker}.",
+        )
+
+    def build_closed_outcome(thesis: Thesis) -> QuizRoundQuestion | None:
+        if not thesis.outcome or thesis.outcome not in OUTCOME_DISPLAY:
+            return None
+        stock = stock_by_id.get(thesis.stock_id)
+        if stock is None:
+            return None
+        options = list(OUTCOME_DISPLAY.values())
+        correct = OUTCOME_DISPLAY[thesis.outcome]
+        return QuizRoundQuestion(
+            id=f"co-{thesis.id}",
+            type="closed_outcome",
+            stem=f"What outcome did you record when you closed this thesis?\n\n\u201c{thesis.statement}\u201d",
+            choices=options,
+            correct_index=options.index(correct),
+            reveal=f"Outcome: {correct} (on {stock.ticker}).",
+        )
+
+    # Plan the mix
+    questions: list[QuizRoundQuestion] = []
+    used_thesis_ids: set[int] = set()
+
+    # 1 signal_impact if available
+    sig_q = build_signal_impact()
+    if sig_q is not None:
+        questions.append(sig_q)
+
+    # 1 closed_outcome if user has closed theses
+    if closed_theses:
+        ct = random.choice(closed_theses)
+        co_q = build_closed_outcome(ct)
+        if co_q is not None:
+            questions.append(co_q)
+            used_thesis_ids.add(ct.id)
+
+    # Fill remainder with t2s and p2c in ~60/40 split
+    open_pool = [t for t in open_theses if t.id not in used_thesis_ids]
+    random.shuffle(open_pool)
+    types_cycle = ["thesis_to_stock"] * 6 + ["point_to_category"] * 4
+    random.shuffle(types_cycle)
+
+    while len(questions) < size and open_pool:
+        t = open_pool.pop()
+        qtype = types_cycle.pop() if types_cycle else random.choice(["thesis_to_stock", "point_to_category"])
+        q = build_thesis_to_stock(t) if qtype == "thesis_to_stock" else build_point_to_category(t)
+        if q is None and qtype == "thesis_to_stock":
+            q = build_point_to_category(t)
+        if q is not None:
+            questions.append(q)
+            used_thesis_ids.add(t.id)
+
+    if len(questions) < 3:
+        raise HTTPException(status_code=422, detail="Not enough thesis content yet. Add more thesis points first.")
+
+    random.shuffle(questions)
+    return QuizRound(questions=questions[:size])
+
+
+def _anon_stock_label(stock: Stock) -> str:
+    """Label for MC options that avoids leaking the ticker symbol."""
+    import re
+    name = (stock.name or "").strip()
+    ticker = (stock.ticker or "").strip()
+    if name and ticker:
+        # Remove any occurrence of the ticker from the display name so it
+        # doesn't give the quiz away (e.g. "Apple Inc. (AAPL)" -> "Apple Inc.").
+        cleaned = re.sub(rf"\s*[\(\[]?\b{re.escape(ticker)}\b[\)\]]?\s*", " ", name).strip(" -·,")
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            return cleaned
+    if name:
+        return name
+    return f"Holding {stock.ticker[0] if stock.ticker else '?'}"
+
+
 class ThesisOverviewItem(BaseModel):
     ticker: str
     thesis_id: int

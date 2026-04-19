@@ -734,6 +734,28 @@ export interface QuizQuestion {
 export const getQuizQuestion = (portfolioId?: number | null): Promise<QuizQuestion> =>
   apiFetch(`/portfolio/quiz${joinParams(pq(portfolioId))}`);
 
+export type QuizRoundQuestionType =
+  | "thesis_to_stock"
+  | "point_to_category"
+  | "signal_impact"
+  | "closed_outcome";
+
+export interface QuizRoundQuestion {
+  id: string;
+  type: QuizRoundQuestionType;
+  stem: string;
+  choices: string[];
+  correct_index: number;
+  reveal: string;
+}
+
+export interface QuizRound {
+  questions: QuizRoundQuestion[];
+}
+
+export const getQuizRound = (portfolioId?: number | null, size = 10): Promise<QuizRound> =>
+  apiFetch(`/portfolio/quiz/round${joinParams(pq(portfolioId), `size=${size}`)}`);
+
 export interface ThesisOverviewItem {
   ticker: string;
   thesis_id: number;
