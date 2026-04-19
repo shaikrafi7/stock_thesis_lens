@@ -87,14 +87,39 @@ export function BriefingCard({ item }: { item: BriefingItem }) {
               </a>
             )}
           </p>
-          {item.related_thesis && (
-            <div className="mt-1.5 flex items-start gap-1">
-              <span className={`shrink-0 text-[9px] uppercase tracking-wider font-semibold mt-0.5 ${item.impact === "bearish" ? "text-red-500" : item.impact === "bullish" ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
-                {item.impact === "bearish" ? "Challenges" : item.impact === "bullish" ? "Supports" : "Related to"}:
-              </span>
-              <span className="text-[11px] text-gray-500 dark:text-zinc-400 italic leading-snug">&ldquo;{item.related_thesis}&rdquo;</span>
-            </div>
-          )}
+          {item.related_thesis && (() => {
+            const pillTone = item.impact === "bearish"
+              ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+              : item.impact === "bullish"
+              ? "bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+              : "bg-gray-100 dark:bg-zinc-800/70 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-700";
+            const pillLabel = item.impact === "bearish"
+              ? "! Threatens"
+              : item.impact === "bullish"
+              ? "+ Confirms"
+              : "~ Related";
+            const href = item.linked_thesis_id != null && item.ticker !== "MACRO"
+              ? `/stocks/${item.ticker}#thesis-${item.linked_thesis_id}`
+              : null;
+            const body = (
+              <>
+                <span className={`shrink-0 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-full border ${pillTone}`}>
+                  {pillLabel}
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-zinc-400 italic leading-snug">&ldquo;{item.related_thesis}&rdquo;</span>
+              </>
+            );
+            return href ? (
+              <Link
+                href={href}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-1.5 flex items-start gap-1.5 hover:bg-white/40 dark:hover:bg-zinc-900/40 -mx-1 px-1 py-0.5 rounded transition-colors"
+                title="Open the linked thesis point"
+              >{body}</Link>
+            ) : (
+              <div className="mt-1.5 flex items-start gap-1.5">{body}</div>
+            );
+          })()}
           {item.suggestion && (
             <div className="mt-2 pt-2 border-t border-current opacity-60">
               <p className="text-[11px] italic leading-snug mb-1.5">

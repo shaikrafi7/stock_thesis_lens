@@ -431,6 +431,7 @@ export interface BriefingItem {
   suggestion?: ThesisSuggestion | null;
   source_url?: string | null;
   related_thesis?: string | null;
+  linked_thesis_id?: number | null;
 }
 
 export interface MorningBriefingResponse {

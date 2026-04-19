@@ -145,6 +145,7 @@ class BriefingItemSchema(BaseModel):
     suggestion: Optional[ThesisSuggestionSchema] = None
     source_url: Optional[str] = None
     related_thesis: Optional[str] = None  # existing thesis statement this news challenges/supports
+    linked_thesis_id: Optional[int] = None  # resolved thesis id when related_thesis matches a current thesis
 
 
 class MorningBriefingResponse(BaseModel):

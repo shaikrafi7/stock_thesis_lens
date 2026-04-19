@@ -222,7 +222,22 @@ def portfolio_score_histories(
     return result
 
 
-def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema]:
+def _briefing_items_to_schema(items_data: list[dict], db: Session | None = None, portfolio_id: int | None = None) -> list[BriefingItemSchema]:
+    """Serialize briefing items, resolving linked_thesis_id from related_thesis text when possible."""
+    thesis_index: dict[tuple[str, str], int] = {}
+    if db is not None and portfolio_id is not None:
+        from app.models.thesis import Thesis
+        rows = (
+            db.query(Stock.ticker, Thesis.id, Thesis.statement)
+            .join(Thesis, Thesis.stock_id == Stock.id)
+            .filter(Stock.portfolio_id == portfolio_id)
+            .all()
+        )
+        for ticker, tid, statement in rows:
+            key = ((ticker or "").upper(), (statement or "").strip())
+            if key not in thesis_index:
+                thesis_index[key] = int(tid)
+
     result = []
     for item in items_data:
         suggestion = None
@@ -232,6 +247,11 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
                 category=s["category"],
                 statement=s["statement"],
             )
+        ticker = (item.get("ticker") or "").upper()
+        related = (item.get("related_thesis") or "").strip() or None
+        linked_id: int | None = None
+        if related and thesis_index:
+            linked_id = thesis_index.get((ticker, related))
         result.append(
             BriefingItemSchema(
                 ticker=item.get("ticker", ""),
@@ -239,7 +259,8 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
                 impact=item.get("impact", "neutral"),
                 suggestion=suggestion,
                 source_url=item.get("source_url") or None,
-                related_thesis=item.get("related_thesis") or None,
+                related_thesis=related,
+                linked_thesis_id=linked_id,
             )
         )
     result.sort(key=lambda x: (0 if x.ticker == "MACRO" else 1))
@@ -336,7 +357,7 @@ async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: in
 
     return MorningBriefingResponse(
         summary=briefing.summary,
-        items=_briefing_items_to_schema(items_for_db),
+        items=_briefing_items_to_schema(items_for_db, db=db, portfolio_id=portfolio_id),
         date=str(today),
     )
 
@@ -356,7 +377,7 @@ async def morning_briefing(portfolio_id: int | None = Query(None), db: Session =
             items_data = json.loads(existing.items) if existing.items else []
             return MorningBriefingResponse(
                 summary=existing.summary,
-                items=_briefing_items_to_schema(items_data),
+                items=_briefing_items_to_schema(items_data, db=db, portfolio_id=portfolio.id),
                 date=str(existing.date),
             )
         logger.info("briefing_cache: MISS portfolio=%s date=%s (thesis state changed)", portfolio.id, today)
@@ -391,7 +412,7 @@ def briefing_history(
         results.append(
             MorningBriefingResponse(
                 summary=b.summary,
-                items=_briefing_items_to_schema(items_data),
+                items=_briefing_items_to_schema(items_data, db=db, portfolio_id=portfolio.id),
                 date=str(b.date),
             )
         )

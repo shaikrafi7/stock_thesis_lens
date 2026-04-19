@@ -184,6 +184,23 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     return () => { cancelled = true; };
   }, [showClosed, ticker, pid]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#thesis-")) return;
+    if (theses.length === 0) return;
+    const el = document.getElementById(hash.slice(1));
+    if (!el) return;
+    const timer = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-accent", "ring-offset-2");
+      window.setTimeout(() => {
+        el.classList.remove("ring-2", "ring-accent", "ring-offset-2");
+      }, 1800);
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [theses]);
+
   const likedCount = theses.filter((t) => t.conviction === "liked").length;
   const dislikedCount = theses.filter((t) => t.conviction === "disliked").length;
   const lockedCount = theses.filter((t) => t.frozen).length;
@@ -792,7 +809,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                       : theses.some((x) => x.last_confirmed) // only flag if others have been confirmed
 
                     return editingId === t.id ? (
-                      <div key={t.id} className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-600">
+                      <div key={t.id} id={`thesis-${t.id}`} className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-600">
                         <textarea value={editDraft} onChange={(e) => setEditDraft(e.target.value)} rows={3}
                           className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-gray-900 dark:text-white resize-none focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
                         />
@@ -808,7 +825,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         </div>
                       </div>
                     ) : (
-                      <div key={t.id} className={`group flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                      <div key={t.id} id={`thesis-${t.id}`} className={`group flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         t.closed_at
                           ? "border border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/60 dark:bg-zinc-900/40 opacity-70"
                           : isFrozenBroken
