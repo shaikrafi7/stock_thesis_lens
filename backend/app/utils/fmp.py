@@ -66,3 +66,49 @@ def get_fundamentals(ticker: str) -> dict:
     except Exception as exc:
         logger.warning("fmp: get_fundamentals failed for %s: %s", ticker, exc)
         return {}
+
+
+def get_quarterly_income(ticker: str, limit: int = 8) -> list[dict]:
+    """Fetch recent quarterly income statements. Returns [] on any error.
+
+    Used for computing trend labels (revenue, margins) across multiple quarters.
+    Results are ordered newest first.
+    """
+    if not settings.FMP_API_KEY:
+        return []
+    try:
+        resp = httpx.get(
+            f"{_BASE}/income-statement/{ticker}",
+            params={"limit": limit, "period": "quarter", "apikey": settings.FMP_API_KEY},
+            timeout=10,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list):
+            return []
+        return data
+    except Exception as exc:
+        logger.warning("fmp: get_quarterly_income failed for %s: %s", ticker, exc)
+        return []
+
+
+def get_quarterly_balance(ticker: str, limit: int = 8) -> list[dict]:
+    """Fetch recent quarterly balance sheets. Newest first. Returns [] on any error."""
+    if not settings.FMP_API_KEY:
+        return []
+    try:
+        resp = httpx.get(
+            f"{_BASE}/balance-sheet-statement/{ticker}",
+            params={"limit": limit, "period": "quarter", "apikey": settings.FMP_API_KEY},
+            timeout=10,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list):
+            return []
+        return data
+    except Exception as exc:
+        logger.warning("fmp: get_quarterly_balance failed for %s: %s", ticker, exc)
+        return []

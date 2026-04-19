@@ -442,6 +442,7 @@ def _llm_news_mapping(
     theses: list[dict],
     headlines: list[str],
     fundamentals: FundamentalSignal | None = None,
+    trends: dict[str, str | None] | None = None,
 ) -> list[ThesisSignalMapping]:
     if not headlines or not theses or not settings.OPENAI_API_KEY:
         return []
@@ -457,6 +458,10 @@ def _llm_news_mapping(
             fund_str = _format_fundamentals(fundamentals)
             if fund_str:
                 user_content += f"\n\nFUNDAMENTAL SIGNALS:\n{fund_str}"
+        if trends:
+            trend_lines = [f"- {k}: {v}" for k, v in trends.items() if v]
+            if trend_lines:
+                user_content += "\n\nMULTI-QUARTER TRENDS (deterministic, 20% threshold):\n" + "\n".join(trend_lines)
         user_content += "\n\nReturn JSON object with 'mappings' key."
 
         response = client.chat.completions.create(
@@ -541,7 +546,14 @@ def interpret_signals(signals: CollectedSignals, selected_theses: list[dict]) ->
         for f in signals.recent_filings[:3]:
             headlines.append(f"[SEC FILING] {f.form_type} filed {f.date}: {f.title}")
 
-    news_maps = _llm_news_mapping(selected_theses, headlines, signals.fundamentals)
+    trend_dict = None
+    if signals.trends is not None:
+        trend_dict = {
+            "revenue": signals.trends.revenue,
+            "gross_margin": signals.trends.margin,
+            "total_debt": signals.trends.debt,
+        }
+    news_maps = _llm_news_mapping(selected_theses, headlines, signals.fundamentals, trend_dict)
 
     # Deterministic rules for all categories
     valuation_maps = _valuation_rules(signals.valuation, selected_theses)

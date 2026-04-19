@@ -107,6 +107,18 @@ class OwnershipSignal:
 
 
 @dataclass
+class TrendLabels:
+    """Deterministic trend classifications across multiple quarters.
+
+    Reduces single-quarter noise for the evaluator. Each label is one of:
+    'accelerating' | 'stable' | 'decelerating' | None (insufficient data).
+    """
+    revenue: str | None = None
+    margin: str | None = None
+    debt: str | None = None
+
+
+@dataclass
 class CollectedSignals:
     ticker: str
     price: PriceSignal | None
@@ -117,6 +129,7 @@ class CollectedSignals:
     valuation: ValuationSignal | None = None
     financial_health: FinancialHealthSignal | None = None
     ownership: OwnershipSignal | None = None
+    trends: TrendLabels | None = None
 
 
 # ── Polygon helpers ──────────────────────────────────────────────────────────
@@ -356,6 +369,86 @@ def _collect_yfinance_extended(ticker: str) -> tuple[ValuationSignal | None, Fin
         return None, None, None
 
 
+# ── Deterministic trend labels ──────────────────────────────────────────────
+
+TREND_THRESHOLD = 0.20
+
+
+def _label_trend(latest: float | None, priors: list[float], *, higher_is_better: bool = True) -> str | None:
+    """Return 'accelerating' | 'stable' | 'decelerating' by comparing latest to the
+    average of priors, using a 20% threshold. Returns None if data is insufficient.
+
+    When ``higher_is_better`` is False (e.g. debt), the direction is inverted so
+    that a rising metric still counts as 'decelerating' from the thesis POV.
+    """
+    priors = [p for p in priors if isinstance(p, (int, float))]
+    if latest is None or len(priors) < 2:
+        return None
+    avg_prior = sum(priors) / len(priors)
+    if avg_prior == 0:
+        return "stable"
+    delta = (latest - avg_prior) / abs(avg_prior)
+    if not higher_is_better:
+        delta = -delta
+    if delta >= TREND_THRESHOLD:
+        return "accelerating"
+    if delta <= -TREND_THRESHOLD:
+        return "decelerating"
+    return "stable"
+
+
+def compute_revenue_trend(income: list[dict]) -> str | None:
+    """Revenue trend from quarterly income statements (newest first)."""
+    if not income or len(income) < 3:
+        return None
+    revenues = [q.get("revenue") for q in income]
+    return _label_trend(revenues[0], revenues[1:4])
+
+
+def compute_margin_trend(income: list[dict]) -> str | None:
+    """Gross margin trend from quarterly income statements (newest first)."""
+    if not income or len(income) < 3:
+        return None
+
+    def _margin(q: dict) -> float | None:
+        rev = q.get("revenue")
+        gp = q.get("grossProfit")
+        if not rev or gp is None:
+            return None
+        return gp / rev if rev else None
+
+    margins = [_margin(q) for q in income]
+    return _label_trend(margins[0], [m for m in margins[1:4] if m is not None])
+
+
+def compute_debt_trend(balance: list[dict]) -> str | None:
+    """Total debt trend from quarterly balance sheets (newest first).
+
+    Rising debt is treated as 'decelerating' for the thesis (higher_is_better=False).
+    """
+    if not balance or len(balance) < 3:
+        return None
+    debts = [q.get("totalDebt") for q in balance]
+    return _label_trend(debts[0], debts[1:4], higher_is_better=False)
+
+
+def _collect_trends(ticker: str) -> TrendLabels:
+    """Fetch quarterly statements and derive trend labels."""
+    try:
+        from app.utils.fmp import get_quarterly_income, get_quarterly_balance
+
+        income = get_quarterly_income(ticker, limit=5)
+        balance = get_quarterly_balance(ticker, limit=5)
+        return TrendLabels(
+            revenue=compute_revenue_trend(income),
+            margin=compute_margin_trend(income),
+            debt=compute_debt_trend(balance),
+        )
+    except Exception as exc:
+        logger.error("signal_collector: trend computation failed for %s: %s", ticker, exc)
+        return TrendLabels()
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
@@ -366,6 +459,7 @@ def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
     insider = _collect_insider(ticker)
     filings = _collect_filings(ticker)
     valuation, financial, ownership = _collect_yfinance_extended(ticker)
+    trends = _collect_trends(ticker)
     return CollectedSignals(
         ticker=ticker,
         price=price,
@@ -376,4 +470,5 @@ def collect_signals(ticker: str, company_name: str) -> CollectedSignals:
         valuation=valuation,
         financial_health=financial,
         ownership=ownership,
+        trends=trends,
     )
