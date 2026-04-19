@@ -7,17 +7,19 @@ import {
   generateAndEvaluate, previewThesis, confirmPreview as confirmPreview_api,
   updateThesisConviction, updateThesisStatement,
   updateThesisFrozen, deleteThesis, runEvaluation, addManualThesis, getShareToken, reorderTheses, getThesisAudit,
+  reopenThesis,
   type Thesis, type Evaluation, type ThesisPreview,
 } from "@/lib/api";
 import { useAssistant } from "@/app/context/AssistantContext";
 import { usePortfolio } from "@/app/context/PortfolioContext";
 import StatusBadge from "@/app/components/StatusBadge";
 import ThesisTemplateSelector from "@/app/components/ThesisTemplateSelector";
+import ThesisAuditModal from "@/app/components/ThesisAuditModal";
 import {
   Lock, Unlock, Pencil, X, AlertTriangle, Loader2, RefreshCw,
   Activity, Save, CircleDot, ChevronUp, ChevronDown, Plus,
   Zap, Star, ThumbsUp, ThumbsDown, Check, Download, Share2,
-  Info, History,
+  Info, History, Archive, RotateCcw,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,6 +40,20 @@ const IMPORTANCE_ICONS: Record<string, { Icon: typeof Zap; className: string; la
   standard: null,
   important: { Icon: Star, className: "w-3.5 h-3.5 text-yellow-400", label: "Important" },
   critical: { Icon: Zap, className: "w-3.5 h-3.5 text-red-400", label: "Critical" },
+};
+
+const OUTCOME_LABEL: Record<string, string> = {
+  played_out: "Played out",
+  partial: "Partial",
+  failed: "Broke",
+  invalidated: "Invalidated",
+};
+
+const OUTCOME_BADGE: Record<string, string> = {
+  played_out: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  partial: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  failed: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  invalidated: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
 };
 
 function groupByCategory(theses: Thesis[]): Record<string, Thesis[]> {
@@ -94,6 +110,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditLog, setAuditLog] = useState<import("@/lib/api").ThesisAuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [closingThesis, setClosingThesis] = useState<Thesis | null>(null);
+  const [showClosed, setShowClosed] = useState(false);
 
   const { setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint, fireExplainThesisPoint, togglePanel, isOpen } = useAssistant();
   const { activePortfolioId: pid } = usePortfolio();
@@ -121,12 +139,28 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
     };
   }, [ticker, setTicker, registerThesisAdded, registerEvaluationTriggered, registerPrefillThesisPoint]);
 
+  useEffect(() => {
+    if (!showClosed) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getTheses } = await import("@/lib/api");
+        const all = await getTheses(ticker, pid, true);
+        if (!cancelled) setTheses(all);
+      } catch {
+        // Non-fatal: keep current list; toggle is purely additive.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showClosed, ticker, pid]);
+
   const likedCount = theses.filter((t) => t.conviction === "liked").length;
   const dislikedCount = theses.filter((t) => t.conviction === "disliked").length;
   const lockedCount = theses.filter((t) => t.frozen).length;
   const selectedCount = theses.filter((t) => t.selected).length;
 
   const filteredTheses = theses.filter((t) => {
+    if (!showClosed && t.closed_at) return false;
     if (filterCategory !== "all" && t.category !== filterCategory) return false;
     if (filterConviction === "liked" && t.conviction !== "liked") return false;
     if (filterConviction === "disliked" && t.conviction !== "disliked") return false;
@@ -240,6 +274,15 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       await deleteThesis(ticker, id, pid);
       setTheses((prev) => prev.filter((t) => t.id !== id));
     } catch (err) { setError(err instanceof Error ? err.message : "Delete failed"); }
+  }
+
+  async function handleReopen(thesis: Thesis) {
+    try {
+      const updated = await reopenThesis(ticker, thesis.id, pid);
+      setTheses((prev) => prev.map((t) => t.id === thesis.id ? updated : t));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reopen failed");
+    }
   }
 
   async function handleEvaluate() {
@@ -595,6 +638,18 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
               {filteredTheses.length} of {theses.length}
             </span>
           )}
+          <label
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-zinc-400 cursor-pointer select-none"
+            title="Show closed / post-mortem theses"
+          >
+            <input
+              type="checkbox"
+              checked={showClosed}
+              onChange={(e) => setShowClosed(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-gray-300 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500"
+            />
+            <Archive className="w-3.5 h-3.5" /> Show closed
+          </label>
         </div>
       )}
 
@@ -703,7 +758,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                       </div>
                     ) : (
                       <div key={t.id} className={`group flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                        isFrozenBroken
+                        t.closed_at
+                          ? "border border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/60 dark:bg-zinc-900/40 opacity-70"
+                          : isFrozenBroken
                           ? "border-l-2 border-red-500 bg-red-50 dark:bg-red-950/30"
                           : t.frozen
                           ? "border-l-2 border-amber-400 bg-amber-50 dark:bg-amber-950/20"
@@ -727,18 +784,33 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         {t.frozen && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
 
                         <span className="flex-1 min-w-0">
-                          <span className="flex items-start gap-1.5">
-                            <span className="text-sm leading-relaxed text-gray-800 dark:text-zinc-200">{t.statement}</span>
-                            {isStale && (
+                          <span className="flex items-start gap-1.5 flex-wrap">
+                            <span className={`text-sm leading-relaxed ${t.closed_at ? "text-gray-500 dark:text-zinc-500 line-through decoration-gray-400/50" : "text-gray-800 dark:text-zinc-200"}`}>
+                              {t.statement}
+                            </span>
+                            {t.closed_at && t.outcome && (
+                              <span
+                                title={t.lessons || undefined}
+                                className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${OUTCOME_BADGE[t.outcome]}`}
+                              >
+                                {OUTCOME_LABEL[t.outcome]}
+                              </span>
+                            )}
+                            {isStale && !t.closed_at && (
                               <span title="Not confirmed in 30+ days — consider re-evaluating"
                                 className="shrink-0 mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500" />
                             )}
                           </span>
-                          {t.last_confirmed && (
+                          {t.closed_at ? (
+                            <span className="block text-[10px] text-gray-400 dark:text-zinc-600 mt-0.5">
+                              closed {new Date(t.closed_at).toLocaleDateString()}
+                              {t.lessons ? ` · ${t.lessons.length > 80 ? t.lessons.slice(0, 77) + "…" : t.lessons}` : ""}
+                            </span>
+                          ) : t.last_confirmed ? (
                             <span className="block text-[10px] text-gray-400 dark:text-zinc-600 mt-0.5">
                               confirmed {new Date(t.last_confirmed).toLocaleDateString()}
                             </span>
-                          )}
+                          ) : null}
                         </span>
 
                         {impact && (
@@ -789,16 +861,31 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                               className="p-1 text-gray-300 dark:text-zinc-600 hover:text-indigo-500 rounded transition-colors">
                               <Info className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); startEdit(t); }}
-                              title="Edit"
-                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); requestDelete(t); }}
-                              title="Delete"
-                              className="p-1 text-gray-300 dark:text-zinc-600 hover:text-red-500 rounded transition-colors">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                            {!t.closed_at ? (
+                              <>
+                                <button onClick={(e) => { e.stopPropagation(); startEdit(t); }}
+                                  title="Edit"
+                                  className="p-1 text-gray-300 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-300 rounded transition-colors">
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); setClosingThesis(t); }}
+                                  title="Close & audit — write a post-mortem"
+                                  className="p-1 text-gray-300 dark:text-zinc-600 hover:text-indigo-500 rounded transition-colors">
+                                  <Archive className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); requestDelete(t); }}
+                                  title="Delete"
+                                  className="p-1 text-gray-300 dark:text-zinc-600 hover:text-red-500 rounded transition-colors">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={(e) => { e.stopPropagation(); handleReopen(t); }}
+                                title="Reopen this thesis"
+                                className="p-1 text-gray-300 dark:text-zinc-600 hover:text-emerald-500 rounded transition-colors">
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -916,6 +1003,18 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
             </div>
           </div>
         </div>
+      )}
+
+      {closingThesis && (
+        <ThesisAuditModal
+          ticker={ticker}
+          thesis={closingThesis}
+          portfolioId={pid}
+          onClose={() => setClosingThesis(null)}
+          onClosed={(updated) => {
+            setTheses((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+          }}
+        />
       )}
     </div>
   );

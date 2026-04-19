@@ -12,7 +12,7 @@ import ProfileWizard from "./ProfileWizard";
 import StatusBadge from "./StatusBadge";
 import {
   Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2,
-  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper, Search, MessageSquare,
+  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper, Search, MessageSquare, BookOpen,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import StreakBadge from "./StreakBadge";
@@ -158,6 +158,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Main nav */}
         <NavLink href="/" label="Dashboard" Icon={Home} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/briefing" label="Briefing" Icon={Newspaper} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/journal" label="Journal" Icon={BookOpen} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/screener" label="Screener" Icon={Search} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/chat" label="Research AI" Icon={MessageSquare} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/profile" label="Investor Profile" Icon={User} pathname={pathname} onClick={() => setMobileOpen(false)} />

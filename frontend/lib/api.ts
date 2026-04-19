@@ -29,6 +29,27 @@ export interface Thesis {
   sort_order: number;
   created_at: string;
   last_confirmed: string | null;
+  closed_at: string | null;
+  outcome: ThesisOutcome | null;
+  lessons: string | null;
+}
+
+export type ThesisOutcome = "played_out" | "partial" | "failed" | "invalidated";
+
+export interface ClosedThesisEntry {
+  thesis_id: number;
+  ticker: string;
+  stock_name: string | null;
+  category: string;
+  statement: string;
+  outcome: ThesisOutcome;
+  lessons: string | null;
+  closed_at: string;
+  created_at: string;
+  duration_days: number;
+  importance: "standard" | "important" | "critical";
+  frozen: boolean;
+  conviction: "liked" | "disliked" | null;
 }
 
 export interface CompanyInfo {
@@ -215,8 +236,54 @@ export const reorderTheses = (
     body: JSON.stringify(order),
   });
 
-export const getTheses = (ticker: string, portfolioId?: number | null): Promise<Thesis[]> =>
-  apiFetch(`/stocks/${ticker}/theses${joinParams(pq(portfolioId))}`);
+export const getTheses = (
+  ticker: string,
+  portfolioId?: number | null,
+  includeClosed: boolean = false,
+): Promise<Thesis[]> => {
+  const extra = includeClosed ? ["include_closed=true"] : [];
+  return apiFetch(`/stocks/${ticker}/theses${joinParams(pq(portfolioId), ...extra)}`);
+};
+
+export const closeThesis = (
+  ticker: string,
+  thesisId: number,
+  outcome: ThesisOutcome,
+  lessons: string,
+  portfolioId?: number | null,
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}/close${joinParams(pq(portfolioId))}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ outcome, lessons }),
+  });
+
+export const reopenThesis = (
+  ticker: string,
+  thesisId: number,
+  portfolioId?: number | null,
+): Promise<Thesis> =>
+  apiFetch(`/stocks/${ticker}/theses/${thesisId}/reopen${joinParams(pq(portfolioId))}`, {
+    method: "POST",
+  });
+
+export interface AuditLogFilter {
+  outcome?: ThesisOutcome;
+  ticker?: string;
+  q?: string;
+  portfolioId?: number | null;
+  limit?: number;
+}
+
+export const getAuditLog = (filter: AuditLogFilter = {}): Promise<ClosedThesisEntry[]> => {
+  const parts: string[] = [];
+  if (filter.outcome) parts.push(`outcome=${encodeURIComponent(filter.outcome)}`);
+  if (filter.ticker) parts.push(`ticker=${encodeURIComponent(filter.ticker)}`);
+  if (filter.q) parts.push(`q=${encodeURIComponent(filter.q)}`);
+  if (filter.portfolioId != null) parts.push(`portfolio_id=${filter.portfolioId}`);
+  if (filter.limit) parts.push(`limit=${filter.limit}`);
+  return apiFetch(`/audit-log${joinParams(...parts)}`);
+};
 
 export const generateThesis = (ticker: string, portfolioId?: number | null): Promise<Thesis[]> =>
   apiFetch(`/stocks/${ticker}/generate-thesis${joinParams(pq(portfolioId))}`, { method: "POST" });
