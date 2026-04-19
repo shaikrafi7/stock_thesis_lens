@@ -41,18 +41,34 @@ def test_quiz_round_returns_mixed_questions(client):
         assert 0 <= q["correct_index"] < len(q["choices"])
 
 
-def test_quiz_round_does_not_leak_tickers_in_stems_or_choices(client):
+def test_quiz_round_does_not_leak_tickers_or_names_in_stems_or_choices(client):
     _seed_stocks_with_theses(client, n_stocks=3, points_per_stock=3)
     r = client.get("/portfolio/quiz/round?size=10")
     assert r.status_code == 200
     tickers = ["TIC0", "TIC1", "TIC2"]
+    names = ["Company TIC0", "Company TIC1", "Company TIC2"]
     for q in r.json()["questions"]:
         for t in tickers:
             assert t not in q["stem"], f"ticker {t} leaked in stem: {q['stem']}"
             for choice in q["choices"]:
                 assert t not in choice, f"ticker {t} leaked in choice: {choice}"
-        # Reveal is allowed to contain the ticker
+        for n in names:
+            assert n not in q["stem"], f"name {n} leaked in stem: {q['stem']}"
+            for choice in q["choices"]:
+                assert n not in choice, f"name {n} leaked in choice: {choice}"
+        # Reveal is allowed to contain the ticker + name (shown after answer)
         assert q["reveal"]
+
+
+def test_quiz_thesis_to_stock_uses_anonymous_holding_labels(client):
+    _seed_stocks_with_theses(client, n_stocks=4, points_per_stock=3)
+    r = client.get("/portfolio/quiz/round?size=10")
+    assert r.status_code == 200
+    t2s_questions = [q for q in r.json()["questions"] if q["type"] == "thesis_to_stock"]
+    assert t2s_questions, "expected at least one thesis_to_stock question"
+    for q in t2s_questions:
+        for choice in q["choices"]:
+            assert choice.startswith("Holding "), f"choice should be anonymized: {choice}"
 
 
 def test_quiz_round_rejects_insufficient_data(client):

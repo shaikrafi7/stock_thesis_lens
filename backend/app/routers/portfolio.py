@@ -871,16 +871,20 @@ def portfolio_quiz_round(
         if len(others) < 1:
             return None
         wrong_sample = random.sample(others, min(3, len(others)))
-        correct_label = _anon_stock_label(stock)
-        options = [_anon_stock_label(s) for s in wrong_sample] + [correct_label]
-        random.shuffle(options)
+        picks = wrong_sample + [stock]
+        random.shuffle(picks)
+        # Labels are purely anonymous within the round — ticker/name never appear
+        # in stems or options. Reveal text below still discloses the correct ticker.
+        letters = ["A", "B", "C", "D"][: len(picks)]
+        options = [f"Holding {letters[i]}" for i in range(len(picks))]
+        correct_index = picks.index(stock)
         return QuizRoundQuestion(
             id=f"t2s-{thesis.id}",
             type="thesis_to_stock",
             stem=f"Which holding is this thesis point from?\n\n\u201c{thesis.statement}\u201d",
             choices=options,
-            correct_index=options.index(correct_label),
-            reveal=f"From {stock.ticker} ({stock.name}).",
+            correct_index=correct_index,
+            reveal=f"Holding {letters[correct_index]} is {stock.ticker} ({stock.name}).",
         )
 
     def build_point_to_category(thesis: Thesis) -> QuizRoundQuestion:
@@ -981,23 +985,6 @@ def portfolio_quiz_round(
 
     random.shuffle(questions)
     return QuizRound(questions=questions[:size])
-
-
-def _anon_stock_label(stock: Stock) -> str:
-    """Label for MC options that avoids leaking the ticker symbol."""
-    import re
-    name = (stock.name or "").strip()
-    ticker = (stock.ticker or "").strip()
-    if name and ticker:
-        # Remove any occurrence of the ticker from the display name so it
-        # doesn't give the quiz away (e.g. "Apple Inc. (AAPL)" -> "Apple Inc.").
-        cleaned = re.sub(rf"\s*[\(\[]?\b{re.escape(ticker)}\b[\)\]]?\s*", " ", name).strip(" -·,")
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        if cleaned:
-            return cleaned
-    if name:
-        return name
-    return f"Holding {stock.ticker[0] if stock.ticker else '?'}"
 
 
 class ThesisOverviewItem(BaseModel):
