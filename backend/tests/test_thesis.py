@@ -61,6 +61,44 @@ def test_generate_thesis_preserves_selections_on_regenerate(client):
     assert r2.json()[0]["selected"] is True
 
 
+def test_confirm_preview_preserves_liked_and_disliked_points(client):
+    """Regenerate via confirm-preview must keep conviction-bearing points (liked/disliked),
+    not just frozen/manual ones."""
+    _add_stock(client)
+    with patch("app.routers.thesis.generate_thesis") as mock_gen:
+        from app.agents.thesis_generator import GeneratedThesis
+        mock_gen.return_value = [
+            GeneratedThesis(category="competitive_moat", statement="Ecosystem moat."),
+            GeneratedThesis(category="risks", statement="Revenue concentration."),
+        ]
+        r = client.post("/stocks/AAPL/generate-thesis")
+    assert r.status_code == 200
+    liked_id = r.json()[0]["id"]
+    disliked_id = r.json()[1]["id"]
+
+    # User expresses conviction
+    client.patch(f"/stocks/AAPL/theses/{liked_id}", json={"conviction": "liked"})
+    client.patch(f"/stocks/AAPL/theses/{disliked_id}", json={"conviction": "disliked"})
+
+    # Confirm a brand-new preview set (simulating regenerate) — no overlap
+    new_points = [
+        {"category": "growth_trajectory", "statement": "New R&D engine kicks in.",
+         "importance": "primary", "weight": 20},
+    ]
+    with patch("app.routers.thesis.run_evaluation_for_stock") as mock_eval:
+        mock_eval.return_value = None
+        r2 = client.post("/stocks/AAPL/confirm-preview", json={"points": new_points})
+    assert r2.status_code == 200, r2.text
+
+    theses = r2.json()["theses"]
+    statements = {t["statement"] for t in theses}
+    # Liked + disliked survive the regenerate
+    assert "Ecosystem moat." in statements
+    assert "Revenue concentration." in statements
+    # New point also saved
+    assert "New R&D engine kicks in." in statements
+
+
 def test_get_theses(client):
     _add_stock(client)
     with patch("app.routers.thesis.generate_thesis") as mock_gen:

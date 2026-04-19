@@ -239,6 +239,9 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       const preview = await previewThesis(ticker, pid, maxGroups, maxPerGroup);
       setPreviewPoints(preview);
       setRejectedIndexes(new Set());
+      if (preview.length === 0) {
+        setError("No new points to draft — your existing thesis already covers the categories we'd propose. Widen the limits in Settings (max groups / max per group), or add points manually below.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally { setGenerating(false); }
@@ -491,7 +494,26 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       )}
 
       {/* Preview modal */}
-      {previewPoints && (
+      {previewPoints && previewPoints.length === 0 && (
+        <div className="border border-amber-200 dark:border-amber-800 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 p-5 flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">No new points to draft</h3>
+          <p className="text-xs text-gray-600 dark:text-zinc-300 leading-snug">
+            Your existing thesis already covers the categories we&apos;d propose. Your preserved points (locked, liked, disliked, manual) stay as-is.
+          </p>
+          <ul className="text-[11px] text-gray-500 dark:text-zinc-400 list-disc pl-5 space-y-0.5">
+            <li>Widen <strong>max groups</strong> or <strong>max per group</strong> in Settings to explore new angles.</li>
+            <li>Unfreeze or remove a stale point, then regenerate.</li>
+            <li>Add a manual point below.</li>
+          </ul>
+          <div>
+            <button onClick={() => { setPreviewPoints(null); setError(""); }}
+              className="px-3 py-1.5 text-xs bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+      {previewPoints && previewPoints.length > 0 && (
         <div className="border border-blue-200 dark:border-blue-800 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Review Generated Points</h3>
@@ -550,12 +572,12 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
       <div className="flex gap-3 items-center flex-wrap">
         <div className="flex items-center gap-1">
           <button onClick={handleGenerate} disabled={generating || !!previewPoints}
-            title="Creates fresh AI-suggested starting points. Your locked (frozen) and manual points are preserved."
+            title="Creates fresh AI-suggested starting points. Your locked, liked, disliked, and manual points are preserved."
             className="flex items-center gap-1.5 px-4 py-2 text-sm bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:opacity-50 text-gray-700 dark:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors">
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             {generating ? "Generating…" : theses.length ? "Regenerate Thesis" : "Generate Thesis"}
           </button>
-          <InfoPop text="Creates fresh AI-suggested starting points. Your locked (frozen) and manual points are preserved." />
+          <InfoPop text="Creates fresh AI-suggested starting points. Your locked, liked, disliked, and manual points are preserved." />
         </div>
         <div className="flex items-center gap-1">
           <button onClick={handleEvaluate} disabled={evaluating || selectedCount < 3}

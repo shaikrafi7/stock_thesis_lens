@@ -50,9 +50,15 @@ def confirm_preview(ticker: str, payload: ConfirmPreviewRequest, portfolio_id: i
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
-    preserved = [t for t in existing if t.frozen or getattr(t, "source", "ai") == "manual"]
+    preserved = [
+        t for t in existing
+        if t.frozen
+        or t.conviction in ("liked", "disliked")
+        or getattr(t, "source", "ai") == "manual"
+    ]
+    preserved_ids = {t.id for t in preserved}
     for t in existing:
-        if not t.frozen and getattr(t, "source", "ai") != "manual":
+        if t.id not in preserved_ids:
             db.delete(t)
     db.flush()
 
@@ -114,10 +120,16 @@ def generate_and_evaluate(ticker: str, portfolio_id: int | None = Query(None), d
     stock = get_user_stock(ticker, current_user, db, portfolio_id)
 
     existing = db.query(Thesis).filter(Thesis.stock_id == stock.id).all()
-    preserved_points = [t for t in existing if t.frozen or getattr(t, "source", "ai") == "manual"]
+    preserved_points = [
+        t for t in existing
+        if t.frozen
+        or t.conviction in ("liked", "disliked")
+        or getattr(t, "source", "ai") == "manual"
+    ]
+    preserved_ids = {t.id for t in preserved_points}
 
     for t in existing:
-        if not t.frozen and getattr(t, "source", "ai") != "manual":
+        if t.id not in preserved_ids:
             db.delete(t)
     db.flush()
 
