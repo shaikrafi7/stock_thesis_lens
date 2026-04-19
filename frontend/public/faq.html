@@ -232,7 +232,7 @@
                         <circle cx="20" cy="8" r="2.8" fill="#6366f1"/>
                     </svg>
                 </div>
-                <h1 class="header-title">Thesis<strong>Arc</strong> · FAQ</h1>
+                <h1 class="header-title">St<strong>ARC</strong> · FAQ</h1>
             </div>
             <div class="header-right">
                 <p class="header-subtitle">Answers to common questions</p>
@@ -311,6 +311,22 @@
 
                 <div class="faq-item">
                     <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>How does the score actually work?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            The engine is fully deterministic Python &mdash; no LLM decides your score. Every stock starts at a base of <strong>50</strong> (neutral) and is pushed up by confirmed signals and down by flagged signals. Category weights (moat, growth, valuation, etc.), importance (standard / important / critical), and your conviction signals (like / dislike / lock) multiply each point&rsquo;s contribution. The final number is clamped to 0&ndash;100. Old signals decay in weight so a 60-day-old news item counts less than this week&rsquo;s. Full math, worked examples, and edge cases: <a href="/scoring" style="color:#6366f1;font-weight:600;">Scoring page</a>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
                         <span>How often should I run an evaluation?</span>
                         <div class="chevron">
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
@@ -347,6 +363,21 @@
         <section class="faq-section">
             <h2 class="faq-section-title">Features</h2>
             <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>What happens when I close a thesis?</span>
+                        <div class="chevron">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 8l4 4 4-4"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-content">
+                            Closing is how you lock in what a thesis taught you. From the Thesis Manager, hover any active point and click the archive icon. You pick one of four outcomes &mdash; <strong>Played out</strong> (your case ran its course), <strong>Partial</strong> (some of it was right), <strong>Broke</strong> (the thesis failed on its own merits), or <strong>Invalidated</strong> (the world changed in a way that made the thesis irrelevant) &mdash; and write a short lessons note (10+ chars). The point is removed from active scoring and lands in the <strong>Decision Journal</strong>, a cross-stock record of every closed thesis with outcome + lessons. The journal is where you see your patterns: which category you misjudge most, how long conviction tends to last, what you keep getting wrong. You can reopen a prematurely-closed thesis any time &mdash; it re-enters scoring and the outcome clears.
+                        </div>
+                    </div>
+                </div>
                 <div class="faq-item">
                     <button class="faq-question" onclick="toggleFaq(this)">
                         <span>What's the difference between Liked, Disliked, and Locked thesis points?</span>

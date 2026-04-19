@@ -301,7 +301,7 @@
           <path d="M4 34 Q20 6 36 34" stroke="#6366f1" stroke-width="2.8" stroke-linecap="round" fill="none"/>
           <circle cx="20" cy="8" r="2.8" fill="#6366f1"/>
         </svg>
-        <span class="brand-text">Thesis<em>Arc</em></span>
+        <span class="brand-text">St<em>ARC</em></span>
       </a>
       <span style="color:#d1d5db;font-size:18px;margin:0 4px;">·</span>
       <span style="font-size:15px;font-weight:600;color:#374151;">User Guide</span>
@@ -746,6 +746,31 @@
         <strong>Smart regeneration:</strong> Your manually-added points are preserved. Only AI-drafted, unfrozen points are replaced. Frozen core convictions are always kept.
       </div>
 
+      <h3>Regenerate vs. Evaluate — What They Do (and Don&rsquo;t)</h3>
+      <p>These two buttons look similar but do very different things. Knowing which to use when saves you from accidentally wiping work.</p>
+      <table>
+        <thead>
+          <tr><th>Button</th><th>What it does</th><th>What it does <em>not</em> do</th><th>When to use</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Regenerate</strong></td>
+            <td>Calls the AI to draft <em>fresh starting points</em>. Replaces only unfrozen, AI-drafted points. Your manual points, edits, and frozen (locked) points stay untouched.</td>
+            <td>Does not change your score. Does not delete manual or frozen points. Does not touch points you locked.</td>
+            <td>When the AI&rsquo;s initial draft feels weak, or a major event reshapes the narrative (new CEO, merger, earnings surprise) and you want a fresh starting canvas — while keeping your core convictions.</td>
+          </tr>
+          <tr>
+            <td><strong>Evaluate</strong></td>
+            <td>Scores your <em>existing</em> selected points against the latest market signals. Updates the score, confirmed/flagged labels, and Score Delta.</td>
+            <td>Does not change your thesis points. Does not add or remove points. Does not touch your frozen or manual points.</td>
+            <td>Any time you want a fresh reading — after news drops, after earnings, or just to see if anything moved today.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Rule of thumb:</strong> <em>Evaluate</em> to update the score. <em>Regenerate</em> to rewrite unfrozen AI-drafted points. If unsure, always prefer <em>Evaluate</em> — it&rsquo;s non-destructive.
+      </div>
+
       <h3>Thesis Point Structure</h3>
       <p>Each point displays:</p>
       <ul>
@@ -990,6 +1015,17 @@
 
       <h3>Score History</h3>
       <p>Each evaluation is timestamped and stored. The Score History chart on the stock detail page shows the trend over time. You can see whether your thesis is strengthening, weakening, or stable across multiple evaluations.</p>
+
+      <h3>Deterministic Engine — The Full Picture</h3>
+      <p>The simplified walkthrough above captures the intent. The engine itself is <strong>fully deterministic Python</strong> — no LLM decides your score. Here is what actually runs under the hood:</p>
+      <ul>
+        <li><strong>Base 50, clamped to 0–100.</strong> Every stock starts at 50 (neutral) and moves up on confirmed signals, down on flagged signals. A score of exactly 50 means no evidence either way.</li>
+        <li><strong>Bidirectional weighting.</strong> Each confirmed point pushes the score up; each flagged point pushes it down. Magnitude depends on category weight × importance × conviction multipliers.</li>
+        <li><strong>Regime-aware categories.</strong> Category weights shift with your investor profile (Growth, Value, Income, Defensive). A growth investor weights "Growth Trajectory" heaviest; a value investor weights "Valuation" and "Financial Health" heaviest.</li>
+        <li><strong>Sector presets.</strong> SaaS defaults differ from consumer defaults differ from banks. STARC picks sensible starting weights based on sector.</li>
+        <li><strong>Signal decay.</strong> Old signals lose weight over time; a news item from 60 days ago counts less than one from this week.</li>
+      </ul>
+      <p>Full math, worked examples, and edge-case behavior live on the dedicated <a href="/scoring" style="color:#6366f1;font-weight:600;">Scoring page</a>.</p>
     </div>
 
     <!-- 10. Dark & Light Mode -->
