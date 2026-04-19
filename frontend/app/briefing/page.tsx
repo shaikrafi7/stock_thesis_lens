@@ -143,7 +143,7 @@ export default function BriefingPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-semibold text-white">Morning Briefing</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">Daily AI-generated news digest for your portfolio</p>
+          <p className="text-xs text-zinc-500 mt-0.5">Daily AI-drafted news digest for your portfolio</p>
         </div>
         <button
           onClick={handleRefresh}

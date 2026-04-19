@@ -119,7 +119,7 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">Max groups</p>
                   <span className="text-sm font-mono text-indigo-600 dark:text-indigo-400">{maxGroups}</span>
                 </div>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">How many thesis categories AI generates (1–6)</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500">How many thesis categories AI drafts starting points for (1–6)</p>
               </div>
             </div>
             <input
