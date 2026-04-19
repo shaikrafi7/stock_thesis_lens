@@ -154,7 +154,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const sidebar = (
     <aside className="w-52 shrink-0 flex flex-col h-full">
-      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto scrollbar-hide">
         {/* Main nav */}
         <NavLink href="/" label="Dashboard" Icon={Home} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/briefing" label="Briefing" Icon={Newspaper} pathname={pathname} onClick={() => setMobileOpen(false)} />

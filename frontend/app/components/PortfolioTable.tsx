@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import DeleteStockButton from "./DeleteStockButton";
 import StatusBadge from "./StatusBadge";
@@ -48,10 +48,21 @@ interface Props {
   onStockUpdated?: (updated: Stock) => void;
 }
 
+type WatchlistToast = {
+  ticker: string;
+  direction: "to_watchlist" | "to_portfolio";
+};
+
 export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHistories, priceSparklines, priceSnapshots, onStockUpdated }: Props) {
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [togglingWatchlist, setTogglingWatchlist] = useState<string | null>(null);
+  const [toast, setToast] = useState<WatchlistToast | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+  }, []);
 
   const allRows = useMemo(() => stocks.map((stock, i) => ({ stock, evaluation: evaluations[i] })), [stocks, evaluations]);
 
@@ -73,13 +84,30 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
 
   const watchlistRows = useMemo(() => allRows.filter((r) => r.stock.watchlist === "true"), [allRows]);
 
-  async function handleToggleWatchlist(ticker: string) {
+  async function handleToggleWatchlist(ticker: string, showToast = true) {
     setTogglingWatchlist(ticker);
+    const wasOnWatchlist = stocks.find((s) => s.ticker === ticker)?.watchlist === "true";
     try {
       const updated = await toggleWatchlist(ticker);
       onStockUpdated?.(updated);
+      if (showToast) {
+        if (toastTimer.current) window.clearTimeout(toastTimer.current);
+        setToast({
+          ticker,
+          direction: wasOnWatchlist ? "to_portfolio" : "to_watchlist",
+        });
+        toastTimer.current = window.setTimeout(() => setToast(null), 5000);
+      }
     } catch { /* ignore */ }
     finally { setTogglingWatchlist(null); }
+  }
+
+  async function undoToast() {
+    if (!toast) return;
+    const t = toast.ticker;
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToast(null);
+    await handleToggleWatchlist(t, false);
   }
 
   function toggleSort(field: SortField) {
@@ -206,7 +234,9 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
                 <button
                   onClick={(e) => { e.preventDefault(); handleToggleWatchlist(stock.ticker); }}
                   disabled={togglingWatchlist === stock.ticker}
-                  title={stock.watchlist === "true" ? "Remove from watchlist" : "Move to watchlist"}
+                  title={stock.watchlist === "true"
+                    ? "Remove from watchlist\nWatchlist stocks don't count toward portfolio score."
+                    : "Move to watchlist\nWatchlist stocks don't count toward portfolio score."}
                   className="p-1 text-gray-300 dark:text-zinc-700 hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
                 >
                   {stock.watchlist === "true"
@@ -223,7 +253,9 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
       {/* Watchlist section */}
       {watchlistRows.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold mb-3">Watchlist</h3>
+          <h3 className="text-xs uppercase tracking-widest text-gray-400 dark:text-zinc-500 font-semibold mb-3">
+            Watchlist <span className="normal-case tracking-normal text-gray-400 dark:text-zinc-600 font-normal">· researching, not held</span>
+          </h3>
           <div className="flex flex-col gap-2">
             {watchlistRows.map(({ stock }) => (
               <div key={stock.ticker}
@@ -250,6 +282,25 @@ export default function PortfolioTable({ stocks, evaluations, trendMap, scoreHis
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 dark:bg-zinc-800 text-white shadow-xl rounded-full px-4 py-2.5 text-sm flex items-center gap-3 border border-gray-700 dark:border-zinc-700"
+        >
+          <span>
+            <span className="font-mono font-semibold">{toast.ticker}</span>{" "}
+            {toast.direction === "to_watchlist" ? "moved to Watchlist" : "moved to Portfolio"}
+          </span>
+          <button
+            onClick={undoToast}
+            className="text-accent hover:text-white font-semibold"
+            type="button"
+          >
+            Undo
+          </button>
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ import ScoreDeltaPanel from "@/app/components/ScoreDelta";
 import BacktestPanel from "@/app/components/BacktestPanel";
 import StockNews from "@/app/components/StockNews";
 import { usePortfolio } from "@/app/context/PortfolioContext";
-import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell, Lightbulb } from "lucide-react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Loader2, Bell, Lightbulb, Eye } from "lucide-react";
 
 interface Props {
   params: Promise<{ ticker: string }>;
@@ -78,7 +78,7 @@ export default function StockPage({ params }: Props) {
   return (
     <div className="px-6 pt-4 pb-24 min-h-full">
       {/* Stock header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-gray-200 dark:border-zinc-700">
           {stock.logo_url
             ? <img src={stock.logo_url} alt={stock.ticker} className="w-full h-full object-contain" />
@@ -88,6 +88,15 @@ export default function StockPage({ params }: Props) {
           <h1 className="text-xl font-mono font-bold text-gray-900 dark:text-white leading-none">{stock.ticker}</h1>
           <p className="text-gray-400 dark:text-zinc-400 text-xs">{stock.name}</p>
         </div>
+        {stock.watchlist === "true" && (
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+            title="Watchlist stocks don't count toward your portfolio score"
+          >
+            <Eye className="w-3 h-3" />
+            Watchlist · not counted toward portfolio score
+          </span>
+        )}
       </div>
 
       {/* Quarterly review prompt */}

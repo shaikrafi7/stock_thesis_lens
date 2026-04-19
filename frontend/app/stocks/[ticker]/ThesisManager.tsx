@@ -96,7 +96,15 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
   const [editDraft, setEditDraft] = useState("");
   // Only confirm for: delete-frozen, edit-frozen, unfreeze
   const [confirmAction, setConfirmAction] = useState<{ type: "edit" | "delete" | "unfreeze"; thesis: Thesis } | null>(null);
-  const [evalCollapsed, setEvalCollapsed] = useState(false);
+  const [evalCollapsed, setEvalCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const stored = window.localStorage.getItem(`starc.evalOpen.${ticker}`);
+    return stored === null ? true : stored !== "1";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(`starc.evalOpen.${ticker}`, evalCollapsed ? "0" : "1");
+  }, [evalCollapsed, ticker]);
   const [addForCategory, setAddForCategory] = useState<string | null>(null);
   const [addStatement, setAddStatement] = useState("");
   const [addingManual, setAddingManual] = useState(false);
@@ -535,10 +543,22 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
         <div className="border border-gray-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800/40 overflow-hidden">
           <button
             onClick={() => setEvalCollapsed((c) => !c)}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-zinc-700/30 transition-colors"
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-zinc-700/30 transition-colors text-left"
           >
             <span className="text-2xl font-mono font-bold text-gray-900 dark:text-white">{evaluation.score}/100</span>
             <StatusBadge status={evaluation.status} />
+            {evalCollapsed && (evaluation.confirmed_points.length + evaluation.broken_points.length > 0) && (
+              <span className="text-xs text-gray-500 dark:text-zinc-400 hidden sm:inline">
+                {evaluation.confirmed_points.length > 0 && (
+                  <span className="text-emerald-600 dark:text-emerald-400">{evaluation.confirmed_points.length} confirmed</span>
+                )}
+                {evaluation.confirmed_points.length > 0 && evaluation.broken_points.length > 0 && <span>, </span>}
+                {evaluation.broken_points.length > 0 && (
+                  <span className="text-rose-600 dark:text-rose-400">{evaluation.broken_points.length} flagged</span>
+                )}
+                <span className="text-gray-400 dark:text-zinc-500"> — expand to review</span>
+              </span>
+            )}
             <span className="text-gray-400 dark:text-zinc-600 text-xs ml-auto mr-2">
               {new Date(evaluation.timestamp).toLocaleString()}
             </span>

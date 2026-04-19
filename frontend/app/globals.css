@@ -137,3 +137,12 @@ button:active:not(:disabled) {
   border-color: #7c3aed !important;
   box-shadow: 0 0 0 1px #7c3aed, 0 4px 16px rgba(109, 40, 217, 0.2);
 }
+
+/* Hide scrollbar visually but keep scrolling */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
