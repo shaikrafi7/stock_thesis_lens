@@ -231,7 +231,7 @@ def _is_duplicate(stmt: str, existing: list[str], threshold: float = 0.6) -> boo
     return False
 
 
-def _parse_bullets(data: dict, existing_statements: list[str] | None = None, max_groups: int = 5, max_per_group: int = 2) -> list[GeneratedThesis]:
+def _parse_bullets(data: dict, existing_statements: list[str] | None = None, max_groups: int = 6, max_per_group: int = 2) -> list[GeneratedThesis]:
     results = []
     seen_statements: list[str] = list(existing_statements or [])
     groups_used = 0
@@ -272,7 +272,7 @@ def _parse_bullets(data: dict, existing_statements: list[str] | None = None, max
     return results
 
 
-def generate_thesis(ticker: str, company_name: str, investor_profile: dict | None = None, existing_statements: list[str] | None = None, max_groups: int = 5, max_per_group: int = 2) -> list[GeneratedThesis]:
+def generate_thesis(ticker: str, company_name: str, investor_profile: dict | None = None, existing_statements: list[str] | None = None, max_groups: int = 6, max_per_group: int = 2) -> list[GeneratedThesis]:
     """Generate structured thesis bullets for a stock.
 
     Returns placeholder bullets if the OpenAI call fails.

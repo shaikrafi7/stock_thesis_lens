@@ -32,8 +32,18 @@ def test_thesis_generator_truncates_to_5_per_category():
 
 
 def test_thesis_generator_returns_correct_categories():
+    """Each category gets a statement containing at least one quality-gate keyword so we
+    test routing, not content quality."""
     from app.agents.thesis_generator import generate_thesis, CATEGORIES
-    data = {cat: [{"statement": f"{cat} observation.", "importance": "standard"}] for cat in CATEGORIES}
+    seed = {
+        "competitive_moat": "Durable network-effect moat with strong switching costs.",
+        "growth_trajectory": "Revenue growth has compounded in expanding end-markets.",
+        "valuation": "Trades at a discount P/E multiple versus peers today.",
+        "financial_health": "Generates strong free cash flow with conservative debt levels.",
+        "ownership_conviction": "Heavy insider ownership aligns with institutional conviction.",
+        "risks": "Regulatory risk around antitrust and execution risk on new launches.",
+    }
+    data = {cat: [{"statement": seed[cat], "importance": "standard"}] for cat in CATEGORIES}
     with patch("app.agents.thesis_generator._call_openai", return_value=data):
         results = generate_thesis("AAPL", "Apple")
     cats = {r.category for r in results}

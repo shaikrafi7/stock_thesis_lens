@@ -38,7 +38,7 @@ def preview_stock_thesis(ticker: str, portfolio_id: int | None = Query(None), ma
         stock.ticker, stock.name,
         investor_profile=get_investor_profile(current_user),
         existing_statements=existing_stmts,
-        max_groups=max_groups or 5,
+        max_groups=max_groups or 6,
         max_per_group=max_per_group or 2,
     )
     return [ThesisPreview(category=g.category, statement=g.statement, importance=g.importance, weight=g.weight) for g in generated]
