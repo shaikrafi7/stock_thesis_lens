@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from datetime import date
@@ -245,6 +246,32 @@ def _briefing_items_to_schema(items_data: list[dict]) -> list[BriefingItemSchema
     return result
 
 
+def _compute_thesis_state_hash(db: Session, portfolio_id: int) -> str:
+    """Stable hash over the thesis state of every stock in the portfolio.
+
+    Cache is valid while this hash is stable; any thesis add/edit/close/freeze/
+    conviction flip changes the hash and forces regeneration.
+    """
+    from app.models.thesis import Thesis
+    rows = (
+        db.query(Thesis.stock_id, Thesis.id, Thesis.statement, Thesis.selected,
+                 Thesis.frozen, Thesis.conviction, Thesis.closed_at)
+        .join(Stock, Stock.id == Thesis.stock_id)
+        .filter(Stock.portfolio_id == portfolio_id)
+        .order_by(Thesis.stock_id, Thesis.id)
+        .all()
+    )
+    payload = [
+        (
+            int(r[0] or 0), int(r[1] or 0), (r[2] or "").strip(),
+            bool(r[3]), bool(r[4]), r[5] or "", str(r[6] or ""),
+        )
+        for r in rows
+    ]
+    blob = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
 async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: int) -> MorningBriefingResponse:
     today = date.today()
 
@@ -287,17 +314,20 @@ async def _generate_and_store_briefing(db: Session, user: User, portfolio_id: in
         }
         items_for_db.append(entry)
 
+    state_hash = _compute_thesis_state_hash(db, portfolio_id)
     existing = db.query(Briefing).filter(
         Briefing.date == today, Briefing.portfolio_id == portfolio_id
     ).first()
     if existing:
         existing.summary = briefing.summary
         existing.items = json.dumps(items_for_db)
+        existing.thesis_state_hash = state_hash
     else:
         db_briefing = Briefing(
             date=today,
             summary=briefing.summary,
             items=json.dumps(items_for_db),
+            thesis_state_hash=state_hash,
             user_id=user.id,
             portfolio_id=portfolio_id,
         )
@@ -320,12 +350,16 @@ async def morning_briefing(portfolio_id: int | None = Query(None), db: Session =
         Briefing.date == today, Briefing.portfolio_id == portfolio.id
     ).first()
     if existing:
-        items_data = json.loads(existing.items) if existing.items else []
-        return MorningBriefingResponse(
-            summary=existing.summary,
-            items=_briefing_items_to_schema(items_data),
-            date=str(existing.date),
-        )
+        current_hash = _compute_thesis_state_hash(db, portfolio.id)
+        if existing.thesis_state_hash and existing.thesis_state_hash == current_hash:
+            logger.info("briefing_cache: HIT portfolio=%s date=%s", portfolio.id, today)
+            items_data = json.loads(existing.items) if existing.items else []
+            return MorningBriefingResponse(
+                summary=existing.summary,
+                items=_briefing_items_to_schema(items_data),
+                date=str(existing.date),
+            )
+        logger.info("briefing_cache: MISS portfolio=%s date=%s (thesis state changed)", portfolio.id, today)
 
     return await _generate_and_store_briefing(db, current_user, portfolio.id)
 

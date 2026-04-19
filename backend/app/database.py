@@ -79,6 +79,9 @@ def _run_migrations():
         if "portfolio_id" not in briefing_columns:
             conn.execute(text("ALTER TABLE briefings ADD COLUMN portfolio_id INTEGER REFERENCES portfolios(id)"))
             conn.commit()
+        if "thesis_state_hash" not in briefing_columns:
+            conn.execute(text("ALTER TABLE briefings ADD COLUMN thesis_state_hash TEXT"))
+            conn.commit()
 
         # --- Chat messages columns ---
         result = conn.execute(text("PRAGMA table_info(chat_messages)"))

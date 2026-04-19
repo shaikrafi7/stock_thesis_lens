@@ -16,6 +16,7 @@ class Briefing(Base):
     date = Column(Date, nullable=False)
     summary = Column(Text, nullable=False)
     items = Column(Text, nullable=False)
+    thesis_state_hash = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     owner = relationship("User", back_populates="briefings")
