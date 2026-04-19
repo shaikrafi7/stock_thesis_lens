@@ -437,7 +437,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400" />
             <h4 className="text-red-700 dark:text-red-300 text-sm font-bold uppercase tracking-wide">
-              Core Conviction Under Pressure
+              Core Conviction Broken
             </h4>
           </div>
           {evaluation.frozen_breaks.map((fb, i) => (
