@@ -8,5 +8,6 @@ from .briefing import Briefing
 from .chat import ChatMessage
 from .investor_profile import InvestorProfile
 from .share_token import ShareToken
+from .sell_trigger import SellTrigger
 
-__all__ = ["User", "Portfolio", "Stock", "Thesis", "ThesisAudit", "Evaluation", "Briefing", "ChatMessage", "InvestorProfile", "ShareToken"]
+__all__ = ["User", "Portfolio", "Stock", "Thesis", "ThesisAudit", "Evaluation", "Briefing", "ChatMessage", "InvestorProfile", "ShareToken", "SellTrigger"]

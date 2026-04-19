@@ -15,6 +15,7 @@ import { usePortfolio } from "@/app/context/PortfolioContext";
 import StatusBadge from "@/app/components/StatusBadge";
 import ThesisTemplateSelector from "@/app/components/ThesisTemplateSelector";
 import ThesisAuditModal from "@/app/components/ThesisAuditModal";
+import SellTriggerList from "./SellTriggerList";
 import {
   Lock, Unlock, Pencil, X, AlertTriangle, Loader2, RefreshCw,
   Activity, Save, CircleDot, ChevronUp, ChevronDown, Plus,
@@ -825,7 +826,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                         </div>
                       </div>
                     ) : (
-                      <div key={t.id} id={`thesis-${t.id}`} className={`group flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                      <div key={t.id} id={`thesis-${t.id}`} className={`group flex flex-col px-3 py-2.5 rounded-lg transition-all ${
                         t.closed_at
                           ? "border border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/60 dark:bg-zinc-900/40 opacity-70"
                           : isFrozenBroken
@@ -844,6 +845,7 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                           ? "border-l-2 border-red-400 bg-red-50/60 dark:bg-red-950/10"
                           : "bg-white dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-700/50 hover:border-gray-200 dark:hover:border-zinc-600"
                       }`}>
+                        <div className="flex items-start gap-3">
                         {importanceIcon && (
                           <span title={importanceIcon.label} className="shrink-0 mt-0.5">
                             <importanceIcon.Icon className={importanceIcon.className} />
@@ -956,6 +958,8 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
                             )}
                           </div>
                         </div>
+                        </div>
+                        {!t.closed_at && <SellTriggerList thesisId={t.id} />}
                       </div>
                     );
                   })}

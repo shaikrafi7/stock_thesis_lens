@@ -2,21 +2,90 @@
 
 import json
 import logging
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.models.stock import Stock
 from app.models.thesis import Thesis
 from app.models.evaluation import Evaluation
+from app.models.sell_trigger import SellTrigger
+from app.models.thesis_audit import ThesisAudit
 from app.agents.signal_collector import collect_signals
 from app.agents.signal_interpreter import interpret_signals
 from app.agents.thesis_evaluator import evaluate_thesis
 from app.agents.explanation_agent import generate_explanation
 from app.agents.thesis_generator import generate_thesis
+from app.utils.market_snapshot import get_snapshot
 
 logger = logging.getLogger(__name__)
 
 MIN_SELECTED = 3
+
+
+_OP_FUNCS = {
+    "<": lambda a, b: a < b,
+    ">": lambda a, b: a > b,
+    "<=": lambda a, b: a <= b,
+    ">=": lambda a, b: a >= b,
+}
+
+
+def _resolve_metric_value(metric: str, stock: Stock, evaluation: Evaluation) -> float | None:
+    if metric == "score":
+        return float(evaluation.score) if evaluation and evaluation.score is not None else None
+    if metric in ("price", "change_pct"):
+        try:
+            snap = get_snapshot(stock.ticker)
+        except Exception:
+            return None
+        val = getattr(snap, metric, None)
+        return float(val) if val is not None else None
+    return None
+
+
+def _check_and_fire_triggers(stock: Stock, evaluation: Evaluation, db: Session) -> None:
+    """Compare every watching trigger for this stock against current values; fire when true."""
+    triggers = (
+        db.query(SellTrigger)
+        .filter(SellTrigger.stock_id == stock.id, SellTrigger.status == "watching")
+        .all()
+    )
+    if not triggers:
+        return
+
+    metric_cache: dict[str, float | None] = {}
+    now = datetime.utcnow()
+    for trig in triggers:
+        if trig.metric not in metric_cache:
+            metric_cache[trig.metric] = _resolve_metric_value(trig.metric, stock, evaluation)
+        value = metric_cache[trig.metric]
+        if value is None:
+            continue
+        op = _OP_FUNCS.get(trig.operator)
+        if op is None or not op(value, trig.threshold):
+            continue
+
+        trig.status = "triggered"
+        trig.triggered_at = now
+        trig.triggered_value = float(value)
+
+        thesis = db.query(Thesis).filter(Thesis.id == trig.thesis_id).first()
+        if thesis:
+            audit = ThesisAudit(
+                thesis_id=thesis.id,
+                stock_id=stock.id,
+                user_id=trig.user_id,
+                action="trigger_fired",
+                field_changed=trig.metric,
+                old_value=f"{trig.operator} {trig.threshold}",
+                new_value=f"{value}",
+                statement_snapshot=thesis.statement,
+                category=thesis.category,
+                note=trig.note,
+            )
+            db.add(audit)
+    db.commit()
 
 
 def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict | None = None) -> Evaluation | None:
@@ -60,7 +129,6 @@ def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict |
         explanation = generate_explanation(stock.ticker, result)
 
         # Update last_confirmed on confirmed thesis points
-        from datetime import datetime
         confirmed_ids = {bp["thesis_id"] for bp in result.confirmed_points if "thesis_id" in bp}
         if confirmed_ids:
             db.query(Thesis).filter(Thesis.id.in_(confirmed_ids)).update(
@@ -80,6 +148,13 @@ def run_evaluation_for_stock(stock: Stock, db: Session, investor_profile: dict |
         db.add(evaluation)
         db.commit()
         db.refresh(evaluation)
+
+        try:
+            _check_and_fire_triggers(stock, evaluation, db)
+        except Exception as trig_exc:
+            logger.warning("evaluation_service: trigger check failed for %s: %s", stock.ticker, trig_exc)
+            db.rollback()
+
         return evaluation
 
     except Exception as exc:

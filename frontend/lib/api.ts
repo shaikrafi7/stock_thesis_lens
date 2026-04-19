@@ -440,6 +440,49 @@ export interface MorningBriefingResponse {
   date?: string;
 }
 
+export interface SellTrigger {
+  id: number;
+  thesis_id: number;
+  stock_id: number;
+  metric: "price" | "change_pct" | "pe_ratio" | "score";
+  operator: "<" | ">" | "<=" | ">=";
+  threshold: number;
+  status: "watching" | "triggered" | "dismissed";
+  note: string | null;
+  triggered_at: string | null;
+  triggered_value: number | null;
+  created_at: string;
+}
+
+export const listTriggers = (thesisId: number): Promise<SellTrigger[]> =>
+  apiFetch(`/triggers?thesis_id=${thesisId}`);
+
+export const createTrigger = (payload: {
+  thesis_id: number;
+  metric: string;
+  operator: string;
+  threshold: number;
+  note?: string | null;
+}): Promise<SellTrigger> =>
+  apiFetch(`/triggers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const updateTrigger = (
+  triggerId: number,
+  payload: Partial<{ status: "watching" | "triggered" | "dismissed"; threshold: number; note: string | null }>,
+): Promise<SellTrigger> =>
+  apiFetch(`/triggers/${triggerId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const deleteTrigger = (triggerId: number): Promise<{ ok: boolean }> =>
+  apiFetch(`/triggers/${triggerId}`, { method: "DELETE" });
+
 export interface EvaluationSummary {
   id: number;
   score: number;
