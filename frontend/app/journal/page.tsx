@@ -108,6 +108,19 @@ export default function JournalPage() {
     return c;
   }, [entries]);
 
+  const stats = useMemo(() => {
+    if (entries.length === 0) return null;
+    const total = entries.length;
+    const durations = entries
+      .map((e) => e.duration_days)
+      .filter((d): d is number => typeof d === "number" && d >= 0);
+    const avgDuration =
+      durations.length > 0
+        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+        : null;
+    return { total, avgDuration };
+  }, [entries]);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <header className="mb-6">
@@ -120,6 +133,49 @@ export default function JournalPage() {
           it&apos;s to get better at knowing <em>when you&apos;re wrong</em>.
         </p>
       </header>
+
+      {stats && stats.total >= 3 && outcomeFilter === "all" && !debouncedSearch && (
+        <div className="mb-5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+          <div className="flex items-baseline justify-between mb-2.5">
+            <div className="text-[11px] uppercase tracking-widest text-gray-500 dark:text-zinc-400 font-semibold">
+              Outcome Distribution
+            </div>
+            <div className="text-[11px] text-gray-400 dark:text-zinc-500">
+              {stats.total} closed{stats.avgDuration != null ? ` · avg ${stats.avgDuration}d held` : ""}
+            </div>
+          </div>
+          <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800">
+            {(["played_out", "partial", "failed", "invalidated"] as const).map((o) => {
+              const n = counts[o];
+              if (n === 0) return null;
+              const pct = (n / stats.total) * 100;
+              return (
+                <div
+                  key={o}
+                  className={OUTCOME_META[o].dot}
+                  style={{ width: `${pct}%` }}
+                  title={`${OUTCOME_META[o].label}: ${n} (${pct.toFixed(0)}%)`}
+                />
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+            {(["played_out", "partial", "failed", "invalidated"] as const).map((o) => {
+              const n = counts[o];
+              if (n === 0) return null;
+              const pct = ((n / stats.total) * 100).toFixed(0);
+              return (
+                <div key={o} className="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-zinc-400">
+                  <span className={`w-1.5 h-1.5 rounded-full ${OUTCOME_META[o].dot}`} />
+                  <span>
+                    {OUTCOME_META[o].label} <span className="text-gray-400 dark:text-zinc-500">{pct}%</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center gap-1 flex-wrap">
