@@ -207,10 +207,10 @@ function DashboardInner() {
                   </button>
                   <button
                     onClick={() => setShowComparison(true)}
-                    title="Compare portfolios"
+                    title="Rank your portfolios by average thesis health and see which stocks differ."
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                     <GitCompare className="w-3.5 h-3.5" />
-                    Compare
+                    Compare Portfolios
                   </button>
                   <EvaluateAllButton portfolioId={activePortfolioId} />
                   <AddStockInline onAdded={loadData} portfolioId={activePortfolioId} />

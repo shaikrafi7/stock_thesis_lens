@@ -56,6 +56,28 @@ const OUTCOME_BADGE: Record<string, string> = {
   invalidated: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
 };
 
+function InfoPop({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="More info"
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="p-1 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <span className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 w-64 p-2.5 rounded-lg bg-gray-900 dark:bg-zinc-800 text-white text-[11px] leading-snug shadow-xl border border-gray-700 dark:border-zinc-700">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function groupByCategory(theses: Thesis[]): Record<string, Thesis[]> {
   const groups: Record<string, Thesis[]> = {};
   for (const t of theses) {
@@ -508,17 +530,26 @@ export default function ThesisManager({ ticker, initialTheses, initialEvaluation
 
       {/* Actions */}
       <div className="flex gap-3 items-center flex-wrap">
-        <button onClick={handleGenerate} disabled={generating || !!previewPoints}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:opacity-50 text-gray-700 dark:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors">
-          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {generating ? "Generating…" : theses.length ? "Regenerate Thesis" : "Generate Thesis"}
-        </button>
-        <button onClick={handleEvaluate} disabled={evaluating || selectedCount < 3}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-gray-100 dark:disabled:bg-zinc-800 disabled:text-gray-400 dark:disabled:text-zinc-600 text-white rounded-lg transition-colors"
-          title={selectedCount < 3 ? `Need at least 3 thesis points (${selectedCount} available)` : undefined}>
-          {evaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-          {evaluating ? "Evaluating…" : "Evaluate Thesis"}
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={handleGenerate} disabled={generating || !!previewPoints}
+            title="Creates fresh AI-suggested starting points. Your locked (frozen) and manual points are preserved."
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:opacity-50 text-gray-700 dark:text-zinc-200 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors">
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {generating ? "Generating…" : theses.length ? "Regenerate Thesis" : "Generate Thesis"}
+          </button>
+          <InfoPop text="Creates fresh AI-suggested starting points. Your locked (frozen) and manual points are preserved." />
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={handleEvaluate} disabled={evaluating || selectedCount < 3}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent hover:bg-accent-hover disabled:bg-gray-100 dark:disabled:bg-zinc-800 disabled:text-gray-400 dark:disabled:text-zinc-600 text-white rounded-lg transition-colors"
+            title={selectedCount < 3
+              ? `Need at least 3 thesis points (${selectedCount} available)`
+              : "Scores your existing selected thesis points against the latest signals. Doesn't change your thesis points."}>
+            {evaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+            {evaluating ? "Evaluating…" : "Evaluate Thesis"}
+          </button>
+          <InfoPop text="Scores your existing selected thesis points against the latest signals. Doesn't change your thesis points." />
+        </div>
         {theses.length > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={handleShare}

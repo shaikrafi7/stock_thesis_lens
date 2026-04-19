@@ -51,7 +51,10 @@ export default function PortfolioComparison({ onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[80vh] overflow-auto shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Portfolio Comparison</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Portfolio Comparison</h2>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">This compares portfolios you&apos;ve created, not individual stocks.</p>
+          </div>
           <button onClick={onClose} className="p-1 text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors">
             <X className="w-4 h-4" />
           </button>
@@ -62,8 +65,11 @@ export default function PortfolioComparison({ onClose }: Props) {
             <Loader2 className="w-5 h-5 animate-spin text-accent" />
           </div>
         ) : snapshots.length < 2 ? (
-          <div className="px-6 py-12 text-center text-gray-400 dark:text-zinc-500 text-sm">
-            You need at least 2 portfolios to compare. Create another portfolio from the header menu.
+          <div className="px-6 py-12 text-center text-gray-500 dark:text-zinc-400 text-sm flex flex-col items-center gap-3">
+            <p>You need at least 2 portfolios to compare.</p>
+            <p className="text-xs text-gray-400 dark:text-zinc-500 max-w-xs">
+              Open the portfolio picker in the sidebar (top-left) and choose <strong>+ New portfolio</strong> to add one.
+            </p>
           </div>
         ) : (
           <div className="px-6 py-4">
