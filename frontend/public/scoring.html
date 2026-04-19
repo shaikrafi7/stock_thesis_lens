@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STARC · Scoring Algorithm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #dbeafe 0%, #c4b5fd 50%, #d8b4fe 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      color: #1f2937;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 880px; margin: 0 auto; }
+    header {
+      text-align: center;
+      background: white;
+      border-radius: 20px;
+      padding: 3rem 2rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+    }
+    .logo-row {
+      display: inline-flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;
+    }
+    .logo-arc { width: 32px; height: 32px; }
+    .wordmark {
+      font-size: 1.5rem; font-weight: 600; color: #1f2937; letter-spacing: -0.01em;
+    }
+    .wordmark .arc {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-style: italic; color: #6366f1; font-weight: 400;
+    }
+    .wordmark .sub {
+      font-size: 0.875rem; color: #6b7280; font-weight: 400; margin-left: 0.5rem;
+    }
+    h1 {
+      font-family: 'Merriweather', serif;
+      font-size: 2.5rem; font-weight: 700; line-height: 1.15; margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+      background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .lede { color: #4b5563; font-size: 1.05rem; line-height: 1.6; max-width: 640px; margin: 0 auto; }
+    section {
+      background: white;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.06);
+    }
+    h2 {
+      font-family: 'Merriweather', serif;
+      font-size: 1.5rem; margin-bottom: 1rem; color: #1f2937;
+      display: flex; align-items: center; gap: 0.65rem;
+    }
+    h2 .num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; border-radius: 8px;
+      background: linear-gradient(135deg,#4f46e5,#8b5cf6); color: white;
+      font-size: 0.9rem; font-family: 'Inter', sans-serif; font-weight: 700;
+    }
+    h3 {
+      font-size: 1.05rem; font-weight: 600; color: #1f2937;
+      margin-top: 1.5rem; margin-bottom: 0.5rem;
+    }
+    p { color: #4b5563; line-height: 1.65; margin-bottom: 1rem; }
+    ul { padding-left: 1.25rem; color: #4b5563; line-height: 1.75; margin-bottom: 1rem; }
+    li { margin-bottom: 0.35rem; }
+    strong { color: #1f2937; }
+    code {
+      font-family: 'Geist Mono', 'Fira Code', monospace;
+      background: #f3f4f6; padding: 0.15em 0.4em; border-radius: 4px;
+      font-size: 0.92em; color: #4f46e5;
+    }
+    .callout {
+      background: #f0f4ff; border-left: 3px solid #6366f1; border-radius: 6px;
+      padding: 1rem 1.25rem; margin: 1rem 0; font-size: 0.95rem; color: #3730a3;
+    }
+    .callout.warn {
+      background: #fef3c7; border-left-color: #f59e0b; color: #78350f;
+    }
+    .callout.danger {
+      background: #fee2e2; border-left-color: #ef4444; color: #7f1d1d;
+    }
+    table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0;
+      font-size: 0.93rem;
+    }
+    th, td {
+      padding: 0.65rem 0.9rem; border-bottom: 1px solid #e5e7eb; text-align: left;
+    }
+    th { background: #f9fafb; font-weight: 600; color: #1f2937; font-size: 0.85rem; }
+    td { color: #4b5563; }
+    .example {
+      background: linear-gradient(135deg,#f0f4ff,#faf5ff);
+      border-radius: 12px; padding: 1.5rem; margin: 1rem 0;
+    }
+    .example .calc {
+      font-family: 'Geist Mono', 'Fira Code', monospace;
+      font-size: 0.9rem; color: #4f46e5; margin: 0.5rem 0;
+    }
+    .zone-strip {
+      display: flex; height: 36px; border-radius: 8px; overflow: hidden;
+      margin: 1rem 0 0.5rem; box-shadow: inset 0 0 0 1px #e5e7eb;
+    }
+    .zone { flex: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 600; color: white; }
+    .z-red    { background: #ef4444; }
+    .z-yellow { background: #f59e0b; flex: 0.5; }
+    .z-lime   { background: #84cc16; flex: 0.75; }
+    .z-green  { background: #22c55e; }
+    .zone-legend {
+      display: flex; justify-content: space-between;
+      font-size: 0.75rem; color: #6b7280; padding: 0 0.25rem;
+    }
+    footer {
+      text-align: center; padding: 2rem 1rem; color: #6b7280; font-size: 0.85rem;
+    }
+    footer a { color: #6366f1; text-decoration: none; font-weight: 500; }
+    footer a:hover { text-decoration: underline; }
+    @media (max-width: 640px) {
+      header { padding: 2rem 1.25rem 1.5rem; }
+      h1 { font-size: 2rem; }
+      section { padding: 1.75rem 1.25rem; }
+      h2 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="logo-row">
+        <svg class="logo-arc" viewBox="0 0 40 40" fill="none">
+          <path d="M4 34 Q20 6 36 34" stroke="#6366f1" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+          <circle cx="20" cy="8" r="2.8" fill="#6366f1"/>
+        </svg>
+        <span class="wordmark">St<span class="arc">ARC</span><span class="sub">Stock Thesis Arc</span></span>
+      </div>
+      <h1>How the Score Works</h1>
+      <p class="lede">
+        The STARC score is fully deterministic. No language model decides your number.
+        Every input, every weight, and every math step is defined in Python you can read —
+        and this page is the plain-English version.
+      </p>
+    </header>
+
+    <section>
+      <h2><span class="num">1</span>The one-line version</h2>
+      <p>
+        Every stock starts at <strong>50</strong>. Confirmed signals push the score up; flagged signals push it down.
+        The final number is clamped to <code>[0, 100]</code>. That's the whole architecture — the rest of this page
+        is just what counts as a signal and how much each one moves the needle.
+      </p>
+      <div class="callout">
+        <strong>Why 50 is the base:</strong> a score of exactly 50 means no evidence either way — a brand-new thesis
+        on a quiet stock. It's the neutral starting line, not a passing grade.
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="num">2</span>Signals — where the evidence comes from</h2>
+      <p>When you click <strong>Evaluate</strong>, STARC pulls fresh data across nine signal families:</p>
+      <ul>
+        <li><strong>Price signals</strong> — day, week, and month % change; volume vs. 10-day average; 20-day vs. 50-day moving average; distance from 52-week high/low.</li>
+        <li><strong>Valuation</strong> — P/E, forward P/E, PEG, P/S, P/B, EV/EBITDA, analyst target price.</li>
+        <li><strong>Financial health</strong> — debt-to-equity, current ratio, ROE, margins, free cash flow, revenue growth.</li>
+        <li><strong>Fundamentals</strong> — EPS actual vs. estimate, surprise %, revenue growth.</li>
+        <li><strong>Ownership</strong> — institutional %, short interest %, analyst count, analyst recommendation.</li>
+        <li><strong>Insider activity</strong> — Form 4 filings over the last 90 days.</li>
+        <li><strong>Filings</strong> — 8-K filing count over the last 90 days.</li>
+        <li><strong>News</strong> — recent headlines mapped to thesis categories.</li>
+        <li><strong>Trend labels</strong> — pre-computed accelerating / stable / decelerating tags on revenue, margin, and debt. These stabilize the score against single-quarter noise.</li>
+      </ul>
+      <p>Each signal gets routed to one or more of your thesis points by deterministic rules, then labeled <strong>confirmed</strong> (supports the point) or <strong>flagged</strong> (contradicts it) with a confidence score.</p>
+    </section>
+
+    <section>
+      <h2><span class="num">3</span>The multipliers — how much each point moves the score</h2>
+      <p>A thesis point's contribution to the score is:</p>
+      <div class="example">
+        <div class="calc">base × category_weight × importance × conviction × confidence</div>
+      </div>
+
+      <h3>Category weight</h3>
+      <p>Not all thesis categories matter equally to your strategy. A growth investor weights Growth Trajectory heaviest; a value investor weights Valuation and Financial Health heaviest. STARC picks regime-aware defaults from your investor profile; you can override them in Settings.</p>
+
+      <h3>Importance multiplier</h3>
+      <table>
+        <thead><tr><th>Importance</th><th>Multiplier</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td>Standard</td><td>1.0×</td><td>Default for most points.</td></tr>
+          <tr><td>Important</td><td>1.5×</td><td>Central to your reasoning; pay attention if it breaks.</td></tr>
+          <tr><td>Critical</td><td>2.0×</td><td>Load-bearing. If it breaks, the whole thesis may be wrong.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Conviction multiplier</h3>
+      <table>
+        <thead><tr><th>Conviction</th><th>Multiplier</th><th>Signal</th></tr></thead>
+        <tbody>
+          <tr><td>Neutral</td><td>1.0×</td><td>You have no strong view.</td></tr>
+          <tr><td>Liked</td><td>1.2×</td><td>You endorse this point as part of your case.</td></tr>
+          <tr><td>Disliked</td><td>1.2×</td><td>You disagree; strengthens bearish signals.</td></tr>
+          <tr><td>Frozen (locked)</td><td>2.0×</td><td>Core conviction. Breaking a frozen point triggers a red-banner alert.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Confidence</h3>
+      <p>The signal-routing layer attaches a confidence value (0–1) to each mapping based on how strongly the evidence supports the category. A clear month-over-month price decline scores higher confidence than a mild, ambiguous one.</p>
+    </section>
+
+    <section>
+      <h2><span class="num">4</span>Regime + sector adjustments</h2>
+      <p>Two quiet adjustments prevent one-size-fits-all scoring:</p>
+      <ul>
+        <li><strong>Investor regime</strong> — Growth, Value, Income, Defensive. Each profile shifts category weights. A Value investor's Valuation weight is higher than a Growth investor's.</li>
+        <li><strong>Sector presets</strong> — SaaS defaults differ from consumer staples differ from banks. A bank thesis weights Financial Health more than a SaaS thesis does, because balance-sheet strength matters more for banks.</li>
+      </ul>
+      <p>Both kick in automatically on stock creation. You see the effective weights in Settings and can override them per-portfolio.</p>
+    </section>
+
+    <section>
+      <h2><span class="num">5</span>Signal decay</h2>
+      <p>Old signals weigh less than recent ones. A news headline from 60 days ago counts roughly half of one from this week. This prevents stale signals from anchoring the score while still honoring the longer-term picture.</p>
+    </section>
+
+    <section>
+      <h2><span class="num">6</span>Worked example</h2>
+      <p>Suppose you hold MSFT with 5 selected thesis points. You run Evaluate. Here is what happens:</p>
+      <div class="example">
+        <ol style="padding-left: 1.25rem; line-height: 1.8; color: #4b5563;">
+          <li>Start at base <strong>50</strong>.</li>
+          <li><strong>Growth point</strong> (Standard, Neutral) — Azure revenue grew 30% YoY. <em>Confirmed</em>, confidence 0.8. Contribution: <code>+10 × 1.0 × 1.0 × 1.0 × 0.8 = +8</code>.</li>
+          <li><strong>Moat point</strong> (Critical, Frozen) — M365 enterprise retention held above 95%. <em>Confirmed</em>, confidence 0.9. Contribution: <code>+10 × 1.0 × 2.0 × 2.0 × 0.9 = +36</code>.</li>
+          <li><strong>Valuation point</strong> (Important, Liked) — P/E of 34 trades above peer median. <em>Flagged</em>, confidence 0.7. Contribution: <code>−10 × 1.0 × 1.5 × 1.2 × 0.7 = −12.6</code>.</li>
+          <li><strong>Risk point</strong> (Standard, Neutral) — antitrust lawsuit filed. <em>Flagged</em>, confidence 0.6. Contribution: <code>−10 × 1.0 × 1.0 × 1.0 × 0.6 = −6</code>.</li>
+          <li><strong>Cash-flow point</strong> (Standard, Liked) — FCF margin expanded. <em>Confirmed</em>, confidence 0.5. Contribution: <code>+10 × 1.0 × 1.0 × 1.2 × 0.5 = +6</code>.</li>
+        </ol>
+        <div class="calc">Final: 50 + 8 + 36 − 12.6 − 6 + 6 = <strong>81.4</strong> → rounded to <strong>81</strong>.</div>
+        <p style="margin-top: 0.75rem; font-size: 0.9rem; color: #4b5563;">The Frozen + Critical moat point dominates the arithmetic. That is by design — breaking a locked critical point is the loudest signal STARC can fire.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="num">7</span>Zones</h2>
+      <p>The final score maps to one of four zones on the gauge:</p>
+      <div class="zone-strip">
+        <div class="zone z-red">0–40 Breaking</div>
+        <div class="zone z-yellow">40–60 Pressure</div>
+        <div class="zone z-lime">60–75 Holding</div>
+        <div class="zone z-green">75–100 Intact</div>
+      </div>
+      <div class="zone-legend"><span>Red</span><span>Yellow</span><span>Lime</span><span>Green</span></div>
+      <p style="margin-top: 1rem;">Zones are thresholds for your own attention budget, not trading signals. A score of 42 doesn't mean "sell"; it means "look carefully and decide." A score of 78 doesn't mean "buy more"; it means "the reasons still hold today."</p>
+    </section>
+
+    <section>
+      <h2><span class="num">8</span>What the score is <em>not</em></h2>
+      <ul>
+        <li><strong>Not a price forecast.</strong> Our 2020–2024 backtest across 99 S&amp;P 500 stocks found no reliable relationship between score and forward returns. The score measures thesis coherence, not alpha.</li>
+        <li><strong>Not a buy or sell signal.</strong> STARC tells you whether your reasons still hold. The decision to act is yours.</li>
+        <li><strong>Not an AI judgement.</strong> The engine is Python. LLMs are used upstream to draft thesis points and interpret news, but the scoring math is deterministic and auditable.</li>
+        <li><strong>Not a consensus score.</strong> It's scored against <em>your</em> selected points. Two investors holding the same stock will get different STARC scores if their theses differ.</li>
+      </ul>
+      <div class="callout warn">
+        <strong>Use the score as a conversation starter with yourself.</strong> When it drops, ask: is my thesis wrong, or did the market just move? When it rises, ask: is this genuine confirmation, or am I anchoring?
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Source: <code>backend/app/agents/thesis_evaluator.py</code> ·
+        Full technical doc: <code>docs/scoring_algorithm.md</code> ·
+        Questions? See the <a href="/faq">FAQ</a> or <a href="/guide#scoring">User Guide</a>.
+      </p>
+    </footer>
+
+  </div>
+</body>
+</html>

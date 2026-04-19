@@ -12,7 +12,7 @@ import ProfileWizard from "./ProfileWizard";
 import StatusBadge from "./StatusBadge";
 import {
   Menu, X, Home, Settings, LogOut, ChevronDown, Plus, Trash2,
-  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper, Search, MessageSquare, BookOpen,
+  Briefcase, User, HelpCircle, Sun, Moon, Loader2, Clock, Sparkles, Newspaper, Search, MessageSquare, BookOpen, Calculator,
 } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import StreakBadge from "./StreakBadge";
@@ -167,6 +167,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Docs */}
         <NavLink href="/why" label="Why STARC" Icon={Sparkles} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/guide" label="User Guide" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
+        <NavLink href="/scoring" label="Scoring" Icon={Calculator} pathname={pathname} onClick={() => setMobileOpen(false)} />
         <NavLink href="/faq" label="FAQ" Icon={HelpCircle} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
         {/* Portfolios section */}
